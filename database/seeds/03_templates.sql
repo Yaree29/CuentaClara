@@ -1,0 +1,67 @@
+INSERT INTO industry_templates (name, default_modules, default_units, icon) VALUES
+(
+  'Carnicería',
+  '["inventory","sales","purchases","cash","staff"]',
+  '["kg","lb","g"]',
+  '🥩'
+),
+(
+  'Barbería',
+  '["sales","cash","staff"]',
+  '["und"]',
+  '✂️'
+),
+(
+  'Estilista',
+  '["sales","cash","staff"]',
+  '["und","ml"]',
+  '💇'
+),
+(
+  'Tienda de ropa',
+  '["inventory","sales","purchases","cash"]',
+  '["und","doc"]',
+  '👕'
+),
+(
+  'Papelería',
+  '["inventory","sales","purchases","cash"]',
+  '["und","cja","paq"]',
+  '📎'
+),
+(
+  'Farmacia',
+  '["inventory","sales","purchases","cash"]',
+  '["und","cja","ml"]',
+  '💊'
+),
+(
+  'Ferretería',
+  '["inventory","sales","purchases","cash"]',
+  '["und","m","kg"]',
+  '🔧'
+),
+(
+  'Panadería',
+  '["inventory","sales","purchases","cash","staff"]',
+  '["kg","g","und"]',
+  '🍞'
+),
+(
+  'Frutería',
+  '["inventory","sales","purchases","cash"]',
+  '["kg","lb","und"]',
+  '🍎'
+),
+(
+  'Restaurante',
+  '["inventory","sales","cash","staff"]',
+  '["kg","L","und"]',
+  '🍽️'
+),
+(
+  'Tienda general',
+  '["inventory","sales","purchases","cash"]',
+  '["und","cja"]',
+  '🏪'
+);

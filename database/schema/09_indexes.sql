@@ -1,0 +1,14 @@
+CREATE INDEX idx_users_business         ON users(business_id);
+CREATE INDEX idx_products_business      ON products(business_id);
+CREATE INDEX idx_inventory_product      ON inventory(product_id);
+CREATE INDEX idx_inv_movements_business ON inventory_movements(business_id);
+CREATE INDEX idx_inv_movements_product  ON inventory_movements(product_id);
+CREATE INDEX idx_invoices_business      ON invoices(business_id);
+CREATE INDEX idx_invoices_status        ON invoices(status);
+CREATE INDEX idx_invoice_items_invoice  ON invoice_items(invoice_id);
+CREATE INDEX idx_payments_invoice       ON payments(invoice_id);
+CREATE INDEX idx_purchase_orders_biz    ON purchase_orders(business_id);
+CREATE INDEX idx_expenses_business      ON expenses(business_id);
+CREATE INDEX idx_cash_sessions_business ON cash_sessions(business_id);
+CREATE INDEX idx_audit_logs_business    ON audit_logs(business_id);
+CREATE INDEX idx_notifications_user     ON notifications(user_id);

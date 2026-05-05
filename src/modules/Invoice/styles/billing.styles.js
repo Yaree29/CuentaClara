@@ -1,0 +1,62 @@
+import { StyleSheet } from 'react-native';
+import colors from '../../../theme/colors';
+
+export default StyleSheet.create({
+  title: {
+    textAlign: 'center',
+    padding: 30,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  label: {
+    paddingLeft: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  rowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addText: {
+    paddingRight: 10,
+    color: '#2563eb',
+    fontWeight: 'bold',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  mainButton: {
+    backgroundColor: '#2563eb',
+    padding: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  disabledButton: {
+    backgroundColor: '#94a3b8',
+  },
+  mainButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

@@ -23,10 +23,11 @@ const ProfileScreen = () => {
 
       <View style={styles.infoCard}>
         <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>{profile?.name.charAt(0)}</Text>
+          <Text style={styles.avatarText}>{profile?.name?.charAt(0)}</Text>
         </View>
         <Text style={styles.userName}>{profile?.name}</Text>
         <Text style={styles.userEmail}>{profile?.email}</Text>
+        <Text style={styles.userEmail}>Rol: {profile?.role}</Text>
       </View>
 
       <View style={styles.section}>

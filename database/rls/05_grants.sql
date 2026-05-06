@@ -1,0 +1,42 @@
+-- ******************************************************************
+-- 05_grants.sql (ARCHIVADO)
+-- Este archivo quedó reemplazado por `06_auth_rls_repair.sql`, que
+-- aplica los GRANTs de forma idempotente junto con la reparación de
+-- la función y las policies necesarias.
+--
+-- Comentario: Los GRANT son necesarios para que el rol `authenticated`
+-- tenga permiso de intentar leer las tablas. Sin GRANT, RLS no llega
+-- a evaluarse y se obtiene `permission denied for table users`.
+--
+-- Si por alguna razón prefieres ejecutar los GRANT de forma manual,
+-- aquí tienes el bloque original (comentado):
+-- GRANT USAGE ON SCHEMA public TO authenticated;
+--
+-- GRANT SELECT ON TABLE
+--   businesses,
+--   users,
+--   business_configs,
+--   features,
+--   subscriptions,
+--   product_categories,
+--   products,
+--   inventory,
+--   inventory_movements,
+--   invoices,
+--   invoice_items,
+--   payments,
+--   suppliers,
+--   purchase_orders,
+--   purchase_items,
+--   cash_sessions,
+--   expense_categories,
+--   expenses,
+--   staff_attendance,
+--   staff_expenses,
+--   notifications,
+--   audit_logs
+-- TO authenticated;
+--
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- FIN ARCHIVO DE RESPALDO

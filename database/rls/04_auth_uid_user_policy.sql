@@ -1,0 +1,24 @@
+-- ******************************************************************
+-- 04_auth_uid_user_policy.sql (ARCHIVADO)
+-- Este archivo queda como respaldo histórico. Sus cambios fueron
+-- incorporados y ampliados por `06_auth_rls_repair.sql`.
+--
+-- Comentario: La policy "usuario propio por auth uid" es necesaria
+-- para permitir que un usuario autenticado lea su propia fila en
+-- `public.users` mediante `auth.uid()`. Sin embargo, ejecutar solo
+-- esta policy sin otorgar primero los GRANT necesarios al rol
+-- `authenticated` puede dejar el sistema en un estado donde la
+-- app no puede siquiera intentar leer la tabla (permission denied).
+--
+-- Mantengo aquí el contenido original para referencia, pero no se
+-- recomienda ejecutar este archivo por separado si no se han aplicado
+-- los GRANTs adecuados. Use `06_auth_rls_repair.sql` como script
+-- idempotente y preferido.
+--
+-- Contenido original (comentado):
+-- CREATE POLICY "usuario propio por auth uid" ON public.users
+--   FOR SELECT
+--   USING (id = auth.uid());
+
+-- FIN ARCHIVO DE RESPALDO
+

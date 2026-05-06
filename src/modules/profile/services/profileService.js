@@ -1,19 +1,30 @@
-const profileService = {
-    getUserProfile: async(userId) => {
-        // Simulación de carga de datos de perfil
-        await new Promise(resolve => setTimeout(resolve, 800));
+const formatDate = (value) => {
+  if (!value) return 'No disponible';
 
-        return {
-            name: 'Usuario Administrador',
-            email: 'admin@cuenta-clara.com',
-            businessName: 'Mi Negocio Pyme S.A.',
-            joinedDate: '2026-01-15',
-            preferences: {
-                notifications: true,
-                currency: 'USD'
-            }
-        };
+  return new Intl.DateTimeFormat('es-PA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
+};
+
+const profileService = {
+  getUserProfile: async (user) => {
+    if (!user) {
+      return null;
     }
+
+    return {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      businessName: user.business?.name || 'Sin negocio',
+      joinedDate: formatDate(user.created_at || user.business?.created_at),
+      preferences: {
+        currency: 'USD',
+      },
+    };
+  },
 };
 
 export default profileService;

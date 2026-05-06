@@ -1,36 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import useAuthStore from '../../../store/useAuthStore';
 import inventoryService from '../services/inventoryService';
 
 export const useInventory = () => {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+  const businessId = useAuthStore((state) => state.user?.business_id);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-    const fetchProducts = async() => {
-        try {
-            const data = await inventoryService.getProducts();
-            setProducts(data);
-        } catch (error) {
-            console.error("Error al cargar inventario:", error);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
+  const fetchProducts = async () => {
+    if (!businessId) {
+      setProducts([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
 
-    const handleRefresh = () => {
-        setRefreshing(true);
-        fetchProducts();
-    };
+    setError(null);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    try {
+      const data = await inventoryService.getProducts(businessId);
+      setProducts(data);
+    } catch (err) {
+      console.error('Error al cargar inventario:', err);
+      setError(err.message || 'No se pudo cargar el inventario.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    return {
-        products,
-        loading,
-        refreshing,
-        handleRefresh
-    };
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchProducts();
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [businessId]);
+
+  return {
+    products,
+    loading,
+    refreshing,
+    error,
+    handleRefresh,
+  };
 };

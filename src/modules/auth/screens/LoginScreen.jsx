@@ -3,15 +3,20 @@ import { Alert, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicato
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import { useAuth } from '../hooks/useAuth';
 import styles from '../styles/Login.styles';
+import { validateEmail, validatePassword } from '../utils/validation';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
-  const [showBiometricModal, setShowBiometricModal] = useState(true);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
   const biometricAttemptedRef = useRef(false);
+  const biometricPromptedRef = useRef(false);
+  const biometricAutoAttemptRef = useRef(false);
 
   const { 
     login, 
@@ -19,6 +24,7 @@ const LoginScreen = () => {
     linkBiometricSession, 
     isBiometricAvailable,
     isBiometricEnabled,
+    resetPassword,
     loading, 
     error 
   } = useAuth();
@@ -56,6 +62,7 @@ const LoginScreen = () => {
   useEffect(() => {
     if (!showBiometricModal || !biometricChecked) return;
     if (!biometricAvailable || !biometricEnabled) return;
+    if (!biometricAutoAttemptRef.current) return;
     if (biometricAttemptedRef.current) return;
     handleBiometricLogin();
   }, [showBiometricModal, biometricChecked, biometricAvailable, biometricEnabled]);
@@ -73,8 +80,28 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) return;
-    const response = await login(email, password).catch(() => null);
+    // Validar email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setEmailError(emailValidation.error);
+      setPasswordError('');
+      Alert.alert('Correo inválido', emailValidation.error);
+      return;
+    }
+
+    // Validar contraseña
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setPasswordError(passwordValidation.error);
+      setEmailError('');
+      Alert.alert('Contraseña inválida', passwordValidation.error);
+      return;
+    }
+
+    setEmailError('');
+    setPasswordError('');
+
+    const response = await login(email.trim().toLowerCase(), password).catch(() => null);
     if (!response) return;
 
     if (biometricAvailable && response?.user && response?.token) {
@@ -94,8 +121,40 @@ const LoginScreen = () => {
     }
   };
 
+  const handleResetPassword = async () => {
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      Alert.alert('Correo inválido', emailValidation.error);
+      return;
+    }
+
+    try {
+      await resetPassword(email.trim().toLowerCase());
+      Alert.alert(
+        'Correo enviado',
+        'Revisa tu correo para continuar con la recuperación de contraseña.'
+      );
+    } catch (err) {
+      Alert.alert(
+        'No se pudo enviar',
+        'Verifica tu correo e intenta nuevamente.'
+      );
+    }
+  };
+
   const handleOpenBiometricModal = () => {
     biometricAttemptedRef.current = false;
+    biometricAutoAttemptRef.current = true;
+    setShowBiometricModal(true);
+  };
+
+  const handleOpenBiometricPrompt = () => {
+    if (!biometricChecked) return;
+    if (!biometricAvailable || !biometricEnabled) return;
+    if (biometricPromptedRef.current) return;
+    biometricPromptedRef.current = true;
+    biometricAttemptedRef.current = false;
+    biometricAutoAttemptRef.current = false;
     setShowBiometricModal(true);
   };
 
@@ -112,26 +171,51 @@ const LoginScreen = () => {
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Correo electrónico"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View>
+            <TextInput
+              style={[styles.input, emailError && styles.inputError]}
+              placeholder="Correo electrónico"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (text) setEmailError('');
+              }}
+              onFocus={handleOpenBiometricPrompt}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              textContentType="username"
+              importantForAutofill="yes"
+            />
+            {emailError ? <Text style={styles.errorMessage}>{emailError}</Text> : null}
+          </View>
+
+          <View>
+            <TextInput
+              style={[styles.input, passwordError && styles.inputError]}
+              placeholder="Contraseña"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (text) setPasswordError('');
+              }}
+              onFocus={handleOpenBiometricPrompt}
+              secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+              importantForAutofill="yes"
+            />
+            {passwordError ? <Text style={styles.errorMessage}>{passwordError}</Text> : null}
+          </View>
+
+          <TouchableOpacity style={styles.forgotPasswordLink} onPress={handleResetPassword}>
+            <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
+            style={[styles.button, (loading || !email || !password) && styles.buttonDisabled]} 
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || !email || !password}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" />

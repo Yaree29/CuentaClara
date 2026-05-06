@@ -26,6 +26,9 @@ def register(data: RegisterRequest):
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Prevent plain text 500 errors by catching everything and returning JSON
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @router.post("/login", response_model=TokenResponse, summary="Iniciar sesión")
 def login(data: LoginRequest):

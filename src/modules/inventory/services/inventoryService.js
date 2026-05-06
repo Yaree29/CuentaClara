@@ -63,29 +63,54 @@ const inventoryService = {
       .map(mapProduct);
   },
 
-  saveProduct: async (businessId, productData) => {
+  createProduct: async (businessId, productData) => {
     if (!businessId) {
       throw new Error('No hay negocio activo para guardar el producto.');
     }
 
-    const { data, error } = await supabase
+    const { data: product, error: productError } = await supabase
       .from('products')
       .insert({
         business_id: businessId,
-        category_id: productData.categoryId,
+        category_id: productData.categoryId ?? null,
         name: productData.name,
-        sku: productData.sku,
-        price: productData.price,
-        unit_type: productData.unitType,
+        sku: productData.sku ?? null,
+        price: productData.price ?? 0,
+        unit_type: productData.unitType ?? null,
       })
       .select()
       .single();
 
-    if (error) {
-      throw error;
+    if (productError) {
+      throw productError;
     }
 
-    return { success: true, data };
+    const { data: inventoryRow, error: inventoryError } = await supabase
+      .from('inventory')
+      .insert({
+        business_id: businessId,
+        product_id: product.id,
+        quantity: productData.quantity ?? 0,
+        unit: productData.unit ?? product.unit_type ?? null,
+        min_stock: productData.minStock ?? 0,
+      })
+      .select()
+      .single();
+
+    if (inventoryError) {
+      await supabase
+        .from('products')
+        .delete()
+        .eq('id', product.id)
+        .eq('business_id', businessId);
+      throw inventoryError;
+    }
+
+    return { success: true, product, inventory: inventoryRow };
+  },
+
+  saveProduct: async (businessId, productData) => {
+    return inventoryService.createProduct(businessId, productData);
   },
 };
 

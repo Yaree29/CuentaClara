@@ -27,6 +27,26 @@ export default StyleSheet.create({
     borderRadius: 10,
     fontSize: 16,
   },
+  inputError: {
+    borderColor: colors.textError,
+    borderWidth: 2,
+  },
+  errorMessage: {
+    color: colors.textError,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  helperText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  strongPassword: {
+    color: '#10b981',
+    fontWeight: '600',
+  },
   button: {
     backgroundColor: colors.primary,
     padding: 16,

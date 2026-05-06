@@ -72,6 +72,21 @@ export const useAuth = () => {
     setLogout();
   };
 
+  const resetPassword = async (email) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await authService.resetPassword(email);
+      return true;
+    } catch (err) {
+      setError(err.message || 'No se pudo enviar el correo de recuperación');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     login,
     loginWithBiometrics,
@@ -80,6 +95,7 @@ export const useAuth = () => {
     isBiometricAvailable,
     isBiometricEnabled,
     logout,
+    resetPassword,
     loading,
     error,
   };

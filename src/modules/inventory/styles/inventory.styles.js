@@ -80,4 +80,73 @@ export default StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  modalRow: {
+    flexDirection: 'row',
+  },
+  modalInputHalf: {
+    flex: 1,
+  },
+  modalInputRight: {
+    marginLeft: 10,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  modalCancel: {
+    backgroundColor: '#e2e8f0',
+  },
+  modalPrimary: {
+    backgroundColor: '#2563eb',
+  },
+  modalButtonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  modalPrimaryText: {
+    color: '#fff',
+  },
+  modalError: {
+    color: colors.textError,
+    fontSize: 12,
+    marginBottom: 8,
+  },
 });

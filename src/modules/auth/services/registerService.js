@@ -32,110 +32,90 @@ const registerService = {
     }
 
     // 1) Crear usuario en Supabase Auth
+    let user = null;
+    let session = null;
+
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+
     if (signUpError) {
-      throw signUpError;
-    }
-
-    // Ensure we have a session/user; if not, try sign in to obtain session
-    let user = signUpData?.user ?? null;
-    let session = signUpData?.session ?? null;
-
-    // If signUp did not provide a session, attempt signIn to get credentials
-    if (!session) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        // If sign in fails because email confirmation is required, return a helpful error
-        throw signInError;
+      // Si el usuario ya existe por un intento fallido anterior, intentamos iniciar sesión para continuar el flujo
+      if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          // Si la contraseña es incorrecta o hay otro error, lanzamos el error original
+          throw signUpError;
+        }
+        user = signInData?.user;
+        session = signInData?.session;
+      } else {
+        throw signUpError;
       }
-      user = signInData?.user ?? user;
-      session = signInData?.session ?? session;
+    } else {
+      user = signUpData?.user ?? null;
+      session = signUpData?.session ?? null;
+
+      // Si signUp no devuelve sesión (ej. requiere confirmación), intentamos signIn
+      if (!session) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          throw signInError;
+        }
+        user = signInData?.user ?? user;
+        session = signInData?.session ?? session;
+      }
     }
 
     if (!user) throw new Error('No se pudo crear o iniciar sesión con el usuario');
 
     const userId = user.id;
 
-    // 2) Crear business
-    // Encontrar industry_template_id por category si existe (buscar template por nombre igual a categoría)
-    let industryTemplate = null;
+    // 2) Encontrar industry_template_id por category si existe
+    let industryTemplateId = 1; // Default to 1 to prevent Render backend crash on null
     if (categoryId) {
       const { data: cat } = await supabase.from('categories').select('id, name').eq('id', categoryId).single();
       if (cat) {
         const { data: tmpl } = await supabase.from('industry_templates').select('id').ilike('name', cat.name).limit(1).single();
-        industryTemplate = tmpl ?? null;
+        industryTemplateId = tmpl?.id ?? 1;
       }
     }
 
-    const ui_mode = mapProfileTypeToUiMode(profileType);
-
-    let { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .insert({
-        name: businessName,
-        category_id: categoryId || null,
-        industry_template_id: industryTemplate?.id || null,
-        ui_mode,
-        phone,
-        address: address || null,
-      })
-      .select()
-      .single();
-
-    if (businessError) {
-      // Detect permission denied and provide clearer actionable hint
-      if (businessError?.code === '42501') {
-        businessError.message = `${businessError.message} - Verifica GRANTs para 'businesses' o que el usuario tenga sesión activa.`;
-      }
-      throw businessError;
-    }
-
-    // 3) Crear business_configs
-    const { error: cfgError } = await supabase.from('business_configs').insert({
-      business_id: business.id,
-      currency: 'USD',
-      weight_unit: 'kg',
-      tax_rate: 0,
-    });
-    if (cfgError) throw cfgError;
-
-    // 4) Crear user en public.users (perfil)
     const fullName = `${name}${lastName ? ' ' + lastName : ''}`;
 
-    const { data: profileRow, error: profileError } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        business_id: business.id,
+    // 3) Llamar a la API del backend para registrar el negocio y perfil
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+    
+    const response = await fetch(`${apiUrl}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        business_name: businessName,
         name: fullName,
-        email,
-        role: 'owner',
+        email: email,
+        password: password, // El backend lo necesita, aunque ya estés en auth
         phone: phone || null,
-      })
-      .select()
-      .single();
+        industry_template_id: industryTemplateId,
+        auth_user_id: userId,
+      }),
+    });
 
-    if (profileError) throw profileError;
-
-    // 5) Activar features desde template
-    if (industryTemplate) {
-      const { data: templateData, error: tmplErr } = await supabase
-        .from('industry_templates')
-        .select('default_modules')
-        .eq('id', industryTemplate.id)
-        .single();
-
-      if (tmplErr) throw tmplErr;
-
-      const modules = templateData?.default_modules ?? [];
-      if (Array.isArray(modules) && modules.length) {
-        const inserts = modules.map((m) => ({ business_id: business.id, module: m, is_active: true }));
-        const { error: featuresErr } = await supabase.from('features').insert(inserts);
-        if (featuresErr) throw featuresErr;
+    if (!response.ok) {
+      let errorDetail = 'Error al registrar el negocio en el backend';
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        errorDetail = errorData.detail || errorDetail;
+      } catch (e) {
+        // If the server didn't return JSON (e.g. a plain text 500 error)
+        errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
       }
+      throw new Error(errorDetail);
     }
 
-    // 6) If we have a session, return full user context using authService
+    const apiData = await response.json();
+
+    // 4) Refrescar la sesión o usar authService para obtener el contexto completo
     try {
       const currentSession = await authService.getCurrentSession();
       if (currentSession) return currentSession;
@@ -143,8 +123,12 @@ const registerService = {
       // ignore
     }
 
-    // Fallback: return created profile and business
-    return { user: profileRow, business, token: session?.access_token || null };
+    // Si falló getCurrentSession, retornar los datos básicos que devuelve el API
+    return { 
+      user: { id: apiData.user_id, role: apiData.role, business_id: apiData.business_id }, 
+      business: { id: apiData.business_id }, 
+      token: session?.access_token || apiData.access_token 
+    };
   },
 };
 

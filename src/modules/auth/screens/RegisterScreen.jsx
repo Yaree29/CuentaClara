@@ -3,10 +3,24 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
+import useAuthStore from '../../../store/useAuthStore';
+import { useAuth } from '../hooks/useAuth';
+import { 
+  validateEmail, 
+  validatePassword, 
+  validateName, 
+  validateBusinessName, 
+  validatePhone,
+  getPasswordStrength
+} from '../utils/validation';
 
 const RegisterScreen = ({ navigation }) => {
-
+  const setLogin = useAuthStore((state) => state.setLogin);
+  const { linkBiometricSession, isBiometricAvailable } = useAuth();
   const [step, setStep] = useState(1);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState(null);
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -29,39 +43,70 @@ const RegisterScreen = ({ navigation }) => {
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [emailError, setEmailError] = useState('');
-
-  const isValidEmail = (value) => {
-    const emailPattern = /^\S+@\S+\.\S+$/;
-    return emailPattern.test((value || '').trim());
-  };
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    businessName: '',
+  });
+  const [passwordStrength, setPasswordStrength] = useState({ level: 'débil', percentage: 0 });
 
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
+    }
+    if (field === 'password') {
+      setPasswordStrength(getPasswordStrength(value));
+    }
   };
 
+
   const handleNext = () => {
-    // validar antes de avanzar (ej: contraseña mínima)
+    const newErrors = {};
+
     if (step === 1) {
-      const normalizedEmail = formData.email.trim().toLowerCase();
+      // Validar nombre
+      const nameValidation = validateName(formData.name);
+      if (!nameValidation.valid) {
+        newErrors.name = nameValidation.error;
+      }
 
-      if (!isValidEmail(normalizedEmail)) {
-        setEmailError('Ingresa un correo válido.');
-        setPasswordError('');
-        Alert.alert('Correo inválido', 'Ingresa un correo válido.');
+      // Validar email
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.valid) {
+        newErrors.email = emailValidation.error;
+      }
+
+      // Validar contraseña
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.valid) {
+        newErrors.password = passwordValidation.error;
+      }
+
+      // Validar teléfono (opcional)
+      if (formData.phone) {
+        const phoneValidation = validatePhone(formData.phone);
+        if (!phoneValidation.valid) {
+          newErrors.phone = phoneValidation.error;
+        }
+      }
+
+      // Validar nombre del negocio
+      const businessValidation = validateBusinessName(formData.businessName);
+      if (!businessValidation.valid) {
+        newErrors.businessName = businessValidation.error;
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        const firstError = Object.values(newErrors)[0];
+        Alert.alert('Datos inválidos', firstError);
         return;
       }
 
-      if (!formData.password || formData.password.length < 6) {
-        setPasswordError('La contraseña debe tener al menos 6 caracteres.');
-        setEmailError('');
-        Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
-        return;
-      }
-
-      if (emailError) setEmailError('');
-      setPasswordError('');
+      setErrors({});
     }
 
     setStep(step + 1);
@@ -165,31 +210,85 @@ const GeneralFields = () => (
     (async () => {
       try {
         setLoading(true);
-        // protección adicional antes de enviar
-        const normalizedEmail = formData.email.trim().toLowerCase();
+        
+        // Validaciones finales
+        const newErrors = {};
 
-        if (!isValidEmail(normalizedEmail)) {
-          setEmailError('Ingresa un correo válido.');
-          setPasswordError('');
-          Alert.alert('Correo inválido', 'Ingresa un correo válido.');
+        const nameValidation = validateName(formData.name);
+        if (!nameValidation.valid) newErrors.name = nameValidation.error;
+
+        const emailValidation = validateEmail(formData.email);
+        if (!emailValidation.valid) newErrors.email = emailValidation.error;
+
+        const passwordValidation = validatePassword(formData.password);
+        if (!passwordValidation.valid) newErrors.password = passwordValidation.error;
+
+        if (formData.phone) {
+          const phoneValidation = validatePhone(formData.phone);
+          if (!phoneValidation.valid) newErrors.phone = phoneValidation.error;
+        }
+
+        const businessValidation = validateBusinessName(formData.businessName);
+        if (!businessValidation.valid) newErrors.businessName = businessValidation.error;
+
+        if (Object.keys(newErrors).length > 0) {
+          setErrors(newErrors);
+          const firstError = Object.values(newErrors)[0];
+          Alert.alert('Datos inválidos', firstError);
           return;
         }
 
-        if (!formData.password || formData.password.length < 6) {
-          setPasswordError('La contraseña debe tener al menos 6 caracteres.');
-          setEmailError('');
-          Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
-          return;
-        }
         const payload = {
           ...formData,
-          email: normalizedEmail,
+          email: formData.email.trim().toLowerCase(),
+          name: formData.name.trim(),
+          businessName: formData.businessName.trim(),
+          phone: formData.phone ? formData.phone.replace(/[\s\-\(\)]/g, '') : null,
           categoryId: formData.category || null,
         };
 
         const result = await registerService.register(payload);
-        // registro ok, el AuthProvider debería detectar la sesión y navegar
-        Alert.alert('Registro', 'Registro completado correctamente');
+        
+        // Si la biometría está disponible, mostrar opción de vinculación
+        if (biometricAvailable) {
+          Alert.alert(
+            'Registro Exitoso',
+            '¿Deseas activar el inicio de sesión con huella dactilar/rostro para futuras ocasiones?',
+            [
+              {
+                text: 'No, gracias',
+                style: 'cancel',
+                onPress: () => {
+                  setLogin(result.user, result.token);
+                }
+              },
+              {
+                text: 'Sí, activar',
+                onPress: async () => {
+                  try {
+                    const biometricService = require('../services/biometricService').default;
+                    const available = await biometricService.isAvailable();
+                    if (available) {
+                      await biometricService.saveSession({ user: result.user, token: result.token });
+                      Alert.alert('¡Listo!', 'Biometría vinculada correctamente.');
+                    } else {
+                      Alert.alert('Aviso', 'Tu dispositivo no soporta biometría.');
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    Alert.alert('Error', 'No se pudo vincular la biometría.');
+                  } finally {
+                    setLogin(result.user, result.token);
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          // Si no está disponible, login automático directamente
+          setLogin(result.user, result.token);
+          Alert.alert('Registro', 'Registro completado correctamente');
+        }
       } catch (error) {
         console.error('Error en registro:', error);
         const message = error?.message || String(error);
@@ -200,7 +299,7 @@ const GeneralFields = () => (
         }
 
         if (/invalid/i.test(message) && /email/i.test(message)) {
-          setEmailError('Ingresa un correo válido.');
+          setErrors({ ...errors, email: 'Ingresa un correo válido.' });
           Alert.alert('Correo inválido', 'Ingresa un correo válido.');
           return;
         }
@@ -218,6 +317,10 @@ const GeneralFields = () => (
       try {
         const cats = await registerService.getCategories();
         if (mounted) setCategories(cats);
+        
+        // Verifica disponibilidad de biometría
+        const biometricEnabled = await isBiometricAvailable();
+        if (mounted) setBiometricAvailable(biometricEnabled);
       } catch (e) {
         console.error('No se pudieron cargar categorias:', e);
       }
@@ -243,12 +346,16 @@ const GeneralFields = () => (
             <Text style={styles.subtitle}>Información básica</Text>
 
             <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Nombre"
-                value={formData.name}
-                onChangeText={(val) => updateField('name', val)}
-              />
+              <View>
+                <TextInput
+                  style={[styles.input, errors.name && styles.inputError]}
+                  placeholder="Nombre"
+                  value={formData.name}
+                  onChangeText={(val) => updateField('name', val)}
+                  maxLength={100}
+                />
+                {errors.name ? <Text style={styles.errorMessage}>{errors.name}</Text> : null}
+              </View>
 
               <TextInput
                 style={styles.input}
@@ -257,49 +364,58 @@ const GeneralFields = () => (
                 onChangeText={(val) => updateField('lastName', val)}
               />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Correo electrónico"
-                value={formData.email}
-                onChangeText={(val) => {
-                  updateField('email', val);
-                  if (emailError) setEmailError('');
-                }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-                autoComplete="email"
-              />
+              <View>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="Correo electrónico"
+                  value={formData.email}
+                  onChangeText={(val) => updateField('email', val)}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                  autoComplete="email"
+                />
+                {errors.email ? <Text style={styles.errorMessage}>{errors.email}</Text> : null}
+              </View>
 
-              {emailError ? (
-                <Text style={{ color: 'red', marginBottom: 8 }}>{emailError}</Text>
-              ) : null}
+              <View>
+                <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Contraseña"
+                  secureTextEntry
+                  value={formData.password}
+                  onChangeText={(val) => updateField('password', val)}
+                  maxLength={128}
+                />
+                {formData.password ? (
+                  <Text style={[styles.helperText, passwordStrength.level === 'fuerte' && styles.strongPassword]}>
+                    Fortaleza: {passwordStrength.level} ({passwordStrength.percentage}%)
+                  </Text>
+                ) : null}
+                {errors.password ? <Text style={styles.errorMessage}>{errors.password}</Text> : null}
+              </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Contraseña"
-                secureTextEntry
-                value={formData.password}
-                onChangeText={(val) => updateField('password', val)}
-              />
+              <View>
+                <TextInput
+                  style={[styles.input, errors.phone && styles.inputError]}
+                  placeholder="Teléfono (opcional)"
+                  value={formData.phone}
+                  onChangeText={(val) => updateField('phone', val)}
+                  keyboardType="phone-pad"
+                />
+                {errors.phone ? <Text style={styles.errorMessage}>{errors.phone}</Text> : null}
+              </View>
 
-              {passwordError ? (
-                <Text style={{ color: 'red', marginBottom: 8 }}>{passwordError}</Text>
-              ) : null}
-
-              <TextInput
-                style={styles.input}
-                placeholder="Teléfono"
-                value={formData.phone}
-                onChangeText={(val) => updateField('phone', val)}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Nombre del negocio"
-                value={formData.businessName}
-                onChangeText={(val) => updateField('businessName', val)}
-              />
+              <View>
+                <TextInput
+                  style={[styles.input, errors.businessName && styles.inputError]}
+                  placeholder="Nombre del negocio"
+                  value={formData.businessName}
+                  onChangeText={(val) => updateField('businessName', val)}
+                  maxLength={100}
+                />
+                {errors.businessName ? <Text style={styles.errorMessage}>{errors.businessName}</Text> : null}
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={handleNext}>
                 <Text style={styles.buttonText}>Continuar</Text>
@@ -427,6 +543,49 @@ const GeneralFields = () => (
 
               <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>Finalizar</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {step === 4 && registeredUser && (
+          <>
+            <Text style={styles.title}>Vinculación de Huella</Text>
+            <Text style={styles.subtitle}>
+              ¿Deseas vincular tu huella digital para inicios de sesión rápidos?
+            </Text>
+
+            <View style={styles.form}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={async () => {
+                  try {
+                    setBiometricLoading(true);
+                    await linkBiometricSession(registeredUser.user, registeredUser.token);
+                    setLogin(registeredUser.user, registeredUser.token);
+                    Alert.alert('Éxito', 'Huella vinculada correctamente. ¡Bienvenido!');
+                  } catch (err) {
+                    Alert.alert('Error', 'No se pudo vincular la huella. Intenta de nuevo.');
+                    console.error('Biometric linking error:', err);
+                  } finally {
+                    setBiometricLoading(false);
+                  }
+                }}
+                disabled={biometricLoading}
+              >
+                <Text style={styles.buttonText}>
+                  {biometricLoading ? 'Vinculando...' : 'Sí, vincular huella'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#6c757d' }]}
+                onPress={() => {
+                  setLogin(registeredUser.user, registeredUser.token);
+                  Alert.alert('Registro', 'Registro completado correctamente');
+                }}
+              >
+                <Text style={styles.buttonText}>No, hacerlo después</Text>
               </TouchableOpacity>
             </View>
           </>

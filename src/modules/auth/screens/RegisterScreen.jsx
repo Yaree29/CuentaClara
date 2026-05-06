@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/register.styles';
+import registerService from '../services/registerService';
 
 const RegisterScreen = ({ navigation }) => {
 
@@ -27,22 +28,121 @@ const RegisterScreen = ({ navigation }) => {
     taxEnabled: false,
   });
 
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  const isValidEmail = (value) => {
+    const emailPattern = /^\S+@\S+\.\S+$/;
+    return emailPattern.test((value || '').trim());
+  };
+
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
 
   const handleNext = () => {
+    // validar antes de avanzar (ej: contraseña mínima)
+    if (step === 1) {
+      const normalizedEmail = formData.email.trim().toLowerCase();
+
+      if (!isValidEmail(normalizedEmail)) {
+        setEmailError('Ingresa un correo válido.');
+        setPasswordError('');
+        Alert.alert('Correo inválido', 'Ingresa un correo válido.');
+        return;
+      }
+
+      if (!formData.password || formData.password.length < 6) {
+        setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+        setEmailError('');
+        Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
+        return;
+      }
+
+      if (emailError) setEmailError('');
+      setPasswordError('');
+    }
+
     setStep(step + 1);
   };
 
   const handleRegister = () => {
-    console.log('DATA FINAL:', formData);
-    // Aquí luego conectas Firebase + creación de tenant
+    (async () => {
+      try {
+        setLoading(true);
+        // protección adicional antes de enviar
+        const normalizedEmail = formData.email.trim().toLowerCase();
+
+        if (!isValidEmail(normalizedEmail)) {
+          setEmailError('Ingresa un correo válido.');
+          setPasswordError('');
+          Alert.alert('Correo inválido', 'Ingresa un correo válido.');
+          return;
+        }
+
+        if (!formData.password || formData.password.length < 6) {
+          setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+          setEmailError('');
+          Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 6 caracteres.');
+          return;
+        }
+        const payload = {
+          ...formData,
+          email: normalizedEmail,
+          categoryId: formData.category || null,
+        };
+
+        const result = await registerService.register(payload);
+        // registro ok, el AuthProvider debería detectar la sesión y navegar
+        Alert.alert('Registro', 'Registro completado correctamente');
+      } catch (error) {
+        console.error('Error en registro:', error);
+        const message = error?.message || String(error);
+
+        if (/rate limit/i.test(message)) {
+          Alert.alert('Demasiados intentos', 'Hubo demasiados intentos de registro con este correo. Espera unos minutos e inténtalo otra vez.');
+          return;
+        }
+
+        if (/invalid/i.test(message) && /email/i.test(message)) {
+          setEmailError('Ingresa un correo válido.');
+          Alert.alert('Correo inválido', 'Ingresa un correo válido.');
+          return;
+        }
+
+        Alert.alert('Error', message);
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const cats = await registerService.getCategories();
+        if (mounted) setCategories(cats);
+      } catch (e) {
+        console.error('No se pudieron cargar categorias:', e);
+      }
+    })();
+    return () => (mounted = false);
+  }, []);
 
   return (
     <AuthLayout>
       <ScrollView contentContainerStyle={styles.container}>
+        {step > 1 && (
+          <TouchableOpacity
+            onPress={() => setStep(step - 1)}
+            style={{ alignSelf: 'flex-start', marginBottom: 12 }}
+          >
+            <Text style={styles.linkText}>Atrás</Text>
+          </TouchableOpacity>
+        )}
         
         {/* STEP 1 - REGISTRO UNIVERSAL */}
         {step === 1 && (
@@ -69,9 +169,19 @@ const RegisterScreen = ({ navigation }) => {
                 style={styles.input}
                 placeholder="Correo electrónico"
                 value={formData.email}
-                onChangeText={(val) => updateField('email', val)}
+                onChangeText={(val) => {
+                  updateField('email', val);
+                  if (emailError) setEmailError('');
+                }}
                 autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                autoComplete="email"
               />
+
+              {emailError ? (
+                <Text style={{ color: 'red', marginBottom: 8 }}>{emailError}</Text>
+              ) : null}
 
               <TextInput
                 style={styles.input}
@@ -80,6 +190,10 @@ const RegisterScreen = ({ navigation }) => {
                 value={formData.password}
                 onChangeText={(val) => updateField('password', val)}
               />
+
+              {passwordError ? (
+                <Text style={{ color: 'red', marginBottom: 8 }}>{passwordError}</Text>
+              ) : null}
 
               <TextInput
                 style={styles.input}
@@ -153,21 +267,15 @@ const RegisterScreen = ({ navigation }) => {
 
               <Text style={styles.subtitle}>Categoría del negocio</Text>
 
-              <TouchableOpacity onPress={() => updateField('category', 'alimentos')}>
-                <Text>Alimentos</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => updateField('category', 'servicios')}>
-                <Text>Servicios</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => updateField('category', 'comercio')}>
-                <Text>Comercio</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => updateField('category', 'restaurante')}>
-                <Text>Alimentos preparados</Text>
-              </TouchableOpacity>
+              {categories.length === 0 ? (
+                <Text>Cargando categorías...</Text>
+              ) : (
+                categories.map((c) => (
+                  <TouchableOpacity key={c.id} onPress={() => updateField('category', c.id)}>
+                    <Text style={{ paddingVertical: 6 }}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
 
               {/* EJEMPLO DINÁMICO */}
               {formData.category === 'alimentos' && (
@@ -183,8 +291,8 @@ const RegisterScreen = ({ navigation }) => {
                 </>
               )}
 
-              <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                <Text style={styles.buttonText}>Finalizar</Text>
+              <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+                <Text style={styles.buttonText}>{loading ? 'Registrando...' : 'Finalizar'}</Text>
               </TouchableOpacity>
             </View>
           </>

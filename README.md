@@ -107,6 +107,18 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_key
 ```
 
+Expo loads these values via `app.config.js` and exposes them through `Constants.expoConfig.extra`.
+
+## 🔌 Supabase Client
+
+Use the shared client from anywhere in the app:
+
+```js
+import { supabase, select, insert, update, remove, rpc } from './src/utils/supabaseClient';
+
+const products = await select('products', { order: { column: 'created_at', ascending: false } });
+```
+
 ## 🔐 Biometric Authentication (Fingerprint / Face ID)
 
 CuentaClara includes **secure biometric login** that allows users to start sessions with fingerprint or Face ID without entering credentials after an initial setup.

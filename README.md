@@ -112,6 +112,21 @@ SUPABASE_ANON_KEY=your_key
 *   **Backend**: Google Cloud Run
 *   **Database**: Supabase
 
+## 🔌 FastAPI Backend (new)
+The project now includes a Python FastAPI backend under `backend/` integrated with the existing SQL schema in `database/database.sql`.
+
+Quick start:
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Detailed docs: `backend/README.md`
+
 ## 🎯 Project Goals
 *   Simplify business management.
 *   Adapt to multiple user types.

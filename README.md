@@ -67,7 +67,7 @@ Handled internally to avoid external dependencies.
 | Database    | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase) |
 | Async Jobs  | FastAPI BackgroundTasks, APScheduler |
 | Integrations| ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase) WhatsApp API |
-| Deployment  | ![Render](https://img.shields.io/badge/Render-000000?logo=render) Expo, Supabase |
+| Deployment  | ![Render](https://img.shields.io/badge/Render-000000?logo=render) ![Expo](https://img.shields.io/badge/Expo-000000?logo=expo) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase) |
 
 ## Local Environment Setup
 

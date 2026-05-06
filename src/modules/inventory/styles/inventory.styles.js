@@ -74,4 +74,10 @@ export default StyleSheet.create({
     color: colors.emptyText,
     marginTop: 40,
   },
+  errorText: {
+    color: colors.textError,
+    marginHorizontal: 40,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
 });

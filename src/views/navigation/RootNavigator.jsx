@@ -2,11 +2,21 @@ import React from 'react';
 import useAuthStore from '../../store/useAuthStore';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import BiometricLockScreen from '../../modules/auth/screens/BiometricLockScreen';
+
 
 const RootNavigator = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { user, isBiometricVerified } = useAuthStore();
 
-  return isAuthenticated ? <MainNavigator /> : <AuthNavigator />;
+      if (!user) {
+      return <AuthNavigator />;
+    }
+
+    if (!isBiometricVerified) {
+      return <BiometricLockScreen />;
+    }
+
+    return <MainNavigator />;
 };
 
 export default RootNavigator;

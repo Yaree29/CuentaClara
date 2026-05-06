@@ -24,8 +24,19 @@ const useProfile = () => {
   }, [user]);
 
   const logout = async () => {
-    await authService.logout();
-    setLogout();
+    try {
+      // Cerrar sesión en Supabase (servidor)
+      await authService.logout();
+      // Limpiar cualquier sesión local persistida
+      if (authService.clearLocalSession) {
+        await authService.clearLocalSession();
+      }
+    } catch (error) {
+      console.error('Error cerrando sesión:', error);
+    } finally {
+      // Reset del estado local de la app
+      setLogout();
+    }
   };
 
   return {

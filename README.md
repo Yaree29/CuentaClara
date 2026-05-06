@@ -107,6 +107,72 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_key
 ```
 
+## 🔐 Biometric Authentication (Fingerprint / Face ID)
+
+CuentaClara includes **secure biometric login** that allows users to start sessions with fingerprint or Face ID without entering credentials after an initial setup.
+
+### Features
+- ✅ **Fast Login**: No email/password needed after linking biometrics
+- ✅ **Secure Storage**: Session tokens stored in Keychain (iOS) / Keystore (Android)
+- ✅ **Automatic Release**: Tokens only released after successful biometric authentication
+- ✅ **Fallback Support**: Graceful fallback to email/password if biometrics fail or unavailable
+- ✅ **24-hour Expiry**: Automatic session invalidation after 24 hours for security
+- ✅ **Device-Bound**: Biometric sessions tied to specific device (WHEN_UNLOCKED_THIS_DEVICE_ONLY)
+
+### How It Works
+
+**First Time Login**
+1. User logs in with email + password
+2. App asks "Link your fingerprint for quick login?"
+3. If yes, session token is encrypted and stored in Keychain/Keystore with biometric protection
+4. Next time, user only needs to touch the sensor
+
+**Subsequent Logins**
+1. User opens app → Biometric modal appears
+2. User authenticates with fingerprint / Face ID
+3. OS releases stored token → User is logged in instantly
+4. If biometrics fail → Fallback to email + password
+
+**Contingency Scenarios**
+- No biometrics available → Credential login is default
+- Sensor fails / cancelled → Modal offers fallback to credentials
+- Token expired (24h) → Re-login required
+- Biometric settings changed → Token invalidated, must re-link
+
+### Configuration
+
+Biometric auth uses `expo-secure-store` and `expo-local-authentication` (already in dependencies).
+
+For iOS, the `NSFaceIDUsageDescription` is configured in `app.json`:
+```json
+"ios": {
+  "infoPlist": {
+    "NSFaceIDUsageDescription": "Se utiliza Face ID o Touch ID para habilitar el inicio de sesión rápido seguro."
+  }
+}
+```
+
+### For Developers
+
+```javascript
+// Check if biometrics available
+const available = await isBiometricAvailable();
+
+// Check if already linked
+const enabled = await isBiometricEnabled();
+
+// Authenticate with biometrics
+const session = await loginWithBiometrics();
+
+// Link biometric session after normal login
+await linkBiometricSession(user, token);
+
+// Unlink biometrics
+await unlinkBiometricSession();
+```
+
+See [SECURITY_ARCHITECTURE.md](/home/cpinto/.copilot/session-state/90eea6cf-bc2b-4f5d-80c4-82dc394c3fb3/SECURITY_ARCHITECTURE.md) for detailed security architecture.
+
 ## 📦 Deployment
 *   **Frontend**: Expo / EAS
 *   **Backend**: Google Cloud Run

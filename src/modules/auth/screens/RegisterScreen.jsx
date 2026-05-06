@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Picker } from '@react-native-picker/picker';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/register.styles';
@@ -14,17 +15,16 @@ const RegisterScreen = ({ navigation }) => {
     password: '',
     phone: '',
     businessName: '',
-    profileType: '', // 'emprendedor' | 'empresa'
+    profileType: '', 
     category: '',
 
-    // Empresa
     nit: '',
     address: '',
 
-    // Emprendedor
     businessType: '',
     avgPrice: '',
     taxEnabled: false,
+    handlesTips: false,
   });
 
   const updateField = (field, value) => {
@@ -35,6 +35,100 @@ const RegisterScreen = ({ navigation }) => {
     setStep(step + 1);
   };
 
+  const handleBack = () => {
+  if (step > 1) {
+    setStep(step - 1);
+  } else {
+    navigation.goBack();
+  }
+};
+
+const renderCategoryFields = () => {
+  switch (formData.category) {
+    case 'alimentos':
+      return <AlimentosFields />;
+    case 'servicios':
+      return <ServiciosFields />;
+    case 'comercio':
+      return <ComercioFields />;
+    case 'restaurante':
+      return <RestauranteFields />;
+    case 'general':
+      return <GeneralFields />;
+    default:
+      return null;
+  }
+};
+
+const handleCategoryChange = (value) => {
+  setTimeout(() => {
+    updateField('category', value);
+  }, 0);
+};
+
+const AlimentosFields = () => (
+  <>
+    <TextInput placeholder="Unidad de medida (Kg/Lb)" style={styles.input} />
+    <TextInput placeholder="Merma estimada (%)" style={styles.input} />
+
+    <TouchableOpacity style={styles.button}  onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
+      <Text style={styles.buttonText}>
+        ¿Usas balanza digital con etiquetas? {formData.taxEnabled ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+  </>
+);
+
+const ServiciosFields = () => (
+  <>
+    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
+      <Text style={styles.buttonText}>
+        ¿Cobra por comisión de empleado? {formData.taxEnabled ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
+      <Text style={styles.buttonText}>
+        ¿Vendes productos físicos además del servicio? {formData.handlesTips ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+  </>
+);
+
+const ComercioFields = () => (
+  <>
+    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
+      <Text style={styles.buttonText}>
+        ¿Tu negocio usa códigos de barras? {formData.taxEnabled ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+  </>
+);
+
+const RestauranteFields = () => (
+  <>
+    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
+      <Text style={styles.buttonText}>
+        ¿Transformas materia prima? {formData.taxEnabled ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
+      <Text style={styles.buttonText}>
+        ¿Manejas propinas? {formData.handlesTips ? 'Sí' : 'No'}
+      </Text>
+    </TouchableOpacity>
+  </>
+);
+
+const GeneralFields = () => (
+  <>
+    <Text style={styles.subtitle}>
+      Inventario simple + reportes básicos activados
+    </Text>
+  </>
+);
+
   const handleRegister = () => {
     console.log('DATA FINAL:', formData);
     // Aquí luego conectas Firebase + creación de tenant
@@ -44,7 +138,6 @@ const RegisterScreen = ({ navigation }) => {
     <AuthLayout>
       <ScrollView contentContainerStyle={styles.container}>
         
-        {/* STEP 1 - REGISTRO UNIVERSAL */}
         {step === 1 && (
           <>
             <Text style={styles.title}>Crear Cuenta</Text>
@@ -102,9 +195,12 @@ const RegisterScreen = ({ navigation }) => {
           </>
         )}
 
-        {/* STEP 2 - SELECCIÓN DE PERFIL */}
         {step === 2 && (
           <>
+            <TouchableOpacity onPress={handleBack}>
+              <Text>← Volver</Text>
+            </TouchableOpacity>
+
             <Text style={styles.title}>Selecciona tu perfil</Text>
 
             <View style={styles.form}>
@@ -127,13 +223,17 @@ const RegisterScreen = ({ navigation }) => {
               >
                 <Text style={styles.buttonText}>Empresa PYME</Text>
               </TouchableOpacity>
+              
             </View>
           </>
         )}
 
-        {/* STEP 3 - FORM DINÁMICO */}
         {step === 3 && formData.profileType === 'empresa' && (
           <>
+          <TouchableOpacity onPress={handleBack}>
+            <Text>← Volver</Text>
+          </TouchableOpacity>
+
             <Text style={styles.title}>Configuración Empresa</Text>
 
             <View style={styles.form}>
@@ -153,35 +253,19 @@ const RegisterScreen = ({ navigation }) => {
 
               <Text style={styles.subtitle}>Categoría del negocio</Text>
 
-              <TouchableOpacity onPress={() => updateField('category', 'alimentos')}>
-                <Text>Alimentos</Text>
-              </TouchableOpacity>
+              <Picker
+                selectedValue={formData.category}
+                onValueChange={handleCategoryChange}
+              >
+                <Picker.Item label="Selecciona categoría" value="" />
+                <Picker.Item label="Alimentos" value="alimentos" />
+                <Picker.Item label="Servicios" value="servicios" />
+                <Picker.Item label="Comercio" value="comercio" />
+                <Picker.Item label="Alimentos preparados" value="restaurante" />
+                <Picker.Item label="General" value="general" />
+              </Picker>
 
-              <TouchableOpacity onPress={() => updateField('category', 'servicios')}>
-                <Text>Servicios</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => updateField('category', 'comercio')}>
-                <Text>Comercio</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => updateField('category', 'restaurante')}>
-                <Text>Alimentos preparados</Text>
-              </TouchableOpacity>
-
-              {/* EJEMPLO DINÁMICO */}
-              {formData.category === 'alimentos' && (
-                <>
-                  <TextInput style={styles.input} placeholder="Unidad de medida (Kg/Lb)" />
-                  <TextInput style={styles.input} placeholder="Merma estimada (%)" />
-                </>
-              )}
-
-              {formData.category === 'servicios' && (
-                <>
-                  <TextInput style={styles.input} placeholder="Duración promedio (min)" />
-                </>
-              )}
+              {renderCategoryFields()}
 
               <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>Finalizar</Text>
@@ -190,9 +274,12 @@ const RegisterScreen = ({ navigation }) => {
           </>
         )}
 
-        {/* STEP 3 - EMPRENDEDOR */}
         {step === 3 && formData.profileType === 'emprendedor' && (
           <>
+          <TouchableOpacity onPress={handleBack}>
+            <Text>← Volver</Text>
+          </TouchableOpacity>
+
             <Text style={styles.title}>Configuración rápida</Text>
 
             <View style={styles.form}>

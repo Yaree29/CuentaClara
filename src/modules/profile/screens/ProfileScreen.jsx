@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import MainLayout from '../../../views/layouts/MainLayout';
-import { useProfile } from '../hooks/useProfile';
+import  useProfile  from '../hooks/useProfile';
 import styles from '../styles/profile.styles';
 
 const ProfileScreen = () => {

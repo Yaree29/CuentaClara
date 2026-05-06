@@ -11,6 +11,13 @@ export default StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textPrimary,
   },
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    marginBottom: 20,
+    alignSelf: 'center', 
+  },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,

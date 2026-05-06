@@ -13,6 +13,12 @@ const BillingScreen = () => {
     setItems([...items, { id: Date.now(), desc: '', price: '' }]);
   };
 
+  const removeItem = () => {
+    if (items.length === 1) return;
+
+    setItems(items.slice(0, -1));
+  };
+
   const handleGenerate = async () => {
     if (!customer || items.some(i => !i.desc || !i.price)) {
       Alert.alert("Campos incompletos", "Por favor llena los datos del cliente y al menos un producto.");
@@ -73,6 +79,17 @@ const BillingScreen = () => {
                   setItems(newItems);
                 }}
               />
+
+              <TouchableOpacity 
+                onPress={removeItem}
+                disabled={items.length === 1}
+              >
+                <Text style={[
+                  styles.addText,
+                  items.length === 1 && { opacity: 0.5 } 
+                  ]}>✕</Text>
+              </TouchableOpacity>
+
             </View>
           ))}
         </View>

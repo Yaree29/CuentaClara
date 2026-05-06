@@ -36,6 +36,7 @@ export default StyleSheet.create({
   },
   addText: {
     paddingRight: 10,
+    textAlign: 'center',
     color: '#2563eb',
     fontWeight: 'bold',
   },

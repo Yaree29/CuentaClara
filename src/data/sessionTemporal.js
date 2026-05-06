@@ -14,7 +14,6 @@ export const sessionTemporal = {
             'profile',
             'reports',
             'billing',
-            'credit',
             'settings'
         ]
     },

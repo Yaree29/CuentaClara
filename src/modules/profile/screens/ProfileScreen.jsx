@@ -42,6 +42,12 @@ const ProfileScreen = () => {
       </View>
 
       <TouchableOpacity 
+        style={styles.succesButton}
+      >
+        <Text style={styles.succesText}>Desactivar Huella</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
         style={styles.logoutButton}
         onPress={logout}
       >

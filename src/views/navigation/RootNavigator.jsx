@@ -3,6 +3,7 @@ import useAuthStore from '../../store/useAuthStore';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import BiometricLockScreen from '../../modules/auth/screens/BiometricLockScreen';
+import MainStackNavigator from './MainStackNavigator';
 
 
 const RootNavigator = () => {
@@ -16,7 +17,7 @@ const RootNavigator = () => {
       return <BiometricLockScreen />;
     }
 
-    return <MainNavigator />;
+    return <MainStackNavigator />;
 };
 
 export default RootNavigator;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import MainLayout from '../../../views/layouts/MainLayout';
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
@@ -7,6 +7,7 @@ import styles from '../styles/sales.styles';
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(0);
   const [total, setTotal] = useState(0);
+  const [description, setDescription] = useState(''); // 🔥 nuevo estado
   const { processSale, loading } = useSales();
 
   const handleQuickAdd = (price) => {
@@ -18,10 +19,11 @@ const SalesScreen = () => {
     if (cartCount === 0) return;
     
     try {
-      await processSale([], total);
+      await processSale([], total, description); // 🔥 enviar descripción
       Alert.alert("Éxito", "Venta registrada correctamente");
       setCartCount(0);
       setTotal(0);
+      setDescription(''); // 🔥 limpiar
     } catch (error) {
       Alert.alert("Error", "No se pudo registrar la venta");
     }
@@ -29,7 +31,7 @@ const SalesScreen = () => {
 
   return (
     <MainLayout>
-      <Text style={styles.title}>Nueva Venta</Text>
+      <Text style={styles.title}>Registro de Ventas</Text>
       
       <View style={styles.display}>
         <Text style={styles.displayLabel}>Total a cobrar:</Text>
@@ -49,6 +51,13 @@ const SalesScreen = () => {
         ))}
       </View>
 
+      <TextInput
+        style={localStyles.input}
+        placeholder="Descripción (opcional)"
+        value={description}
+        onChangeText={setDescription}
+      />
+      
       <TouchableOpacity 
         style={[styles.checkoutBtn, (cartCount === 0 || loading) && styles.disabledBtn]}
         onPress={handleCheckout}
@@ -61,7 +70,11 @@ const SalesScreen = () => {
 
       <TouchableOpacity 
         style={styles.clearBtn}
-        onPress={() => {setCartCount(0); setTotal(0);}}
+        onPress={() => {
+          setCartCount(0);
+          setTotal(0);
+          setDescription(''); // 🔥 limpiar también
+        }}
       >
         <Text style={styles.clearBtnText}>Limpiar</Text>
       </TouchableOpacity>
@@ -70,3 +83,14 @@ const SalesScreen = () => {
 };
 
 export default SalesScreen;
+
+const localStyles = StyleSheet.create({
+  input: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginVertical: 10,
+  },
+});

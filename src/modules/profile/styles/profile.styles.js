@@ -8,6 +8,8 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   title: {
+    textAlign: 'center',
+    padding: 30,
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.textPrimary,
@@ -82,6 +84,19 @@ export default StyleSheet.create({
   },
   logoutText: {
     color: colors.logoutText,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+    succesButton: {
+    marginTop: 'auto',
+    backgroundColor: colors.buttonOutlineBorder,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+   succesText: {
+    color: colors.addText,
     fontWeight: 'bold',
     fontSize: 16,
   },

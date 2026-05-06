@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/views/providers/AuthProvider';
 import { UserTypeProvider } from './src/views/providers/UserTypeProvider';
 import RootNavigator from './src/views/navigation/RootNavigator';
+import GlobalFAB from './src/components/ui/goblalFAB';
 
 export default function App() {
     return ( 
@@ -13,6 +14,7 @@ export default function App() {
                 <AuthProvider>
                     <UserTypeProvider>
                         <RootNavigator />
+                        <GlobalFAB />
                     </UserTypeProvider>
                 </AuthProvider>
             </NavigationContainer>

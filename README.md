@@ -1,205 +1,127 @@
-# 📱 CuentaClara
-A mobile application focused on managing small and medium-sized businesses, enabling simple and scalable control over inventory, billing, metrics, and daily operations.
+# CuentaClara
 
-## 🚀 Description
-CuentaClara is built on a scalable, modular, **multi-tenant architecture**, designed to dynamically adapt to different user types (entrepreneurs, SMEs, etc.).
-The application automatically configures itself based on the business type, displaying only the necessary modules for each specific user.
+## Description
+CuentaClara is a multi-tenant ERP mobile application designed to manage the daily operations of small and medium-sized enterprises (PYMES) and independent entrepreneurs. The system adapts its interface dynamically, offering a simple mode for quick transactions and an advanced mode for structured management of inventory, sales, and billing.
 
-## 🧠 System Architecture
-The system is based on a **Hybrid Modular Monolith** approach, which provides:
-*   Rapid development within a single repository.
-*   Reduced complexity compared to microservices.
-*   High scalability through independent modules.
+## System Architecture
+The project is built as a centralized modular monolith, prioritizing a scalable Minimum Viable Product (MVP) without the overhead of microservices. 
 
-### 🔹 Main Components
-**Frontend (React Native + Expo)**
-*   Dynamic rendering based on configuration ("Blueprint").
-*   User context management (tenant-based).
-*   Authentication integration (Firebase / Supabase).
+### Frontend Layer
+Built with React Native and Expo. Handles user interaction, state management, and API communication using JWT authentication.
 
-**Backend (Node.js + FastAPI)**
-*   Main Gateway with business logic.
-*   JSON-based rules engine.
-*   Specialized workers for heavy processes.
+- Simple Mode: Optimized for fast operations (sales, quick input)
+- Advanced Mode: Designed for structured management (reports, dashboards)
 
-**Database (PostgreSQL + Supabase)**
-*   Multi-tenant architecture (`tenant_id`).
-*   JSONB usage for dynamic customization.
+---
 
-## 🔄 Application Flow
-1.  User logs in (Auth).
-2.  App requests the profile from the backend.
-3.  Backend evaluates the business configuration.
-4.  App adapts dynamically, displaying only enabled modules.
+### Backend Layer
+A centralized FastAPI application that manages all business logic.
 
-## 🛠 Tech Stack
-*   **Frontend:** React Native, Expo, JavaScript, Tailwind CSS (NativeWind).
-*   **Backend:** Node.js, FastAPI (Python).
-*   **Infrastructure:** Supabase (DB + Auth + Storage), PostgreSQL, Google Cloud Run (Deployment).
+- API Gateway / Middleware:
+  - Validates JWT via Supabase Auth
+  - Extracts `business_id`
+- Internal Modules (logical separation only):
+  - Inventory
+  - Sales & Finance
+  - Staff Management
 
-## 📁 Project Structure
-```text
-src/
-│
-├── app/
-│   ├── navigation/      # Route management
-│   ├── layouts/         # Reusable layouts
-│   └── providers/       # Global state (auth, user)
-│
-├── modules/             # Core architecture
-│   ├── auth/
-│   ├── dashboard/
-│   ├── inventory/
-│   └── profile/
-│
-├── components/
-│   ├── ui/              # Reusable UI components
-│   └── feedback/        # Alerts, loaders, etc.
-│
-├── store/               # Global state (Zustand or similar)
-├── utils/               # Helper functions
-├── constants/           # Constant values
-└── styles/              # Global styles
-```
+---
 
-### 🧩 Modular Architecture (Frontend)
-Each module follows this internal structure:
-```text
-module/
- ├── screens/     # Screens
- ├── components/  # Internal components
- ├── hooks/       # Reusable logic
- └── services/    # Backend connection
-```
-This ensures **Separation of Concerns**, **Domain-based Scalability**, and **Simple Maintenance**.
+### Data Layer & Security
+Supabase (PostgreSQL) is used for data persistence and authentication.
 
-## 🔐 Navigation
-The app separates flows into:
-*   **AuthNavigator**: For unauthenticated users.
-*   **MainNavigator**: For authenticated users.
-This facilitates route protection, role management, and future scalability.
+- Multi-tenant isolation via Row Level Security (RLS)
+- Core tables:
+  - businesses
+  - users
+  - products
+  - inventory
+  - invoices
+  - audit_logs
 
-## 🧠 Global State
-Managed through providers:
-*   `AuthProvider`: User session.
-*   `UserTypeProvider`: Business type logic.
+---
 
-## ⚙️ Installation
+### Asynchronous Processing
+Handled internally to avoid external dependencies.
+
+- BackgroundTasks (FastAPI):
+  - Report generation (PDF/PSF)
+  - Message dispatching
+- APScheduler:
+  - Periodic jobs (financial calculations, cleanup)
+
+---
+
+### External Integrations
+- Firebase Cloud Messaging: Push notifications
+- WhatsApp API: Sending receipts, alerts, and business messages
+
+---
+
+## Technologies Used
+
+| Layer        | Technology |
+|-------------|-----------|
+| Frontend    | ![React Native](https://img.shields.io/badge/React%20Native-20232A?logo=react) ![Expo](https://img.shields.io/badge/Expo-000000?logo=expo) |
+| Backend     | ![Python](https://img.shields.io/badge/Python-3776AB?logo=python) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi) |
+| Database    | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase) |
+| Async Jobs  | FastAPI BackgroundTasks, APScheduler |
+| Integrations| ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase) WhatsApp API |
+| Deployment  | ![Render](https://img.shields.io/badge/Render-000000?logo=render) Expo, Supabase |
+
+## Local Environment Setup
+
+### Prerequisites
+* Node.js and npm
+* Python 3.9+
+* Expo CLI
+
+### Installation
+1. Clone the repository:
 ```bash
-# Clone the repository
-git clone https://github.com/youruser/cuentaclara.git
-
-# Enter the project directory
+git clone https://github.com/youruser/CuentaClara.git
 cd cuentaclara
+```
 
-# Install dependencies
+2. Frontend Setup:
+```bash
+cd frontend
 npm install
+```
 
-# Start the project
+3. Backend Setup:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+pip install -r requirements.txt
+```
+
+### Configuration
+Create a `.env` file in the frontend directory:
+```env
+EXPO_PUBLIC_API_URL=your_local_or_public_api_url
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Create a `.env` file in the backend directory:
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+### Running the Application
+Start the backend server:
+```bash
+cd backend
+uvicorn main:app --reload
+```
+Start the mobile application:
+```bash
+cd frontend
 npx expo start
 ```
 
-## 🔐 Environment Variables
-Create a `.env` file:
-```env
-API_URL=your_api_url
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_key
-```
-
-Expo loads these values via `app.config.js` and exposes them through `Constants.expoConfig.extra`.
-
-## 🔌 Supabase Client
-
-Use the shared client from anywhere in the app:
-
-```js
-import { supabase, select, insert, update, remove, rpc } from './src/utils/supabaseClient';
-
-const products = await select('products', { order: { column: 'created_at', ascending: false } });
-```
-
-## 🔐 Biometric Authentication (Fingerprint / Face ID)
-
-CuentaClara includes **secure biometric login** that allows users to start sessions with fingerprint or Face ID without entering credentials after an initial setup.
-
-### Features
-- ✅ **Fast Login**: No email/password needed after linking biometrics
-- ✅ **Secure Storage**: Session tokens stored in Keychain (iOS) / Keystore (Android)
-- ✅ **Automatic Release**: Tokens only released after successful biometric authentication
-- ✅ **Fallback Support**: Graceful fallback to email/password if biometrics fail or unavailable
-- ✅ **24-hour Expiry**: Automatic session invalidation after 24 hours for security
-- ✅ **Device-Bound**: Biometric sessions tied to specific device (WHEN_UNLOCKED_THIS_DEVICE_ONLY)
-
-### How It Works
-
-**First Time Login**
-1. User logs in with email + password
-2. App asks "Link your fingerprint for quick login?"
-3. If yes, session token is encrypted and stored in Keychain/Keystore with biometric protection
-4. Next time, user only needs to touch the sensor
-
-**Subsequent Logins**
-1. User opens app → Biometric modal appears
-2. User authenticates with fingerprint / Face ID
-3. OS releases stored token → User is logged in instantly
-4. If biometrics fail → Fallback to email + password
-
-**Contingency Scenarios**
-- No biometrics available → Credential login is default
-- Sensor fails / cancelled → Modal offers fallback to credentials
-- Token expired (24h) → Re-login required
-- Biometric settings changed → Token invalidated, must re-link
-
-### Configuration
-
-Biometric auth uses `expo-secure-store` and `expo-local-authentication` (already in dependencies).
-
-For iOS, the `NSFaceIDUsageDescription` is configured in `app.json`:
-```json
-"ios": {
-  "infoPlist": {
-    "NSFaceIDUsageDescription": "Se utiliza Face ID o Touch ID para habilitar el inicio de sesión rápido seguro."
-  }
-}
-```
-
-### For Developers
-
-```javascript
-// Check if biometrics available
-const available = await isBiometricAvailable();
-
-// Check if already linked
-const enabled = await isBiometricEnabled();
-
-// Authenticate with biometrics
-const session = await loginWithBiometrics();
-
-// Link biometric session after normal login
-await linkBiometricSession(user, token);
-
-// Unlink biometrics
-await unlinkBiometricSession();
-```
-
-See [SECURITY_ARCHITECTURE.md](/home/cpinto/.copilot/session-state/90eea6cf-bc2b-4f5d-80c4-82dc394c3fb3/SECURITY_ARCHITECTURE.md) for detailed security architecture.
-
-## 📦 Deployment
-*   **Frontend**: Expo / EAS
-*   **Backend**: Google Cloud Run
-*   **Database**: Supabase
-
-## 🎯 Project Goals
-*   Simplify business management.
-*   Adapt to multiple user types.
-*   Scale without rewriting the architecture.
-
-## 🤝 Contributing
-1. Fork the repository.
-2. Create a new branch.
-3. Commit your changes.
-4. Open a Pull Request.
-
-## 📄 License
-MIT
+## Current State
+The project is currently in the MVP development phase. The database schema and core FastAPI routing are defined, the multi-tenant RLS policies are structured, and the deployment pipelines across Render, Supabase, and Expo are being established.

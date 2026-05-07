@@ -40,6 +40,40 @@ export default StyleSheet.create({
     color: '#2563eb',
     fontWeight: 'bold',
   },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 13,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  inventoryList: {
+    gap: 8,
+  },
+  inventoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+  },
+  inventoryName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  inventoryMeta: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
   itemRow: {
     flexDirection: 'row',
     marginBottom: 10,

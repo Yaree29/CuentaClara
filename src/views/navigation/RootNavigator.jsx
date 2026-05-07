@@ -1,21 +1,26 @@
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import useAuthStore from '../../store/useAuthStore';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import BiometricLockScreen from '../../modules/auth/screens/BiometricLockScreen';
+
 import MainStackNavigator from './MainStackNavigator';
 
 
 const RootNavigator = () => {
-  const { user, isBiometricVerified } = useAuthStore();
+  const { user, isAuthenticated, isInitializing } = useAuthStore();
 
-      if (!user) {
-      return <AuthNavigator />;
-    }
+  if (isInitializing) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
 
-    if (!isBiometricVerified) {
-      return <BiometricLockScreen />;
-    }
+  if (!isAuthenticated && !user) {
+    return <AuthNavigator />;
+  }
 
     return <MainStackNavigator />;
 };

@@ -27,6 +27,35 @@ export default StyleSheet.create({
     borderRadius: 10,
     fontSize: 16,
   },
+  inputError: {
+    borderColor: colors.textError,
+    borderWidth: 2,
+  },
+  errorMessage: {
+    color: colors.textError,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  helperText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  strongPassword: {
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+  },
+  forgotPasswordText: {
+    color: colors.textLink,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   button: {
     backgroundColor: colors.primary,
     padding: 16,
@@ -41,6 +70,82 @@ export default StyleSheet.create({
     color: colors.textButton,
     fontSize: 16,
     fontWeight: '600',
+  },
+  biometricButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  biometricButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalActions: {
+    gap: 12,
+  },
+  modalPrimaryButton: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalPrimaryButtonText: {
+    color: colors.textButton,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSecondaryButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSecondaryButtonText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonDisabled: {
+    backgroundColor: colors.disabledButton,
+  },
+  modalErrorText: {
+    color: colors.textError,
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   errorText: {
     color: colors.textError,

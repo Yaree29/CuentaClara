@@ -27,25 +27,45 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 def register_business(data):
+    """Registrar un nuevo negocio con usuario propietario
+    
+    Validaciones:
+    - Email único en la plataforma
+    - Contraseña cumple requisitos de seguridad
+    - Nombre del negocio no vacío
+    - Datos de usuario válidos
+    """
+    # Normalizar email
+    email = data.email.lower().strip()
+    
     # 1. Verificar que el email no exista
     existing = supabase_admin.table("users")\
         .select("id")\
-        .eq("email", data.email)\
+        .eq("email", email)\
         .execute()
 
     if existing.data:
-        raise ValueError("El email ya está registrado")
+        raise ValueError("El email ya está registrado en el sistema")
 
-    # 2. Crear el negocio
-    business = supabase_admin.table("businesses").insert({
-        "name": data.business_name,
-        "industry_template_id": data.industry_template_id,
-        "plan": "free"
-    }).execute()
+    # 2. Hash de contraseña con validación
+    try:
+        password_hash = hash_password(data.password)
+    except ValueError as e:
+        raise ValueError(f"Error en contraseña: {str(e)}")
+
+    # 3. Crear el negocio
+    try:
+        business = supabase_admin.table("businesses").insert({
+            "name": data.business_name.strip(),
+            "industry_template_id": data.industry_template_id,
+            "plan": "free"
+        }).execute()
+    except Exception as e:
+        raise ValueError(f"No se pudo crear el negocio: {str(e)}")
 
     business_id = business.data[0]["id"]
 
-    # 3. Crear configuración por defecto del negocio
+    # 4. Crear configuración por defecto del negocio
     supabase_admin.table("business_configs").insert({
         "business_id": business_id,
         "currency": "USD",
@@ -54,7 +74,7 @@ def register_business(data):
         "language": "es"
     }).execute()
 
-    # 4. Activar features según el template
+    # 5. Activar features según el template
     template = supabase_admin.table("industry_templates")\
         .select("default_modules")\
         .eq("id", data.industry_template_id)\
@@ -70,19 +90,29 @@ def register_business(data):
                 "activated_at": datetime.utcnow().isoformat()
             }).execute()
 
-    # 5. Crear el usuario dueño
-    user = supabase_admin.table("users").insert({
+    # 6. Crear el usuario dueño
+    user_data = {
         "business_id": business_id,
-        "name": data.name,
-        "email": data.email,
-        "password_hash": hash_password(data.password),
+        "name": data.name.strip(),
+        "email": email,
+        "password_hash": password_hash,
         "role": "owner",
-        "phone": data.phone
-    }).execute()
+        "phone": data.phone if data.phone else None
+    }
+    
+    if data.auth_user_id:
+        user_data["id"] = data.auth_user_id
+
+    try:
+        user = supabase_admin.table("users").insert(user_data).execute()
+    except Exception as e:
+        # Rollback del negocio si falla la creación del usuario
+        supabase_admin.table("businesses").delete().eq("id", business_id).execute()
+        raise ValueError(f"No se pudo crear el usuario: {str(e)}")
 
     user_id = user.data[0]["id"]
 
-    # 6. Crear suscripción gratuita
+    # 7. Crear suscripción gratuita
     supabase_admin.table("subscriptions").insert({
         "business_id": business_id,
         "plan": "free",
@@ -90,7 +120,7 @@ def register_business(data):
         "starts_at": datetime.utcnow().isoformat()
     }).execute()
 
-    # 7. Generar token de acceso
+    # 8. Generar token de acceso
     token = create_access_token({
         "sub": user_id,
         "business_id": business_id,
@@ -100,6 +130,16 @@ def register_business(data):
     return {"access_token": token, "user_id": user_id, "business_id": business_id, "role": "owner"}
 
 def login_user(email: str, password: str):
+    """Autenticar usuario con email y contraseña
+    
+    Validaciones:
+    - Email existe en el sistema
+    - Contraseña correcta
+    - Registro de auditoría
+    """
+    # Normalizar email
+    email = email.lower().strip()
+    
     # 1. Buscar usuario
     result = supabase_admin.table("users")\
         .select("id, business_id, role, password_hash, name")\
@@ -119,9 +159,10 @@ def login_user(email: str, password: str):
     supabase_admin.table("audit_logs").insert({
         "business_id": user["business_id"],
         "user_id": user["id"],
-        "action": "create",
+        "action": "login",
         "table_name": "sessions",
-        "record_id": user["id"]
+        "record_id": user["id"],
+        "created_at": datetime.utcnow().isoformat()
     }).execute()
 
     # 4. Generar token

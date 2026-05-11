@@ -80,46 +80,31 @@ Handled internally to avoid external dependencies.
 1. Clone the repository:
 ```bash
 git clone https://github.com/youruser/CuentaClara.git
-cd cuentaclara
 ```
 
 2. Frontend Setup:
 ```bash
-cd frontend
 npm install
 ```
 
 3. Backend Setup:
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+python3.9 -m venv venv
+source venv/bin/activate  #On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
 ```
 
 ### Configuration
-Create a `.env` file in the frontend directory:
+Create a `.env` file in the root of the project (never upload it to the repo): 
 ```env
 EXPO_PUBLIC_API_URL=your_local_or_public_api_url
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-Create a `.env` file in the backend directory:
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
-
 ### Running the Application
-Start the backend server:
-```bash
-cd backend
-uvicorn main:app --reload
-```
 Start the mobile application:
 ```bash
-cd frontend
 npx expo start
 ```
 

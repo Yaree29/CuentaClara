@@ -80,48 +80,74 @@ Handled internally to avoid external dependencies.
 1. Clone the repository:
 ```bash
 git clone https://github.com/youruser/CuentaClara.git
-cd cuentaclara
+cd CuentaClara
 ```
 
-2. Frontend Setup:
+2. Install frontend dependencies:
 ```bash
-cd frontend
 npm install
 ```
 
-3. Backend Setup:
+## Environment Configuration
+
+Create a `.env` file in the root of the project using the provided example file:
+
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-pip install -r requirements.txt
+cp .env.example .env
 ```
 
-### Configuration
-Create a `.env` file in the frontend directory:
-```env
-EXPO_PUBLIC_API_URL=your_local_or_public_api_url
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+If you are using Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-Create a `.env` file in the backend directory:
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+---
+
+### Configure environment variables
+
+Update the values inside `.env` with your own project credentials.
+
+> [!IMPORTANT]
+> Never upload the `.env` file to the repository.
+
+> [!NOTE]
+> Both `SUPABASE_*` and `EXPO_PUBLIC_SUPABASE_*`
+> variables are currently required due to project configuration compatibility.
+
+
+### Recommended Python version
+This project expects Python 3.9 installed locally for compatibility with the deployed backend services and development tooling.
+
+Verify your version:
+```bash
+python --version
 ```
 
 ### Running the Application
-Start the backend server:
-```bash
-cd backend
-uvicorn main:app --reload
-```
 Start the mobile application:
 ```bash
-cd frontend
-npx expo start
+npx expo start -c
 ```
+The -c flag clears the Expo cache and helps avoid environment variable issues.
+
+
+## Notes
+> [!NOTE]
+> The backend API is already deployed on Render.
+
+> [!NOTE]
+> No local backend setup is required to run the mobile application.
+
+> [!NOTE]
+> Supabase is used for authentication and database services.
+
+> [!NOTE]
+> Expo Go can be used to test the application on a physical device.
+
+> [!IMPORTANT]
+> Make sure your mobile device and computer are connected to the same network when using Expo Go.
+
 
 ## Current State
 The project is currently in the MVP development phase. The database schema and core FastAPI routing are defined, the multi-tenant RLS policies are structured, and the deployment pipelines across Render, Supabase, and Expo are being established.

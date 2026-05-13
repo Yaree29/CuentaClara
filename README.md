@@ -83,22 +83,38 @@ git clone https://github.com/youruser/CuentaClara.git
 cd CuentaClara
 ```
 
-2. Frontend Setup:
+2. Install frontend dependencies:
 ```bash
 npm install
 ```
 
-### Configuration
-Create a `.env` file in the root of the project (never upload it to the repo): 
-```env
-API_URL=https://your-backend-url.onrender.com
+## Environment Configuration
 
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key
+Create a `.env` file in the root of the project using the provided example file:
 
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```bash
+cp .env.example .env
 ```
+
+If you are using Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+---
+
+### Configure environment variables
+
+Update the values inside `.env` with your own project credentials.
+
+> [!IMPORTANT]
+> Never upload the `.env` file to the repository.
+
+> [!NOTE]
+> Both `SUPABASE_*` and `EXPO_PUBLIC_SUPABASE_*`
+> variables are currently required due to project configuration compatibility.
+
 
 ### Recommended Python version
 This project expects Python 3.9 installed locally for compatibility with the deployed backend services and development tooling.

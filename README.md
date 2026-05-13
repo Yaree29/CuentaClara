@@ -80,6 +80,7 @@ Handled internally to avoid external dependencies.
 1. Clone the repository:
 ```bash
 git clone https://github.com/youruser/CuentaClara.git
+cd CuentaClara
 ```
 
 2. Frontend Setup:
@@ -87,26 +88,50 @@ git clone https://github.com/youruser/CuentaClara.git
 npm install
 ```
 
-3. Backend Setup:
-```bash
-python3.9 -m venv venv
-source venv/bin/activate  #On Windows use `venv\Scripts\activate`
-pip install -r requirements.txt
-```
-
 ### Configuration
 Create a `.env` file in the root of the project (never upload it to the repo): 
 ```env
-EXPO_PUBLIC_API_URL=your_local_or_public_api_url
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+API_URL=https://your-backend-url.onrender.com
+
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Recommended Python version
+This project expects Python 3.9 installed locally for compatibility with the deployed backend services and development tooling.
+
+Verify your version:
+```bash
+python --version
 ```
 
 ### Running the Application
 Start the mobile application:
 ```bash
-npx expo start
+npx expo start -c
 ```
+The -c flag clears the Expo cache and helps avoid environment variable issues.
+
+
+## Notes
+> [!NOTE]
+> The backend API is already deployed on Render.
+
+> [!NOTE]
+> No local backend setup is required to run the mobile application.
+
+> [!NOTE]
+> Supabase is used for authentication and database services.
+
+> [!NOTE]
+> Expo Go can be used to test the application on a physical device.
+
+> [!IMPORTANT]
+> Make sure your mobile device and computer are connected to the same network when using Expo Go.
+
 
 ## Current State
 The project is currently in the MVP development phase. The database schema and core FastAPI routing are defined, the multi-tenant RLS policies are structured, and the deployment pipelines across Render, Supabase, and Expo are being established.

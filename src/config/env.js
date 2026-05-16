@@ -5,9 +5,7 @@ const extra = expoConfig.extra ?? {};
 
 export const API_URL =
   process.env.API_URL ??
-  process.env.EXPO_PUBLIC_API_URL ??
   extra.API_URL ??
-  extra.EXPO_PUBLIC_API_URL ??
   '';
 export const SUPABASE_URL = process.env.SUPABASE_URL ?? extra.SUPABASE_URL ?? '';
 export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? extra.SUPABASE_ANON_KEY ?? '';

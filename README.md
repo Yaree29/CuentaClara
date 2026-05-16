@@ -112,8 +112,7 @@ Update the values inside `.env` with your own project credentials.
 > Never upload the `.env` file to the repository.
 
 > [!NOTE]
-> Both `SUPABASE_*` and `EXPO_PUBLIC_SUPABASE_*`
-> variables are currently required due to project configuration compatibility.
+> Only `SUPABASE_*` and `API_URL` variables are required.
 
 
 ### Recommended Python version

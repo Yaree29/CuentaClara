@@ -73,7 +73,7 @@ Handled internally to avoid external dependencies.
 
 ### Prerequisites
 * Node.js and npm
-* Python 3.9+
+* Python 3.9 - 3.12
 * Expo CLI
 
 ### Installation
@@ -116,7 +116,7 @@ Update the values inside `.env` with your own project credentials.
 
 
 ### Recommended Python version
-This project expects Python 3.9 installed locally for compatibility with the deployed backend services and development tooling.
+This project expects Python 3.11 or 3.12 installed locally for compatibility with the deployed backend services and development tooling.
 
 Verify your version:
 ```bash

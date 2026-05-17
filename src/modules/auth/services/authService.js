@@ -1,103 +1,30 @@
-import { supabase } from '../../../services/supabaseClient';
+// Sin imports de Supabase — toda la autenticación pasa por la API de FastAPI.
+// El JWT de Supabase se guarda en AsyncStorage en lugar de dejar que el cliente
+// de Supabase maneje la sesión, porque ya no hay cliente de Supabase en auth.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../../config/env';
 
-const BASE_MODULES = ['dashboard', 'profile'];
+const TOKEN_KEY = 'cc_access_token';
 
-const normalizeModules = (features = []) => {
-  const enabledModules = new Set(BASE_MODULES);
+const baseUrl = () => API_URL || 'https://cuentaclara-api.onrender.com';
 
-  features
-    .filter((feature) => feature.is_active)
-    .forEach((feature) => {
-      const moduleName = feature.module;
+const apiRequest = async (path, options = {}, token = null) => {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      if (moduleName === 'inventory') enabledModules.add('inventory');
-      if (moduleName === 'sales') enabledModules.add('sales');
-      if (moduleName === 'credit') enabledModules.add('credit');
-      if (moduleName === 'billing') enabledModules.add('billing');
-    });
-
-  return Array.from(enabledModules);
-};
-
-const getUserContext = async (session) => {
-  const authUser = session?.user;
-
-  if (!authUser) {
-    return null;
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('id, business_id, name, email, role, phone, created_at')
-    .eq('email', authUser.email)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new Error(
-      `No se pudo cargar el perfil del usuario (${authUser.id}, ${authUser.email}). Supabase: ${profileError.code || 'sin_codigo'} - ${profileError.message}`
-    );
-  }
-
-  if (!profile) {
-    throw new Error('El perfil de usuario no existe. Es probable que el registro haya quedado a medias.');
-  }
-
-  const { data: business, error: businessError } = await supabase
-    .from('businesses')
-    .select('id, name, plan, ui_mode, phone, address, created_at')
-    .eq('id', profile.business_id)
-    .single();
-
-  if (businessError) {
-    throw new Error('No se pudo cargar el negocio asociado al usuario.');
-  }
-
-  const { data: features, error: featuresError } = await supabase
-    .from('features')
-    .select('id, module, is_active')
-    .eq('business_id', profile.business_id)
-    .eq('is_active', true);
-
-  if (featuresError) {
-    throw new Error('No se pudieron cargar los modulos activos del negocio.');
-  }
-
-  return {
-    id: profile.id,
-    email: profile.email || authUser.email,
-    name: profile.name,
-    role: profile.role,
-    phone: profile.phone,
-    business_id: profile.business_id,
-    created_at: profile.created_at,
-    business,
-    features: features || [],
-    enabled_modules: normalizeModules(features || []),
-    userType: business?.ui_mode === 'advanced' ? 'pyme' : 'informal',
-  };
-};
-
-const loginWithBackend = async (email, password) => {
-  const apiUrl = API_URL || 'https://cuentaclara-api.onrender.com';
-  const response = await fetch(`${apiUrl}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  const response = await fetch(`${baseUrl()}${path}`, { ...options, headers });
 
   if (!response.ok) {
-    let errorDetail = 'Error al iniciar sesión en el backend';
-    const errorText = await response.text();
+    const text = await response.text();
     try {
-      const errorData = JSON.parse(errorText);
-      errorDetail = errorData.detail || errorDetail;
+      const data = JSON.parse(text);
+      throw new Error(data.detail || 'Error del servidor');
     } catch (e) {
-      errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
+      if (e.message !== 'Error del servidor' && !e.message.startsWith('Error del servidor:')) {
+        throw new Error(`Error del servidor: ${text.substring(0, 150)}`);
+      }
+      throw e;
     }
-    throw new Error(errorDetail);
   }
 
   return response.json();
@@ -105,90 +32,70 @@ const loginWithBackend = async (email, password) => {
 
 const authService = {
   login: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const data = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
 
-    if (error) {
-      throw error;
-    }
+    await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
 
-    let apiSession = null;
-    try {
-      apiSession = await loginWithBackend(email, password);
-    } catch (apiError) {
-      await supabase.auth.signOut({ scope: 'local' });
-      throw apiError;
-    }
-
-    const user = await getUserContext(data.session);
-    const enrichedUser = apiSession
-      ? {
-          ...user,
-          api_token: apiSession.access_token,
-          api_user_id: apiSession.user_id,
-          api_business_id: apiSession.business_id,
-          api_role: apiSession.role,
-        }
-      : user;
+    // /me y /context se cargan en paralelo para reducir latencia al iniciar sesión
+    const [profile, context] = await Promise.all([
+      apiRequest('/auth/me', {}, data.access_token),
+      apiRequest('/auth/context', {}, data.access_token),
+    ]);
 
     return {
-      user: enrichedUser,
-      token: data.session?.access_token,
-      session: data.session,
-      api_token: apiSession?.access_token ?? null,
+      user: { ...profile, ...context, api_token: data.access_token },
+      token: data.access_token,
+      session: null, // session siempre null — ya no usamos el objeto de sesión de Supabase
     };
   },
 
-  resetPassword: async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+  getCurrentSession: async () => {
+    // Al arrancar la app, restaura la sesión desde AsyncStorage sin pedir credenciales
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    if (!token) return null;
 
-    if (error) {
-      throw error;
+    try {
+      const [profile, context] = await Promise.all([
+        apiRequest('/auth/me', {}, token),
+        apiRequest('/auth/context', {}, token),
+      ]);
+
+      return {
+        user: { ...profile, ...context, api_token: token },
+        token,
+        session: null,
+      };
+    } catch {
+      // Si el token expiró o es inválido, lo borramos para forzar nuevo login
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      return null;
     }
-
-    return true;
   },
 
   logout: async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      throw error;
-    }
-
+    await AsyncStorage.removeItem(TOKEN_KEY);
     return true;
   },
 
   clearLocalSession: async () => {
-    await supabase.auth.signOut({ scope: 'local' });
+    await AsyncStorage.removeItem(TOKEN_KEY);
   },
 
-  getCurrentSession: async () => {
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error || !data.session) {
-      return null;
-    }
-
-    const user = await getUserContext(data.session);
-
-    return {
-      user,
-      token: data.session.access_token,
-      session: data.session,
-    };
+  resetPassword: async (email) => {
+    await apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return true;
   },
 
-  getUserContext,
-
-  onAuthStateChange: (callback) => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(callback);
-
-    return subscription;
+  // No-op: el frontend ya no escucha eventos de Supabase Auth.
+  // Se mantiene la firma para no romper código que aún llame a este método.
+  onAuthStateChange: (_callback) => {
+    return { unsubscribe: () => {} };
   },
 };
 

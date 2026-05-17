@@ -8,7 +8,11 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
     phone: Optional[str] = Field(None, max_length=20)
-    industry_template_id: Optional[int] = None
+    # category_id y ui_mode se agregaron para personalización bifurcada:
+    # la app muestra tabs distintos según la categoría del negocio
+    category_id: Optional[int] = None
+    ui_mode: Optional[str] = Field(None, max_length=20)  # "simple" | "advanced"
+    # auth_user_id ya no es necesario — Supabase Auth genera el UUID internamente
     auth_user_id: Optional[str] = None
 
     @validator('password')

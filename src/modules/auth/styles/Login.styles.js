@@ -57,7 +57,7 @@ export default StyleSheet.create({
     fontWeight: '600',
   },
   button: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.addBackground,
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -152,5 +152,30 @@ export default StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  
+  logo: {
+    width: 90,
+    height: 90,
+    marginBottom: 10,
+  },
+  
+  appName: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  
+  mainSubtitle: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 8,
+    textAlign: 'center',
+    marginBottom: 20,
   },
 });

@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  validateEmail, 
-  validatePassword, 
-  validateName, 
-  validateBusinessName, 
-  validatePhone,
-  getPasswordStrength
-} from '../utils/validation';
+import { validateEmail, validatePassword, validateName, validateBusinessName, validatePhone,getPasswordStrength} from '../utils/validation';
+import { Dropdown } from 'react-native-element-dropdown';
 
 const RegisterScreen = ({ navigation }) => {
   const setLogin = useAuthStore((state) => state.setLogin);
@@ -31,6 +25,8 @@ const RegisterScreen = ({ navigation }) => {
     businessName: '',
     profileType: '', 
     category: '',
+    measureUnit: '',
+    wastePercentage: '',
 
     nit: '',
     address: '',
@@ -122,15 +118,15 @@ const RegisterScreen = ({ navigation }) => {
 
 const renderCategoryFields = () => {
   switch (formData.category) {
-    case 'alimentos':
+    case 1:
       return <AlimentosFields />;
-    case 'servicios':
+    case 2:
       return <ServiciosFields />;
-    case 'comercio':
+    case 3:
       return <ComercioFields />;
-    case 'restaurante':
+    case 4:
       return <RestauranteFields />;
-    case 'general':
+    case 5:
       return <GeneralFields />;
     default:
       return null;
@@ -138,16 +134,36 @@ const renderCategoryFields = () => {
 };
 
 const handleCategoryChange = (value) => {
-  setTimeout(() => {
-    updateField('category', value);
-  }, 0);
+  updateField('category', value);
 };
+
+const unitOptions = [
+  { label: 'Kilogramos (Kg)', value: 'kg' },
+  { label: 'Libras (Lb)', value: 'lb' },
+];
 
 const AlimentosFields = () => (
   <>
-    <TextInput placeholder="Unidad de medida (Kg/Lb)" style={styles.input} />
-    <TextInput placeholder="Merma estimada (%)" style={styles.input} />
-
+    <Dropdown
+      style={styles.dropdown}
+      placeholderStyle={styles.placeholderStyle}
+      selectedTextStyle={styles.selectedTextStyle}
+      data={unitOptions}
+      labelField="label"
+      valueField="value"
+      placeholder="Selecciona unidad de medida"
+      value={formData.measureUnit}
+      onChange={(item) => {
+        updateField('measureUnit', item.value);
+      }}
+    />
+    <TextInput
+      placeholder="Merma estimada (%)"
+      keyboardType="numeric"
+      style={styles.input}
+      value={formData.wastePercentage}
+      onChangeText={(text) => updateField('wastePercentage', text)}
+    />
     <TouchableOpacity style={styles.button}  onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
       <Text style={styles.buttonText}>
         ¿Usas balanza digital con etiquetas? {formData.taxEnabled ? 'Sí' : 'No'}
@@ -206,7 +222,7 @@ const GeneralFields = () => (
   </>
 );
 
-  const handleRegister = () => {
+const handleRegister = () => {
     (async () => {
       try {
         setLoading(true);
@@ -309,9 +325,9 @@ const GeneralFields = () => (
         setLoading(false);
       }
     })();
-  };
+};
 
-  useEffect(() => {
+useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -326,9 +342,9 @@ const GeneralFields = () => (
       }
     })();
     return () => (mounted = false);
-  }, []);
+}, []);
 
-  return (
+return (
     <AuthLayout>
       <ScrollView contentContainerStyle={styles.container}>
         {step > 1 && (
@@ -339,9 +355,20 @@ const GeneralFields = () => (
             <Text style={styles.linkText}>Atrás</Text>
           </TouchableOpacity>
         )}
+
+        <View style={styles.headerContainer}>
+          <Image
+            source={require('../../../utils/images/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+
+          <Text style={styles.appName}>CuentaClara</Text>
+        </View>
         
         {step === 1 && (
           <>
+
             <Text style={styles.title}>Crear Cuenta</Text>
             <Text style={styles.subtitle}>Información básica</Text>
 
@@ -426,43 +453,60 @@ const GeneralFields = () => (
 
         {step === 2 && (
           <>
-            <TouchableOpacity onPress={handleBack}>
-              <Text>← Volver</Text>
-            </TouchableOpacity>
+            <View style={styles.cardsContainer}>
 
-            <Text style={styles.title}>Selecciona tu perfil</Text>
-
-            <View style={styles.form}>
+              {/* Emprendedor */}
               <TouchableOpacity
-                style={styles.button}
+                style={styles.profileCard}
                 onPress={() => {
                   updateField('profileType', 'emprendedor');
                   handleNext();
                 }}
               >
-                <Text style={styles.buttonText}>Emprendedor (Rápido)</Text>
+                <View style={styles.iconBox}>
+                  <Text style={styles.icon}>⚡</Text>
+                </View>
+
+                <Text style={styles.cardTitle}>
+                  Emprendedor Informal
+                </Text>
+
+                <Text style={styles.cardDescription}>
+                  Ventas rápidas, fiados y gestión simple en el campo.
+                  Ideal para quienes necesitan agilidad inmediata.
+                </Text>
+
               </TouchableOpacity>
 
+              {/* Empresa */}
               <TouchableOpacity
-                style={styles.button}
+                style={styles.profileCard}
                 onPress={() => {
                   updateField('profileType', 'empresa');
                   handleNext();
                 }}
               >
-                <Text style={styles.buttonText}>Empresa PYME</Text>
-              </TouchableOpacity>
+                <View style={styles.iconBox}>
+                  <Text style={styles.icon}>🏢</Text>
+                </View>
+
+                <Text style={styles.cardTitle}>
+                  Empresa PYME
+                </Text>
+
+                <Text style={styles.cardDescription}>
+                  Facturación, inventario, reportes e impuestos para
+                  negocios en crecimiento.
+                </Text>
               
+              </TouchableOpacity>
+
             </View>
           </>
         )}
 
         {step === 3 && formData.profileType === 'empresa' && (
           <>
-          <TouchableOpacity onPress={handleBack}>
-            <Text>← Volver</Text>
-          </TouchableOpacity>
-
             <Text style={styles.title}>Configuración Empresa</Text>
 
             <View style={styles.form}>
@@ -485,22 +529,24 @@ const GeneralFields = () => (
               {categories.length === 0 ? (
                 <Text>Cargando categorías...</Text>
               ) : (
-                categories.map((c) => (
-                  <TouchableOpacity key={c.id} onPress={() => updateField('category', c.id)}>
-                    <Text style={{ paddingVertical: 6 }}>{c.name}</Text>
-                  </TouchableOpacity>
-                ))
-              )}
-
-              {/* EJEMPLO DINÁMICO */}
-              {formData.category === 'alimentos' && (
                 <>
-                  <TextInput style={styles.input} placeholder="Unidad de medida (Kg/Lb)" />
-                  <TextInput style={styles.input} placeholder="Merma estimada (%)" />
+                  <Dropdown
+                    style={styles.dropdown}
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    data={categories}
+                    labelField="name"
+                    valueField="id"
+                    placeholder="Selecciona una categoría"
+                    value={formData.category}
+                    onChange={(item) => {
+                      handleCategoryChange(item.id);
+                    }}
+                  />
+
+                  {renderCategoryFields()}
                 </>
               )}
-
-              {renderCategoryFields()}
 
               <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
                 <Text style={styles.buttonText}>{loading ? 'Registrando...' : 'Finalizar'}</Text>
@@ -511,10 +557,6 @@ const GeneralFields = () => (
 
         {step === 3 && formData.profileType === 'emprendedor' && (
           <>
-          <TouchableOpacity onPress={handleBack}>
-            <Text>← Volver</Text>
-          </TouchableOpacity>
-
             <Text style={styles.title}>Configuración rápida</Text>
 
             <View style={styles.form}>

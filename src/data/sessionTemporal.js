@@ -12,7 +12,7 @@ export const sessionTemporal = {
             'inventory',
             'sales',
             'profile',
-            'reports',
+            'credit',
             'billing',
             'settings'
         ]

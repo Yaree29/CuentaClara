@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Alert, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import { useAuth } from '../hooks/useAuth';
 import styles from '../styles/Login.styles';
@@ -164,6 +164,15 @@ const LoginScreen = () => {
 
   return (
     <AuthLayout>
+       <View style={styles.headerContainer}>
+                <Image
+                  source={require('../../../utils/images/icon.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+      
+                <Text style={styles.appName}>CuentaClara</Text>
+              </View>
       <View style={styles.container}>
         <Text style={styles.title}>Bienvenido</Text>
         <Text style={styles.subtitle}>Ingresa tus credenciales para continuar</Text>

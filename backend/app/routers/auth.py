@@ -90,6 +90,17 @@ def get_categories():
     return result.data
 
 
+# Plantillas de industria con sus módulos por defecto — usadas en el paso 3
+# del registro PYME para que el usuario elija el tipo de negocio
+@router.get("/templates", summary="Plantillas de industria para registro PYME")
+def get_templates():
+    result = supabase_admin.table("industry_templates")\
+        .select("id, name, icon, default_modules")\
+        .order("id")\
+        .execute()
+    return result.data
+
+
 @router.post("/mfa/setup", summary="Configurar autenticación MFA")
 def setup_mfa(current_user: dict = Depends(get_current_user)):
     try:

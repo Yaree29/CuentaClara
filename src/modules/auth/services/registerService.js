@@ -1,5 +1,22 @@
+// =============================================================================
+// MODIFICADO: 2026-05-20
+// Propósito: Servicio de registro de nuevos usuarios y negocios. Todas las
+//            peticiones van a la API FastAPI — sin contacto directo con Supabase.
+// Cambios:
+//   - Se añadió getTemplates() para cargar las plantillas de industria desde
+//     GET /auth/templates (usadas en el combobox del paso 3 PYME).
+//   - register(): ahora destructura y envía el campo `address` al backend
+//     para que se guarde en businesses.address.
+//   - register(): después de crear el usuario en el backend, guarda el token
+//     en AsyncStorage y hace fetch paralelo de /auth/me y /auth/context para
+//     retornar el perfil completo con enabled_modules y userType, igual que
+//     el flujo de login. Esto evita que el usuario llegue a la app con perfil vacío.
+// =============================================================================
 // Sin imports de Supabase — el registro pasa completamente por la API.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../../config/env';
+
+const TOKEN_KEY = 'cc_access_token';
 
 const baseUrl = () => API_URL || 'https://cuentaclara-api.onrender.com';
 
@@ -30,6 +47,11 @@ const registerService = {
     return apiRequest('/auth/categories');
   },
 
+  // Plantillas de industria para el paso 3 del registro PYME
+  getTemplates: async () => {
+    return apiRequest('/auth/templates');
+  },
+
   register: async (form) => {
     const {
       name,
@@ -40,6 +62,8 @@ const registerService = {
       businessName,
       profileType,
       categoryId,
+      industryTemplateId,
+      address,
     } = form;
 
     if (!email || !password || !businessName || !name) {
@@ -59,18 +83,25 @@ const registerService = {
         email,
         password,
         phone: phone || null,
-        category_id: categoryId || null, // null = sin categoría, se usan módulos por defecto
+        category_id: categoryId || null,
+        industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
         ui_mode: uiMode,
+        address: address && address.trim() ? address.trim() : null,
       }),
     });
 
+    // Guardar token antes de las siguientes llamadas autenticadas
+    await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
+
+    // Igual que login: cargar perfil completo + contexto para que
+    // AuthProvider tenga enabled_modules y userType desde el primer render
+    const [profile, context] = await Promise.all([
+      apiRequest('/auth/me', {}, data.access_token),
+      apiRequest('/auth/context', {}, data.access_token),
+    ]);
+
     return {
-      user: {
-        id: data.user_id,
-        role: data.role,
-        business_id: data.business_id,
-        api_token: data.access_token,
-      },
+      user: { ...profile, ...context, api_token: data.access_token },
       token: data.access_token,
       session: null,
     };

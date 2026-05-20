@@ -1,3 +1,13 @@
+# =============================================================================
+# MODIFICADO: 2026-05-20
+# Propósito: Lógica de negocio de autenticación — registro, login, contexto
+#            del usuario y utilidades de MFA.
+# Cambios:
+#   - register_business: ahora incluye `address` en el insert de businesses
+#     solo si el frontend lo envía (campo opcional, capturado en paso 3 PYME).
+#     Se usa un dict intermedio `business_payload` para construir el insert
+#     condicionalmente en lugar de enviar null al campo.
+# =============================================================================
 # Toda la autenticación pasa por este servicio hacia Supabase Auth.
 # El frontend nunca se conecta directo a Supabase — solo habla con la API.
 from app.database import supabase, supabase_admin
@@ -8,8 +18,8 @@ import qrcode
 import io
 import base64
 
-# Módulos que se activan para usuarios informales sin categoría definida
-DEFAULT_INFORMAL_MODULES = ['sales', 'cash']
+# Módulos fijos para usuarios informales: inicio, ventas, fiado, inventario
+DEFAULT_INFORMAL_MODULES = ['sales', 'credit', 'inventory']
 # Siempre presentes independientemente del tipo de negocio
 BASE_MODULES = ['dashboard', 'profile']
 # Lista blanca para evitar que features con nombres inválidos lleguen al frontend
@@ -48,28 +58,23 @@ def register_business(data):
     except Exception as e:
         raise ValueError(f"No se pudo crear el usuario en Auth: {str(e)}")
 
-    # 3. Determinar industry_template_id desde category_id
-    #    Permite precargar los módulos correctos según el tipo de negocio
-    industry_template_id = None
-    if data.category_id:
-        try:
-            cat = supabase_admin.table("categories").select("name").eq("id", data.category_id).single().execute()
-            if cat.data:
-                tmpl = supabase_admin.table("industry_templates").select("id").ilike("name", cat.data["name"]).limit(1).execute()
-                if tmpl.data:
-                    industry_template_id = tmpl.data[0]["id"]
-        except Exception:
-            pass
+    # 3. Usar industry_template_id directamente si viene del frontend (registro PYME).
+    #    category_id se guarda solo para clasificación del negocio, no para módulos.
+    industry_template_id = data.industry_template_id or None
 
     # 4. Crear el negocio — si falla, limpiamos el usuario de Auth para no dejar huérfanos
     try:
-        business = supabase_admin.table("businesses").insert({
+        business_payload = {
             "name": data.business_name.strip(),
             "category_id": data.category_id,
             "industry_template_id": industry_template_id,
             "ui_mode": data.ui_mode or "simple",  # "simple" = informal, "advanced" = pyme
             "plan": "free"
-        }).execute()
+        }
+        # address solo se incluye si el frontend lo envió (lo captura el paso 3 de PYME)
+        if data.address and data.address.strip():
+            business_payload["address"] = data.address.strip()
+        business = supabase_admin.table("businesses").insert(business_payload).execute()
     except Exception as e:
         supabase_admin.auth.admin.delete_user(auth_user_id)
         raise ValueError(f"No se pudo crear el negocio: {str(e)}")

@@ -1,3 +1,12 @@
+# =============================================================================
+# MODIFICADO: 2026-05-20
+# Propósito: Modelos Pydantic para validar las peticiones del módulo de
+#            autenticación (registro, login, MFA, biometría).
+# Cambios:
+#   - Se agregó el campo `address` en RegisterRequest para que el paso 3
+#     del registro PYME pueda enviar la dirección del negocio y guardarla
+#     en businesses.address.
+# =============================================================================
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
 import re
@@ -8,10 +17,14 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
     phone: Optional[str] = Field(None, max_length=20)
-    # category_id y ui_mode se agregaron para personalización bifurcada:
-    # la app muestra tabs distintos según la categoría del negocio
+    # category_id: clasificación del negocio (Alimentos, Servicios, etc.)
     category_id: Optional[int] = None
+    # industry_template_id: plantilla elegida en el registro PYME; determina
+    # qué módulos se activan en features al crear el negocio
+    industry_template_id: Optional[int] = None
     ui_mode: Optional[str] = Field(None, max_length=20)  # "simple" | "advanced"
+    # Dirección del negocio — opcional, solo PYME la captura en el paso 3
+    address: Optional[str] = Field(None, max_length=255)
     # auth_user_id ya no es necesario — Supabase Auth genera el UUID internamente
     auth_user_id: Optional[str] = None
 

@@ -1,3 +1,17 @@
+// =============================================================================
+// MODIFICADO: 2026-05-20
+// Propósito: Pantalla de registro de 3 pasos — datos básicos, selección de
+//            perfil (informal / PYME) y configuración específica según el tipo.
+// Cambios:
+//   - Paso 3 PYME: se restauraron los campos NIT y Dirección que habían
+//     quedado fuera en una edición anterior.
+//   - Combobox de plantillas: se eliminó el ScrollView anidado y el maxHeight
+//     fijo (220px) que impedía ver todas las opciones en Android. Ahora las
+//     opciones se renderizan en línea y el ScrollView padre del formulario
+//     gestiona el desplazamiento de toda la pantalla.
+//   - Se eliminaron los botones "← Volver" duplicados dentro de cada paso;
+//     solo queda el botón global "Atrás" en la parte superior.
+// =============================================================================
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
@@ -29,19 +43,17 @@ const RegisterScreen = ({ navigation }) => {
     password: '',
     phone: '',
     businessName: '',
-    profileType: '', 
-    category: '',
-
+    profileType: '',
+    industryTemplateId: null, // solo para PYME — determina las pestañas del negocio
     nit: '',
     address: '',
-
     businessType: '',
     avgPrice: '',
     taxEnabled: false,
-    handlesTips: false,
   });
 
-  const [categories, setCategories] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     name: '',
@@ -120,91 +132,6 @@ const RegisterScreen = ({ navigation }) => {
   }
 };
 
-const renderCategoryFields = () => {
-  switch (formData.category) {
-    case 'alimentos':
-      return <AlimentosFields />;
-    case 'servicios':
-      return <ServiciosFields />;
-    case 'comercio':
-      return <ComercioFields />;
-    case 'restaurante':
-      return <RestauranteFields />;
-    case 'general':
-      return <GeneralFields />;
-    default:
-      return null;
-  }
-};
-
-const handleCategoryChange = (value) => {
-  setTimeout(() => {
-    updateField('category', value);
-  }, 0);
-};
-
-const AlimentosFields = () => (
-  <>
-    <TextInput placeholder="Unidad de medida (Kg/Lb)" style={styles.input} />
-    <TextInput placeholder="Merma estimada (%)" style={styles.input} />
-
-    <TouchableOpacity style={styles.button}  onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Usas balanza digital con etiquetas? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const ServiciosFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Cobra por comisión de empleado? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
-      <Text style={styles.buttonText}>
-        ¿Vendes productos físicos además del servicio? {formData.handlesTips ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const ComercioFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Tu negocio usa códigos de barras? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const RestauranteFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Transformas materia prima? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
-      <Text style={styles.buttonText}>
-        ¿Manejas propinas? {formData.handlesTips ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const GeneralFields = () => (
-  <>
-    <Text style={styles.subtitle}>
-      Inventario simple + reportes básicos activados
-    </Text>
-  </>
-);
 
   const handleRegister = () => {
     (async () => {
@@ -244,7 +171,7 @@ const GeneralFields = () => (
           name: formData.name.trim(),
           businessName: formData.businessName.trim(),
           phone: formData.phone ? formData.phone.replace(/[\s\-\(\)]/g, '') : null,
-          categoryId: formData.category || null,
+          industryTemplateId: formData.industryTemplateId || null,
         };
 
         const result = await registerService.register(payload);
@@ -315,14 +242,16 @@ const GeneralFields = () => (
     let mounted = true;
     (async () => {
       try {
-        const cats = await registerService.getCategories();
-        if (mounted) setCategories(cats);
-        
-        // Verifica disponibilidad de biometría
-        const biometricEnabled = await isBiometricAvailable();
-        if (mounted) setBiometricAvailable(biometricEnabled);
+        const [tmplData, biometricEnabled] = await Promise.all([
+          registerService.getTemplates(),
+          isBiometricAvailable(),
+        ]);
+        if (mounted) {
+          setTemplates(tmplData);
+          setBiometricAvailable(biometricEnabled);
+        }
       } catch (e) {
-        console.error('No se pudieron cargar categorias:', e);
+        console.error('Error al cargar datos de registro:', e);
       }
     })();
     return () => (mounted = false);
@@ -426,10 +355,6 @@ const GeneralFields = () => (
 
         {step === 2 && (
           <>
-            <TouchableOpacity onPress={handleBack}>
-              <Text>← Volver</Text>
-            </TouchableOpacity>
-
             <Text style={styles.title}>Selecciona tu perfil</Text>
 
             <View style={styles.form}>
@@ -459,10 +384,6 @@ const GeneralFields = () => (
 
         {step === 3 && formData.profileType === 'empresa' && (
           <>
-          <TouchableOpacity onPress={handleBack}>
-            <Text>← Volver</Text>
-          </TouchableOpacity>
-
             <Text style={styles.title}>Configuración Empresa</Text>
 
             <View style={styles.form}>
@@ -480,29 +401,49 @@ const GeneralFields = () => (
                 onChangeText={(val) => updateField('address', val)}
               />
 
-              <Text style={styles.subtitle}>Categoría del negocio</Text>
+              <Text style={styles.subtitle}>Tipo de negocio</Text>
 
-              {categories.length === 0 ? (
-                <Text>Cargando categorías...</Text>
-              ) : (
-                categories.map((c) => (
-                  <TouchableOpacity key={c.id} onPress={() => updateField('category', c.id)}>
-                    <Text style={{ paddingVertical: 6 }}>{c.name}</Text>
-                  </TouchableOpacity>
-                ))
+              {/* Combobox de plantillas */}
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setTemplatePickerOpen(!templatePickerOpen)}
+              >
+                <Text>
+                  {formData.industryTemplateId
+                    ? (() => {
+                        const t = templates.find((t) => t.id === formData.industryTemplateId);
+                        return t ? `${t.icon}  ${t.name}` : 'Selecciona el tipo de negocio';
+                      })()
+                    : 'Selecciona el tipo de negocio ▾'}
+                </Text>
+              </TouchableOpacity>
+
+              {templatePickerOpen && (
+                <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 8 }}>
+                  {templates.length === 0 ? (
+                    <ActivityIndicator style={{ padding: 16 }} />
+                  ) : (
+                    templates.map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        onPress={() => {
+                          updateField('industryTemplateId', t.id);
+                          setTemplatePickerOpen(false);
+                        }}
+                        style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      >
+                        <Text>{t.icon}  {t.name}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
               )}
 
-              {/* EJEMPLO DINÁMICO */}
-              {formData.category === 'alimentos' && (
-                <>
-                  <TextInput style={styles.input} placeholder="Unidad de medida (Kg/Lb)" />
-                  <TextInput style={styles.input} placeholder="Merma estimada (%)" />
-                </>
-              )}
-
-              {renderCategoryFields()}
-
-              <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+              <TouchableOpacity
+                style={[styles.button, !formData.industryTemplateId && { opacity: 0.5 }]}
+                onPress={handleRegister}
+                disabled={loading || !formData.industryTemplateId}
+              >
                 <Text style={styles.buttonText}>{loading ? 'Registrando...' : 'Finalizar'}</Text>
               </TouchableOpacity>
             </View>
@@ -511,10 +452,6 @@ const GeneralFields = () => (
 
         {step === 3 && formData.profileType === 'emprendedor' && (
           <>
-          <TouchableOpacity onPress={handleBack}>
-            <Text>← Volver</Text>
-          </TouchableOpacity>
-
             <Text style={styles.title}>Configuración rápida</Text>
 
             <View style={styles.form}>

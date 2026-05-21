@@ -1,0 +1,1 @@
+//componente de dashbor para PYMES que no cuenten con alguna categoria

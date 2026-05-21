@@ -1,0 +1,1 @@
+//aqui iran los componentes compartidos del dashboard, como el header, el footer, etc. para evitar repetir codigo en cada vista del dashboard

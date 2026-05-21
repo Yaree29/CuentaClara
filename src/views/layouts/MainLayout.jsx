@@ -7,23 +7,22 @@ const MainLayout = ({ children }) => {
   const userType = useUserStore((state) => state.userType);
 
   return (
-    <SafeAreaView>
-      <View >
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container} >
         {children}
       </View>
     </SafeAreaView>
   );
 };
 
-/*
-<SafeAreaView style={styles.container}>
-      <View style={[
-        styles.content, 
-        userType === 'pyme' ? styles.pymeBg : styles.informalBg
-      ]}>
-        {children}
-      </View>
-    </SafeAreaView>
-*/
-
 export default MainLayout;
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+
+  container: {
+    flex: 1,
+  },
+});

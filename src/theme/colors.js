@@ -1,10 +1,11 @@
-export default {
-
+const colors = {
   /* =========================
-     FONDOS
+     FONDOS GENERALES
   ========================== */
 
   background: '#F5F5F0',
+  backgroundSecondary: '#FFFFFF',
+  overlay: 'rgba(0,0,0,0.4)',
 
   /* =========================
      COLORES PRINCIPALES
@@ -12,7 +13,16 @@ export default {
 
   primary: '#0F2747',
   primaryLight: '#1D3D6B',
+  primaryDark: '#091B33',
+
+  secondary: '#93C5FD',
+
   success: '#45C46B',
+  successLight: '#E8F5E9',
+
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
 
   /* =========================
      TEXTOS
@@ -20,38 +30,92 @@ export default {
 
   textPrimary: '#1E293B',
   textSecondary: '#64748B',
+  textMuted: '#94A3B8',
+
+  textButton: '#FFFFFF',
+  textWhite: '#FFFFFF',
+
   textLink: '#1D3D6B',
+  textSuccess: '#45C46B',
+  textError: '#EF4444',
+
+  placeholder: '#A3A3A3',
 
   /* =========================
      BOTONES
   ========================== */
 
-  textButton: '#FFFFFF',
+  disabledButton: '#94A3B8',
 
-  disabledButton: '#94a1b8',
+  buttonPrimary: '#0F2747',
+  buttonPrimaryText: '#FFFFFF',
 
-  buttonOutlineBorder: '#288f1f',
+  buttonSecondary: '#E2E8F0',
+  buttonSecondaryText: '#1E293B',
+
+  buttonOutlineBorder: '#288F1F',
   buttonOutlineText: '#0F2747',
 
   addBackground: '#45C46B',
   addText: '#FFFFFF',
 
-  /* =========================
-     ERRORES / ALERTAS
-  ========================== */
+  checkoutButton: '#45C46B',
+  checkoutButtonText: '#FFFFFF',
 
-  textError: '#EF4444',
-  warning: '#F59E0B',
+  clearButtonText: '#EF4444',
 
   /* =========================
-     CARDS
+     CARDS / SUPERFICIES
   ========================== */
 
   card: '#FFFFFF',
+  cardSecondary: '#F8FAFC',
+
   trendCard: '#45C46B',
 
+  infocard: '#FFFFFF',
+
+  sectionBackground: '#FFFFFF',
+
+  /* =========================
+     BORDES / SOMBRAS
+  ========================== */
+
   border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+
+  infoBorder: '#E2E8F0',
+  sectionBorder: '#E2E8F0',
+
   shadowCard: '#000000',
+
+  /* =========================
+     SALES SCREEN
+  ========================== */
+
+  salesDisplayBackground: '#0F2747',
+  salesDisplayText: '#FFFFFF',
+  salesDisplaySubtext: '#93C5FD',
+
+  salesBadgeBackground: '#EFF6FF',
+  salesBadgeText: '#64748B',
+
+  quickButtonBackground: '#FFFFFF',
+  quickButtonBorder: '#E2E8F0',
+
+  amountButtonText: '#0F2747',
+  amountButtonSubtext: '#64748B',
+
+  methodButtonBackground: '#FFFFFF',
+  methodButtonActive: '#0F2747',
+
+  methodButtonText: '#64748B',
+  methodButtonTextActive: '#FFFFFF',
+
+  inputBackground: '#FFFFFF',
+  inputBorder: '#E2E8F0',
+
+  reportHighlight: '#EEF6FF',
 
   /* =========================
      PRODUCTOS
@@ -84,18 +148,9 @@ export default {
      PERFIL
   ========================== */
 
-  infocard: '#FFFFFF',
-  infoBorder: '#E2E8F0',
-
   avatarBackground: '#0F2747',
   avatarText: '#FFFFFF',
 
-  /* =========================
-     SECCIONES
-  ========================== */
-
-  sectionBackground: '#FFFFFF',
-  sectionBorder: '#E2E8F0',
   sectionTitle: '#1E293B',
 
   /* =========================
@@ -112,4 +167,21 @@ export default {
 
   logoutBackground: '#FEE2E2',
   logoutText: '#EF4444',
+
+  /* =========================
+     NAVBAR / TABS
+  ========================== */
+
+  tabBackground: '#FFFFFF',
+  tabBorder: '#F0F0F0',
+
+  tabActiveBackground: '#E8F5E9',
+
+  tabIcon: '#64748B',
+  tabIconActive: '#45C46B',
+
+  tabText: '#64748B',
+  tabTextActive: '#45C46B',
 };
+
+export default colors;

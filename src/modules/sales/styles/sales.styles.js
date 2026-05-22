@@ -481,4 +481,70 @@ export default StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
+  /* =========================
+   PRODUCT DROPDOWN
+========================== */
+
+productDropdown: {
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 18,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+
+productDropdownText: {
+  color: colors.textPrimary,
+  fontSize: 15,
+  fontWeight: '600',
+},
+
+dropdownArrow: {
+  color: colors.textSecondary,
+  fontSize: 14,
+},
+
+productsContainer: {
+  backgroundColor: colors.card,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: colors.border,
+  marginBottom: 18,
+  overflow: 'hidden',
+},
+
+productItem: {
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+},
+
+productName: {
+  fontSize: 15,
+  fontWeight: '600',
+  color: colors.textPrimary,
+},
+
+productPrice: {
+  marginTop: 4,
+  fontSize: 13,
+  color: colors.textSecondary,
+},
+
+showMoreBtn: {
+  paddingVertical: 14,
+  alignItems: 'center',
+},
+
+showMoreText: {
+  color: colors.primary,
+  fontWeight: '700',
+  fontSize: 14,
+},
 });

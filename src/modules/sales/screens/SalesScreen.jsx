@@ -4,6 +4,7 @@ import {View,Text,TouchableOpacity,Alert,TextInput,ScrollView,ActivityIndicator}
 import MainLayout from '../../../views/layouts/MainLayout';
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
+import products from '../../../data/products';
 
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(4);
@@ -13,6 +14,9 @@ const SalesScreen = () => {
   const [activeTab, setActiveTab] = useState('sales');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   const {
     processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();
@@ -188,7 +192,7 @@ const SalesScreen = () => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* ACCIONES EXTRA */}
               <View style={styles.actionsTopRow}>
 
@@ -205,21 +209,79 @@ const SalesScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                {/* DROPDOWN PRODUCTOS */}
+                 {/* BOTÓN DROPDOWN */}
                 <TouchableOpacity
                   style={styles.productDropdown}
+                  onPress={() => setShowProducts(!showProducts)}
                 >
                   <Text style={styles.productDropdownText}>
-                    Seleccionar producto
+                    {selectedProduct
+                      ? selectedProduct.name
+                      : 'Seleccionar producto'}
                   </Text>
 
                   <Text style={styles.dropdownArrow}>
-                    ▼
+                    {showProducts ? '▲' : '▼'}
                   </Text>
                 </TouchableOpacity>
 
-              </View>
+                {/* LISTA PRODUCTOS */}
+                {showProducts && (
+                  <View style={styles.productsContainer}>
+                    {(showAllProducts
+                      ? products
+                      : products.slice(0, 5)
+                    ).map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productItem}
+                        onPress={() => {
+                          setSelectedProduct(product);
+                          setShowProducts(false);
 
+                          // AGREGAR PRECIO AUTOMÁTICAMENTE
+                          setCartCount((prev) => prev + 1);
+                          setTotal((prev) => prev + product.price);
+                        }}
+                      >
+                        <View>
+                          <Text style={styles.productName}>
+                            {product.name}
+                          </Text>
+
+                          <Text style={styles.productPrice}>
+                            ${product.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* VER MÁS */}
+                    {products.length > 5 && !showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(true)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver más productos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* VER MENOS */}
+                    {showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(false)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver menos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
 
               {/* MÉTODO DE PAGO */}
               <Text style={styles.label}>

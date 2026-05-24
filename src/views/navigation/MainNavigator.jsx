@@ -1,7 +1,19 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import useUserStore from '../../store/useUserStore';
+import { View } from 'react-native';
+
+// Importación de íconos
+import { 
+  HomeIcon, 
+  BanknotesIcon, 
+  CreditCardIcon, 
+  ArchiveBoxIcon, 
+  WrenchScrewdriverIcon, 
+  DocumentTextIcon, 
+  ChartBarIcon 
+} from 'react-native-heroicons/solid';
 
 // Importación de pantallas
 import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
@@ -21,38 +33,67 @@ const MainNavigator = () => {
   // 2. PYME (Inventario): 'pyme' / 'products'
   // 3. PYME (Servicios): 'pyme' / 'service'
 
-  const MOCK_USER_TYPE = 'pyme';
-  const MOCK_CATEGORY = 'products';
+  //const MOCK_USER_TYPE = 'pyme';
+  //const MOCK_CATEGORY = 'products';
 
-  const isInformal = MOCK_USER_TYPE === 'informal';
-  const isPyme = MOCK_USER_TYPE === 'pyme';
-  const isServicePyme = isPyme && MOCK_CATEGORY === 'service';
+  //const isInformal = MOCK_USER_TYPE === 'informal';
+  //const isPyme = MOCK_USER_TYPE === 'pyme';
+  //const isServicePyme = isPyme && MOCK_CATEGORY === 'service';
+
+  //Para simular bifurcación - se leen los dato usando la libreria Zustand, que permite manejar el estado global de la app
+  const userType = useUserStore((state) => state.userType);
+  const businessData = useUserStore((state) => state.businessData);
+
+  const isInformal = userType === 'informal';
+  const isPyme = userType === 'pyme';
+  const isServicePyme = isPyme && businessData?.category === 'service';
 
   return (
     <Tab.Navigator 
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.primary, 
         tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          paddingBottom: 6,
+        },
         tabBarStyle: {
           backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          borderTopWidth: 0, 
+          elevation: 12, 
+          shadowColor: '#000', 
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.05,
+          shadowRadius: 6,
+          height: 65, 
         },
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+        //Configuración de Heroicons en la barra
+        tabBarIcon: ({ focused, color }) => {
+          let IconComponent;
           
-          if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Sales') iconName = focused ? 'cash' : 'cash-outline';
-          else if (route.name === 'Credit') iconName = focused ? 'card' : 'card-outline';
-          else if (route.name === 'Inventory') iconName = focused ? 'cube' : 'cube-outline';
-          else if (route.name === 'Services') iconName = focused ? 'construct' : 'construct-outline';
-          else if (route.name === 'Billing') iconName = focused ? 'document-text' : 'document-text-outline';
-          else if (route.name === 'Reports') iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+          if (route.name === 'Dashboard') IconComponent = HomeIcon;
+          else if (route.name === 'Sales') IconComponent = BanknotesIcon;
+          else if (route.name === 'Credit') IconComponent = CreditCardIcon;
+          else if (route.name === 'Inventory') IconComponent = ArchiveBoxIcon;
+          else if (route.name === 'Services') IconComponent = WrenchScrewdriverIcon;
+          else if (route.name === 'Billing') IconComponent = DocumentTextIcon;
+          else if (route.name === 'Reports') IconComponent = ChartBarIcon;
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <View style={{
+              backgroundColor: focused ? `${colors.primary}15` : 'transparent',
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 4, 
+            }}>
+              {IconComponent && <IconComponent size={22} color={color} />}
+            </View>
+          );
         },
       })}
     >

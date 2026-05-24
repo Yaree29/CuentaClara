@@ -19,6 +19,8 @@ const colors = {
 
   success: '#45C46B',
   successLight: '#E8F5E9',
+  successDark: '#328339',
+  successBorder: '#96c29b',
 
   warning: '#F59E0B',
   danger: '#EF4444',

@@ -6,7 +6,7 @@ import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 
 // Imports de los sub-componentes
 import InformalInventory from '../components/InformalInventory';
-// import PymeInventory from '../components/PymeInventory'; 
+// import PymeInventory from '../components/PymeInventory'; Proximamente...
 
 const InventoryScreen = () => {
   const userType = useUserStore((state) => state.userType);

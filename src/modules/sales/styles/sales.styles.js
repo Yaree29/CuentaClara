@@ -2,13 +2,11 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
 export default StyleSheet.create({
-
   /* =========================
      HEADER
   ========================== */
-
   header: {
-    height: 60,
+    height: 100,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -17,28 +15,22 @@ export default StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 
-  backButton: {
-    paddingRight: 16,
-  },
-
-  backArrow: {
-    fontSize: 24,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-
   headerTitle: {
     flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.primary,
+    textAlign: 'center',
   },
-
+  
+ /* =========================
+     Foto de perfl
+  ========================== */
   headerDocButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#6A9AB0',
+    backgroundColor: '#10445c',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -65,7 +57,7 @@ export default StyleSheet.create({
   },
 
   /* =========================
-     TABS
+     TABS / Navegacion entre secciones
   ========================== */
 
   tabsContainer: {
@@ -74,6 +66,7 @@ export default StyleSheet.create({
     borderRadius: 12,
     padding: 4,
     marginBottom: 20,
+    marginTop: 10,
   },
 
   tab: {
@@ -94,7 +87,7 @@ export default StyleSheet.create({
   },
 
   tabTextActive: {
-    color: '#FFFFFF',
+    color: colors.textTertiary,
   },
 
   /* =========================
@@ -103,13 +96,30 @@ export default StyleSheet.create({
 
   displayCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+
+    borderRadius: 18,
+
+    paddingTop: 10,
+    paddingBottom: 14,
+    zIndex: 20,
+
+
     alignItems: 'center',
-    marginBottom: 20,
+
     borderWidth: 1,
     borderColor: colors.border,
+
+    marginBottom: 10,
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+
+    elevation: 4,
   },
 
   displayLabel: {
@@ -159,14 +169,32 @@ export default StyleSheet.create({
   },
 
   /* =========================
-     QUICK GRID
+     QUICK GRID/ PRODUCTOS 
   ========================== */
 
   quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 4,
+    maxHeight: 340,
+
+    backgroundColor: '#FFFFFF',
+
+    borderWidth: 1,
+    borderColor: colors.border,
+
+    borderRadius: 18,
+
+    padding: 12,
+
+    marginBottom: 10,
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+
+    elevation: 3,
   },
 
   amountBtn: {
@@ -191,6 +219,102 @@ export default StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+
+  emptyProducts: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    paddingVertical: 24,
+    alignItems: 'center',
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  emptyProductsText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+
+  selectedProductCard: {
+    backgroundColor: colors.card,
+    width: '100%',
+    borderRadius: 14,
+
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+
+    marginBottom: 10,
+
+    borderWidth: 1,
+    borderColor: colors.border,
+
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  selectedProductName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+
+  selectedProductPrice: {
+    marginTop: 4,
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+
+  selectedProductRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  selectedProductQty: {
+    marginRight: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  removeBtn: {
+    width: 34,
+    height: 34,
+
+    borderRadius: 17,
+
+    backgroundColor: '#FEE2E2',
+
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  removeBtnText: {
+    color: '#EF4444',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+
+  addBtn: {
+    width: 32,
+    height: 32,
+
+    borderRadius: 16,
+
+    backgroundColor: colors.success,
+
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    marginLeft: 8,
+  },
+
+  addBtnText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    lineHeight: 24,
   },
 
   /* =========================
@@ -240,33 +364,6 @@ export default StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  /* =========================
-     INPUT
-  ========================== */
-
-  inputContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
-
-  input: {
-    flex: 1,
-    minHeight: 56,
-    fontSize: 16,
-    color: colors.textPrimary,
-    paddingVertical: 14,
-  },
-
-  editIcon: {
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
 
   /* =========================
      EXTRA ACTIONS
@@ -358,6 +455,119 @@ export default StyleSheet.create({
   },
 
   /* =========================
+     Modal De Notas
+  ========================== */
+
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.45)',
+
+  justifyContent: 'center',
+  alignItems: 'center',
+
+  padding: 24,
+},
+
+noteModal: {
+  width: '100%',
+
+  backgroundColor: '#FFFFFF',
+
+  borderRadius: 20,
+
+  padding: 20,
+},
+
+noteModalTitle: {
+  fontSize: 20,
+  fontWeight: '700',
+
+  color: '#0F2747',
+
+  marginBottom: 16,
+},
+
+noteInput: {
+  minHeight: 140,
+
+  borderWidth: 1,
+  borderColor: colors.border,
+
+  borderRadius: 14,
+
+  padding: 14,
+
+  fontSize: 16,
+  color: '#1E293B',
+
+  textAlignVertical: 'top',
+
+  backgroundColor: '#F8FAFC',
+},
+
+noteActions: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+
+  marginTop: 18,
+},
+
+deleteNoteBtn: {
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+
+  borderRadius: 12,
+
+  backgroundColor: '#FEE2E2',
+},
+
+deleteNoteText: {
+  color: '#DC2626',
+  fontWeight: '700',
+},
+
+closeNoteBtn: {
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+
+  borderRadius: 12,
+
+  backgroundColor: colors.success,
+},
+
+closeNoteText: {
+  color: '#FFFFFF',
+  fontWeight: '700',
+},
+
+noteHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+
+  marginBottom: 16,
+},
+
+closeIconBtn: {
+  width: 34,
+  height: 34,
+
+  borderRadius: 17,
+
+  backgroundColor: '#F1F5F9',
+
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+closeIconText: {
+  fontSize: 18,
+  fontWeight: '700',
+
+  color: '#64748B',
+},
+
+  /* =========================
      ERRORS
   ========================== */
 
@@ -369,78 +579,20 @@ export default StyleSheet.create({
   },
 
   /* =========================
-     REPORTS
+     History
   ========================== */
 
-  reportTitle: {
+  historyTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.primary,
     marginBottom: 20,
+    textAlign: 'center',
   },
 
-  reportInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 16,
-    color: colors.textPrimary,
-  },
-
-  reportBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  reportBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  reportCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  reportRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-
-  reportLabel: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-
-  reportIncome: {
-    color: '#10B981',
-    fontWeight: 'bold',
-  },
-
-  reportExpense: {
-    color: '#EF4444',
-    fontWeight: 'bold',
-  },
-
-  reportProfit: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-
-  // ========================= //
-  // Acciones extras
-  // ========================= //
+  /* =========================
+      Acciones extras
+   ========================= */
   actionsTopRow: {
     marginBottom: 16,
   },

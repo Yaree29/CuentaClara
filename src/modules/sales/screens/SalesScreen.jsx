@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
 
 // 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,8 +13,8 @@ import products from '../../../data/products';
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 
 const SalesScreen = () => {
-  const [cartCount, setCartCount] = useState(4);
-  const [total, setTotal] = useState(185.0);
+  const [cartCount, setCartCount] = useState(0);
+  const [total, setTotal] = useState(0);
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [activeTab, setActiveTab] = useState('sales');
@@ -24,13 +24,12 @@ const SalesScreen = () => {
   const [showProducts, setShowProducts] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(false);
 
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [saleNote, setSaleNote] = useState('');
+
   const {
-    processSale,
-    loading,
-    error,
-    fetchProfitsAndExpenses,
-    profitsData
-  } = useSales();
+    processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();
 
   useEffect(() => {
     const today = new Date();
@@ -40,11 +39,13 @@ const SalesScreen = () => {
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
 
+    {/* aumentar cantidad en el carrito */}
   const handleQuickAdd = (amount) => {
     setCartCount((prev) => prev + 1);
     setTotal((prev) => prev + amount);
   };
 
+    {/* Revisar el carrito */}
   const handleCheckout = async () => {
     if (cartCount === 0) {
       Alert.alert('Carrito vacío', 'Agrega productos antes de registrar una venta.');
@@ -64,28 +65,6 @@ const SalesScreen = () => {
     }
   };
 
-  const handleGetReport = async () => {
-    if (!dateFrom || !dateTo) {
-      Alert.alert('Campos requeridos', 'Completa ambas fechas para generar el reporte.');
-      return;
-    }
-
-    try {
-      await fetchProfitsAndExpenses(dateFrom, dateTo);
-      Alert.alert('Reporte cargado', 'Los datos se han actualizado correctamente.');
-    } catch (err) {
-      Alert.alert('Error', error || 'No se pudo obtener el reporte');
-    }
-  };
-
-  const quickButtons = [
-    { amount: 5, label: 'Billete' },
-    { amount: 10, label: 'Efectivo' },
-    { amount: 20, label: 'Sencillo' },
-    { amount: 30, label: 'Combo' },
-    { amount: 50, label: 'Fijo' },
-    { amount: 100, label: 'Max' },
-  ];
 
   return (
     // 2. Usamos SafeAreaView en lugar de MainLayout
@@ -93,14 +72,8 @@ const SalesScreen = () => {
       
       <DashboardHeader title="Venta Rápida" isHome={false} />
 
-      {/* CONTENIDO PRINCIPAL */}
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* TABS DE NAVEGACIÓN INTERNA */}
-        <View style={styles.tabsContainer}>
+      {/* TABS DE NAVEGACIÓN INTERNA */}
+      <View style={styles.tabsContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'sales' && styles.tabActive]}
             onPress={() => setActiveTab('sales')}
@@ -118,175 +91,424 @@ const SalesScreen = () => {
               Historial
             </Text>
           </TouchableOpacity>
+      </View>
+
+      {activeTab === 'sales' && (
+        <View style={styles.displayCard}>
+          <Text style={styles.displayLabel}>
+            TOTAL ACUMULADO
+          </Text>
+      
+          <View style={styles.totalRow}>
+            <Text style={styles.currency}>$</Text>
+      
+            <Text style={styles.displayValue}>
+              {total.toFixed(2)}
+            </Text>
+          </View>
+      
+          <View style={styles.badge}>
+            <Text style={styles.badgeIcon}>
+                {/*<Ionicons name="basket" size={16} color="#64748B" />*/}
+            </Text>
+      
+            <Text style={styles.badgeText}>
+                {cartCount} artículos seleccionados
+            </Text>
+          </View>
         </View>
+      )}
 
-        {/* PANTALLA DE VENTAS (TAB 1) */}
-        {activeTab === 'sales' && (
-          <>
-            {/* CARD TOTAL */}
-            <View style={styles.displayCard}>
-              <Text style={styles.displayLabel}>TOTAL ACUMULADO</Text>
-              <View style={styles.totalRow}>
-                <Text style={styles.currency}>$</Text>
-                <Text style={styles.displayValue}>{total.toFixed(2)}</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeIcon}>🛍️</Text>
-                <Text style={styles.badgeText}>{cartCount} artículos seleccionados</Text>
-              </View>
-            </View>
+      {/* CONTENIDO PRINCIPAL */}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
 
-            {/* BOTONES RÁPIDOS */}
-            <View style={styles.quickGrid}>
-              {quickButtons.map((btn) => (
-                <TouchableOpacity
-                  key={btn.amount}
-                  style={styles.amountBtn}
-                  onPress={() => handleQuickAdd(btn.amount)}
-                >
-                  <Text style={styles.amountBtnText}>${btn.amount}</Text>
-                  <Text style={styles.amountSubtext}>{btn.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          {/* PANTALLA VENTAS */}
+          {activeTab === 'sales' && (
+            <View>
 
-            {/* ACCIONES EXTRA */}
-            <View style={styles.actionsTopRow}>
-              {/* LIMPIAR MONTO */}
-              <TouchableOpacity
-                style={styles.clearAmountBtn}
-                onPress={() => {
-                  setTotal(0);
-                  setCartCount(0);
-                }}
-              >
-                <Text style={styles.clearAmountText}>Limpiar monto</Text>
-              </TouchableOpacity>
-
-              {/* BOTÓN DROPDOWN */}
-              <TouchableOpacity
-                style={styles.productDropdown}
-                onPress={() => setShowProducts(!showProducts)}
-              >
-                <Text style={styles.productDropdownText}>
-                  {selectedProduct ? selectedProduct.name : 'Seleccionar producto'}
-                </Text>
-                <Text style={styles.dropdownArrow}>{showProducts ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-
-              {/* LISTA PRODUCTOS DESPLEGABLE */}
-              {showProducts && (
-                <View style={styles.productsContainer}>
-                  {(showAllProducts ? products : products.slice(0, 5)).map((product) => (
-                    <TouchableOpacity
-                      key={product.id}
-                      style={styles.productItem}
-                      onPress={() => {
-                        setSelectedProduct(product);
-                        setShowProducts(false);
-                        setCartCount((prev) => prev + 1);
-                        setTotal((prev) => prev + product.price);
-                      }}
-                    >
-                      <View>
-                        <Text style={styles.productName}>{product.name}</Text>
-                        <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-
-                  {/* VER MÁS */}
-                  {products.length > 5 && !showAllProducts && (
-                    <TouchableOpacity
-                      style={styles.showMoreBtn}
-                      onPress={() => setShowAllProducts(true)}
-                    >
-                      <Text style={styles.showMoreText}>Ver más productos</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* VER MENOS */}
-                  {showAllProducts && (
-                    <TouchableOpacity
-                      style={styles.showMoreBtn}
-                      onPress={() => setShowAllProducts(false)}
-                    >
-                      <Text style={styles.showMoreText}>Ver menos</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* MÉTODO DE PAGO */}
-            <Text style={styles.label}>Método de pago</Text>
-            <View style={styles.methodContainer}>
-              {['cash', 'card', 'transfer'].map((method) => (
-                <TouchableOpacity
-                  key={method}
-                  style={[styles.methodBtn, paymentMethod === method && styles.methodBtnActive]}
-                  onPress={() => setPaymentMethod(method)}
-                >
-                  <Text
-                    style={[
-                      styles.methodBtnText,
-                      paymentMethod === method && styles.methodBtnTextActive,
-                    ]}
+              {/* CARRITO DE PRODUCTOS */}
+              <View style={styles.quickGrid}>
+                  <ScrollView 
+                    nestedScrollEnabled 
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{paddingBottom: 4,}}
                   >
-                    {method === 'cash' ? 'Efectivo' : method === 'card' ? 'Tarjeta' : 'Transferencia'}
+                    {selectedProducts.length === 0 ? (
+                      <View style={styles.emptyProducts}>
+                        <Text style={styles.emptyProductsText}>
+                          No hay productos seleccionados
+                        </Text>
+                      </View>
+                    ) : (
+                      selectedProducts.map((product) => (
+                        <View
+                          key={product.id}
+                          style={styles.selectedProductCard}
+                        >
+                          <View>
+                            <Text style={styles.selectedProductName}>
+                              {product.name}
+                            </Text>
+
+                            <Text style={styles.selectedProductPrice}>
+                              ${product.price}
+                            </Text>
+                          </View>
+
+                          <View style={styles.selectedProductRight}>
+                            <Text style={styles.selectedProductQty}>
+                              x{product.quantity}
+                            </Text>
+
+                            <TouchableOpacity
+                              style={styles.removeBtn}
+                              onPress={() => {
+                                setSelectedProducts((prev) =>
+                                  prev
+                                    .map((item) => {
+                                      if (item.id === product.id) {
+                                        return {
+                                          ...item,
+                                          quantity: item.quantity - 1,
+                                        };
+                                      }
+
+                                      return item;
+                                    })
+                                    .filter((item) => item.quantity > 0)
+                                );
+
+                                setCartCount((prev) =>
+                                  Math.max(prev - 1, 0)
+                                );
+
+                                setTotal((prev) =>
+                                  Math.max(prev - product.price, 0)
+                                );
+                              }}
+                            >
+                              <Text style={styles.removeBtnText}>
+                                −
+                              </Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                              style={styles.addBtn}
+                              onPress={() => {
+                                setSelectedProducts((prev) =>
+                                  prev.map((item) => {
+                                    if (item.id === product.id) {
+                                      return {
+                                        ...item,
+                                        quantity: item.quantity + 1,
+                                      };
+                                    }
+
+                                    return item;
+                                  })
+                                );
+
+                                setCartCount((prev) => prev + 1);
+
+                                setTotal((prev) => prev + product.price);
+                              }}
+                            >
+                              <Text style={styles.addBtnText}>
+                                +
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </ScrollView>
+              </View>
+
+              {/* ACCIONES EXTRA */}
+              <View style={styles.actionsTopRow}>
+
+                {/* LIMPIAR MONTO */}
+                <TouchableOpacity
+                  style={styles.clearAmountBtn}
+                  onPress={() => {
+                    setTotal(0);
+                    setCartCount(0);
+                    setSelectedProduct(null);
+                    setSelectedProducts([]);
+                    setShowProducts(false);
+                    setShowAllProducts(false);
+                  }}
+                >
+                  <Text style={styles.clearAmountText}>
+                    Limpiar monto
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            {/* INPUT DE NOTA */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Monto Personalizado / Nota de Venta"
-                placeholderTextColor="#A3A3A3"
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
-              <Text style={styles.editIcon}>✏️</Text>
-            </View>
+                 {/* BOTÓN DROPDOWN */}
+                <TouchableOpacity
+                  style={styles.productDropdown}
+                  onPress={() => setShowProducts(!showProducts)}
+                >
+                  <Text style={styles.productDropdownText}>
+                    {selectedProduct
+                      ? selectedProduct.name
+                      : 'Seleccionar producto'}
+                  </Text>
 
-            {/* BOTONES EXTRA (Vincular Fiado, etc.) */}
-            <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.secondaryBtnGray}>
-                <Text style={styles.secondaryBtnIcon}>🗒️</Text>
-                <Text style={styles.secondaryBtnTextGray}>Agregar Nota</Text>
-              </TouchableOpacity>
+                  <Text style={styles.dropdownArrow}>
+                    {showProducts ? '▲' : '▼'}
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.secondaryBtnBlue}>
-                <Text style={styles.secondaryBtnIconBlue}>👤+</Text>
-                <Text style={styles.secondaryBtnTextBlue}>Vincular Fiado</Text>
-              </TouchableOpacity>
-            </View>
+                {/* LISTA PRODUCTOS */}
+                {showProducts && (
+                  <View style={styles.productsContainer}>
+                    {(showAllProducts
+                      ? products
+                      : products.slice(0, 5)
+                    ).map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productItem}
+                        onPress={() => {
+                          setSelectedProducts((prev) => {
+                            const existing = prev.find(
+                              (item) => item.id === product.id
+                            );
 
-            {/* MANEJO DE ERRORES */}
-            {error && <Text style={styles.errorText}>{error}</Text>}
+                            if (existing) {
+                              return prev.map((item) =>
+                                item.id === product.id
+                                  ? {
+                                      ...item,
+                                      quantity: item.quantity + 1,
+                                    }
+                                  : item
+                              );
+                            }
 
-            {/* BOTÓN REGISTRAR VENTA */}
-            <TouchableOpacity
-              style={[
-                styles.checkoutBtn,
-                (cartCount === 0 || loading) && styles.disabledBtn,
-              ]}
-              onPress={handleCheckout}
-              disabled={cartCount === 0 || loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={styles.checkoutBtnContent}>
-                  <Text style={styles.checkMark}>✓</Text>
-                  <Text style={styles.checkoutBtnText}>Registrar Venta</Text>
-                </View>
+                            return [
+                              ...prev,
+                              {
+                                ...product,
+                                quantity: 1,
+                              },
+                            ];
+                          });
+
+                          setShowProducts(false);
+
+                          // AGREGAR PRECIO AUTOMÁTICAMENTE
+                          setCartCount((prev) => prev + 1);
+                          setTotal((prev) => prev + product.price);
+                        }}
+                      >
+                        <View>
+                          <Text style={styles.productName}>
+                            {product.name}
+                          </Text>
+
+                          <Text style={styles.productPrice}>
+                            ${product.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* VER MÁS */}
+                    {products.length > 5 && !showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(true)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver más productos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* VER MENOS */}
+                    {showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(false)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver menos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* MÉTODO DE PAGO */}
+              <Text style={styles.label}>
+                Método de pago
+              </Text>
+
+              <View style={styles.methodContainer}>
+                {['cash', 'card', 'transfer'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    style={[
+                      styles.methodBtn,
+                      paymentMethod === method &&
+                        styles.methodBtnActive,
+                    ]}
+                    onPress={() => setPaymentMethod(method)}
+                  >
+                    <Text
+                      style={[
+                        styles.methodBtnText,
+                        paymentMethod === method &&
+                          styles.methodBtnTextActive,
+                      ]}
+                    >
+                      {method === 'cash'
+                        ? 'Efectivo'
+                        : method === 'card'
+                        ? 'Tarjeta'
+                        : 'Transferencia'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* BOTONES EXTRA */}
+              <View style={styles.actionsRow}>
+
+                {/* Agregar Nota */}
+                <TouchableOpacity
+                  style={styles.secondaryBtnGray}
+                  onPress={() => setNoteModalVisible(true)}
+                >
+                  {/*}
+                  <Ionicons
+                    name="document-text"
+                    size={18}
+                    color="#0F2747"
+                    style={styles.secondaryBtnIcon}
+                  />
+                  */}
+
+                  <Text style={styles.secondaryBtnTextGray}>
+                    {saleNote ? 'Editar Nota' : 'Agregar Nota'}
+                  </Text>
+                </TouchableOpacity>
+
+                <Modal
+                  visible={noteModalVisible}
+                  transparent
+                  animationType="fade"
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.noteModal}>
+
+                      <View style={styles.noteHeader}>
+
+                        <Text style={styles.noteModalTitle}>
+                          Nota de la venta
+                        </Text>
+
+                        <TouchableOpacity
+                          style={styles.closeIconBtn}
+                          onPress={() => setNoteModalVisible(false)}
+                        >
+                          <Text style={styles.closeIconText}>
+                            ✕
+                          </Text>
+                        </TouchableOpacity>
+
+                      </View>
+
+                      <TextInput
+                        style={styles.noteInput}
+                        placeholder="Escribe una nota..."
+                        placeholderTextColor="#94A3B8"
+                        multiline
+                        value={saleNote}
+                        onChangeText={setSaleNote}
+                      />
+
+                      <View style={styles.noteActions}>
+
+                        {/* ELIMINAR */}
+                        <TouchableOpacity
+                          style={styles.deleteNoteBtn}
+                          onPress={() => {
+                            setSaleNote('');
+                          }}
+                        >
+                          <Text style={styles.deleteNoteText}>
+                            Eliminar nota
+                          </Text>
+                        </TouchableOpacity>
+
+                        {/* CERRAR */}
+                        <TouchableOpacity
+                          style={styles.closeNoteBtn}
+                          onPress={() => setNoteModalVisible(false)}
+                        >
+                          <Text style={styles.closeNoteText}>
+                            Listo
+                          </Text>
+                        </TouchableOpacity>
+
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+
+                {/* Vincular Fiado */}
+                <TouchableOpacity
+                  style={styles.secondaryBtnBlue}
+                >
+                  <Text style={styles.secondaryBtnIconBlue}>
+                      {/* Revisar el carrito <Ionicons name="person-add"size={18} color="#1E3A8A" style={styles.secondaryBtnIconBlue}/>*/}
+                  </Text>
+
+                  <Text style={styles.secondaryBtnTextBlue}>
+                    Vincular Fiado
+                  </Text>
+                </TouchableOpacity>
+
+              </View>
+
+              {/* ERROR */}
+              {error && (
+                <Text style={styles.errorText}>
+                  {error}
+                </Text>
               )}
-            </TouchableOpacity>
-          </>
+
+              {/* BOTÓN REGISTRAR VENTA */}
+              <TouchableOpacity
+                style={[
+                  styles.checkoutBtn,
+                  (cartCount === 0 || loading) &&
+                    styles.disabledBtn,
+                ]}
+                onPress={handleCheckout}
+                disabled={cartCount === 0 || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <View style={styles.checkoutBtnContent}>
+                    <Text style={styles.checkMark}>✓</Text>
+
+                    <Text style={styles.checkoutBtnText}>
+                      Registrar Venta
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
         )}
 
         {/* PANTALLA REPORTES / HISTORIAL (TAB 2) */}
@@ -294,44 +516,6 @@ const SalesScreen = () => {
           <>
             <Text style={styles.reportTitle}>Historia de Ganancias</Text>
 
-            <Text style={styles.label}>Desde</Text>
-            <TextInput
-              style={styles.reportInput}
-              placeholder="YYYY-MM-DD"
-              value={dateFrom}
-              onChangeText={setDateFrom}
-            />
-
-            <Text style={styles.label}>Hasta</Text>
-            <TextInput
-              style={styles.reportInput}
-              placeholder="YYYY-MM-DD"
-              value={dateTo}
-              onChangeText={setDateTo}
-            />
-
-            <TouchableOpacity style={styles.checkoutBtn} onPress={handleGetReport}>
-              <Text style={styles.checkoutBtnText}>Generar Reporte</Text>
-            </TouchableOpacity>
-
-            {profitsData && (
-              <View style={styles.reportCard}>
-                <View style={styles.reportRow}>
-                  <Text style={styles.reportLabel}>Ingresos</Text>
-                  <Text style={styles.reportIncome}>${profitsData.income?.toFixed(2)}</Text>
-                </View>
-
-                <View style={styles.reportRow}>
-                  <Text style={styles.reportLabel}>Gastos</Text>
-                  <Text style={styles.reportExpense}>${profitsData.expenses?.toFixed(2)}</Text>
-                </View>
-
-                <View style={styles.reportRow}>
-                  <Text style={styles.reportLabel}>Ganancia</Text>
-                  <Text style={styles.reportProfit}>${profitsData.profit?.toFixed(2)}</Text>
-                </View>
-              </View>
-            )}
           </>
         )}
       </ScrollView>

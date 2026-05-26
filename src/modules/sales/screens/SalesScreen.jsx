@@ -8,9 +8,14 @@ import colors from '../../../theme/colors';
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
 import products from '../../../data/products';
+import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon} from 'react-native-heroicons/solid';
 
 // Importación del HEADER
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
+
+
+// Impotacion de datos de pruebas para el historial
+import historyData from '../../../data/history';
 
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(0);
@@ -67,7 +72,6 @@ const SalesScreen = () => {
 
 
   return (
-    // 2. Usamos SafeAreaView en lugar de MainLayout
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       
       <DashboardHeader title="Venta Rápida" isHome={false} />
@@ -109,7 +113,7 @@ const SalesScreen = () => {
       
           <View style={styles.badge}>
             <Text style={styles.badgeIcon}>
-                {/*<Ionicons name="basket" size={16} color="#64748B" />*/}
+                <ShoppingBagIcon size={16} color="#64748B" />
             </Text>
       
             <Text style={styles.badgeText}>
@@ -387,14 +391,7 @@ const SalesScreen = () => {
                   style={styles.secondaryBtnGray}
                   onPress={() => setNoteModalVisible(true)}
                 >
-                  {/*}
-                  <Ionicons
-                    name="document-text"
-                    size={18}
-                    color="#0F2747"
-                    style={styles.secondaryBtnIcon}
-                  />
-                  */}
+                  <DocumentTextIcon size={18} color="#0F2747" style={styles.secondaryBtnIcon}/>
 
                   <Text style={styles.secondaryBtnTextGray}>
                     {saleNote ? 'Editar Nota' : 'Agregar Nota'}
@@ -469,7 +466,7 @@ const SalesScreen = () => {
                   style={styles.secondaryBtnBlue}
                 >
                   <Text style={styles.secondaryBtnIconBlue}>
-                      {/* Revisar el carrito <Ionicons name="person-add"size={18} color="#1E3A8A" style={styles.secondaryBtnIconBlue}/>*/}
+                      <UserPlusIcon size={18} color="#1E3A8A" style={styles.secondaryBtnIconBlue} />
                   </Text>
 
                   <Text style={styles.secondaryBtnTextBlue}>
@@ -511,11 +508,76 @@ const SalesScreen = () => {
             </View>
         )}
 
-        {/* PANTALLA REPORTES / HISTORIAL (TAB 2) */}
+          {/* PANTALLA REPORTES / HISTORIAL */}
         {activeTab === 'history' && (
           <>
-            <Text style={styles.reportTitle}>Historia de Ganancias</Text>
+            <Text style={styles.reportTitle}>
+              Historial Financiero
+            </Text>
 
+            {/* RESUMEN */}
+            <View style={styles.historySummary}>
+
+              <View style={styles.summaryCardIncome}>
+                <Text style={styles.summaryLabel}>
+                  Ganancias
+                </Text>
+
+                <Text style={styles.summaryIncome}>
+                  $
+                  {historyData
+                    .filter((item) => item.type === 'income')
+                    .reduce((acc, item) => acc + item.amount, 0)
+                    .toFixed(2)}
+                </Text>
+              </View>
+
+              <View style={styles.summaryCardExpense}>
+                <Text style={styles.summaryLabel}>
+                  Pérdidas
+                </Text>
+
+                <Text style={styles.summaryExpense}>
+                  $
+                  {historyData
+                    .filter((item) => item.type === 'expense')
+                    .reduce((acc, item) => acc + item.amount, 0)
+                    .toFixed(2)}
+                </Text>
+              </View>
+
+            </View>
+
+            {/* HISTORIAL */}
+            <View style={styles.historyContainer}>
+              {historyData.map((item) => (
+                <View
+                  key={item.id}
+                  style={styles.historyCard}
+                >
+                  <View>
+                    <Text style={styles.historyTitle}>
+                      {item.title}
+                    </Text>
+
+                    <Text style={styles.historyDate}>
+                      {item.date}
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={
+                      item.type === 'income'
+                        ? styles.historyIncome
+                        : styles.historyExpense
+                    }
+                  >
+                    {item.type === 'income' ? '+' : '-'}$
+                    {item.amount.toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

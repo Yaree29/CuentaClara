@@ -32,6 +32,7 @@ const colors = {
 
   textPrimary: '#1E293B',
   textSecondary: '#64748B',
+  textTertiary: '#FFFFFF',
   textMuted: '#94A3B8',
 
   textButton: '#FFFFFF',

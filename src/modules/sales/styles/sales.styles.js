@@ -699,4 +699,99 @@ showMoreText: {
   fontWeight: '700',
   fontSize: 14,
 },
+
+// =========================
+//     History
+// ==========================
+
+reportTitle: {
+  fontSize: 24,
+  fontWeight: '700',
+  color: colors.primary,
+  marginBottom: 20,
+  textAlign: 'center',
+},
+
+historySummary: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 20,
+  gap: 12,
+},
+
+summaryCardIncome: {
+  flex: 1,
+  backgroundColor: '#ECFDF5',
+  borderRadius: 16,
+  padding: 18,
+  borderWidth: 1,
+  borderColor: '#A7F3D0',
+},
+
+summaryCardExpense: {
+  flex: 1,
+  backgroundColor: '#FEF2F2',
+  borderRadius: 16,
+  padding: 18,
+  borderWidth: 1,
+  borderColor: '#FECACA',
+},
+
+summaryLabel: {
+  fontSize: 14,
+  color: colors.textSecondary,
+  marginBottom: 8,
+},
+
+summaryIncome: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#16A34A',
+},
+
+summaryExpense: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#DC2626',
+},
+
+historyContainer: {
+  gap: 12,
+  paddingBottom: 40,
+},
+
+historyCard: {
+  backgroundColor: colors.card,
+  borderRadius: 16,
+  padding: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+historyTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: colors.textPrimary,
+},
+
+historyDate: {
+  fontSize: 13,
+  color: colors.textSecondary,
+  marginTop: 4,
+},
+
+historyIncome: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#16A34A',
+},
+
+historyExpense: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#DC2626',
+},
 });

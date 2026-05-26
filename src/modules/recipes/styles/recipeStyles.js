@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
 const recipeStyles = StyleSheet.create({
+  /* --- Encabezado de la página --- */
   pageHeader: { 
     paddingHorizontal: 16, 
     paddingTop: 28, 
@@ -18,6 +19,7 @@ const recipeStyles = StyleSheet.create({
     color: colors.textSecondary, 
     lineHeight: 18 },
   
+  /* --- Estructura de secciones --- */
   section: { 
     marginHorizontal: 16, 
     marginTop: 20, 
@@ -26,7 +28,8 @@ const recipeStyles = StyleSheet.create({
   sectionHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    alignItems: 'center', marginBottom: 12 },
+    alignItems: 'center', 
+    marginBottom: 12 },
 
   sectionLabel: { 
     fontSize: 13, 
@@ -36,6 +39,7 @@ const recipeStyles = StyleSheet.create({
     letterSpacing: 0.8, 
     marginBottom: 6 },
   
+  /* --- Campos de entrada (Inputs) --- */
   input: { 
     backgroundColor: colors.card, 
     borderWidth: 1, 
@@ -63,6 +67,7 @@ const recipeStyles = StyleSheet.create({
     marginBottom: 4, 
     marginTop: 8 },
   
+  /* --- Layout en filas (Grid/Rows) --- */
   row: { 
     flexDirection: 'row', 
     alignItems: 'flex-start' },
@@ -74,6 +79,7 @@ const recipeStyles = StyleSheet.create({
   unitField: { 
     flex: 2 },
   
+  /* --- Botón para agregar ingredientes --- */
   addIngBtn: { 
     paddingVertical: 6, 
     paddingHorizontal: 12, 
@@ -86,6 +92,7 @@ const recipeStyles = StyleSheet.create({
     fontWeight: '600', 
     color: colors.primary },
   
+  /* --- Tarjetas de ingredientes --- */
   ingredientCard: { 
     backgroundColor: colors.card, 
     borderRadius: 12, 
@@ -101,6 +108,7 @@ const recipeStyles = StyleSheet.create({
     alignItems: 'center', 
     marginBottom: 8 },
   
+  /* --- Etiquetas (Badges) en ingredientes --- */
   ingBadge: { 
     backgroundColor: colors.primary + '15', 
     borderRadius: 6, 
@@ -117,6 +125,7 @@ const recipeStyles = StyleSheet.create({
     color: colors.textError, 
     fontWeight: '600' },
   
+  /* --- Tarjeta de resumen de receta --- */
   summaryCard: { 
     marginHorizontal: 16, 
     marginTop: 4, 
@@ -152,6 +161,7 @@ const recipeStyles = StyleSheet.create({
     flex: 1 , 
     textAlign: 'right' },
   
+  /* --- Botones de acción principales (Guardar/Cancelar) --- */
   saveButton: { 
     marginHorizontal: 16, 
     marginTop: 8, 

@@ -1,6 +1,10 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../../../theme/colors';
+import useUserStore from '../../../store/useUserStore';
+
+//Importacion del header
+import DashboardHeader from '../components/shared/DashboardHeader';
 
 //Importacion de componentes específicos para cada tipo de usuario
 import InformalDashboard from '../components/InformalDashboard';
@@ -11,18 +15,10 @@ import PymeRetailDashboard from '../components/PymeRetailDashboard';
 import PymeGeneralDashboard from '../components/PymeGeneralDashboard';
 
 const HomeScreen = () => {
-  // ==========================================
-  // ZONA DE PRUEBAS VISUALES (MOCKS)
-  // Cambia userType a 'informal' o 'pyme'
-  // Si es 'pyme', cambia category a: 'food', 'service', 'prepared_food', 'retail' o 'general'
-  // ==========================================
-  const mockState = {
-    userType: 'pyme', 
-    category: 'service' 
-  };
+  // Obtenemos los valores reales del usuario activo
+  const userType = useUserStore((state) => state.userType);
+  const businessData = useUserStore((state) => state.businessData);
 
-  // 2. Creamos un "Diccionario" de componentes para las PYMES
-  // Esto evita tener muchos if/else anidados
   const pymeDashboards = {
     food: <PymeFoodDashboard />,
     service: <PymeServiceDashboard />,
@@ -31,21 +27,19 @@ const HomeScreen = () => {
     general: <PymeGeneralDashboard />
   };
 
-  // 3. Función que decide qué mostrar
   const renderDashboardContent = () => {
-    // Si es informal, no importa la categoría, mostramos su dashboard único
-    if (mockState.userType === 'informal') {
+    if (userType === 'informal') {
       return <InformalDashboard />;
-    }
-
-    // Si es PYME, buscamos el dashboard en nuestro diccionario según su categoría.
-    // Si por algún error la categoría no existe, mostramos el 'general' por defecto.
-    return pymeDashboards[mockState.category] || <PymeGeneralDashboard />;
+    } 
+    
+    // Si es PYME, busca por su categoría
+    const category = businessData?.category || 'general';
+    return pymeDashboards[category] || <PymeGeneralDashboard />;
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Aquí se inyecta automáticamente el diseño correcto */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <DashboardHeader isHome={true} />
       {renderDashboardContent()}
     </SafeAreaView>
   );

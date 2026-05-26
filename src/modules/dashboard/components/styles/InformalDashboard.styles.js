@@ -35,6 +35,26 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   
+  /* --- WELCOM CONTENEDOR ---*/
+  welcomeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  welcomeTitle: {
+    color: colors.greeting,
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  welcomeSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+
   /* --- BANNER DE STOCK BAJO --- */
   stockBanner: {
     backgroundColor: '#FEF3C7',

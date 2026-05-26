@@ -5,6 +5,11 @@ import { useAuth } from '../hooks/useAuth';
 import styles from '../styles/Login.styles';
 import { validateEmail, validatePassword } from '../utils/validation';
 
+// 1. IMPORTACIONES NUEVAS: Mocks y Stores
+import users from '../../../data/users';
+import useUserStore from '../../../store/useUserStore';
+import useAuthStore from '../../../store/useAuthStore';
+
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +24,6 @@ const LoginScreen = () => {
   const biometricAutoAttemptRef = useRef(false);
 
   const { 
-    login, 
     loginWithBiometrics, 
     linkBiometricSession, 
     isBiometricAvailable,
@@ -28,6 +32,11 @@ const LoginScreen = () => {
     loading, 
     error 
   } = useAuth();
+
+  // 2. HOOKS DE ZUSTAND: Para inyectar los datos en toda la app
+  const setUserType = useUserStore((state) => state.setUserType);
+  const setBusinessData = useUserStore((state) => state.setBusinessData);
+  const setLogin = useAuthStore((state) => state.setLogin);
 
   useEffect(() => {
     let isMounted = true;
@@ -101,23 +110,21 @@ const LoginScreen = () => {
     setEmailError('');
     setPasswordError('');
 
-    const response = await login(email.trim().toLowerCase(), password).catch(() => null);
-    if (!response) return;
+    // 3. LÓGICA DE LOGIN LOCAL: Validamos contra nuestro archivo users.js
+    const foundUser = users.find(
+      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
+    );
 
-    if (biometricAvailable && response?.user && response?.token) {
-      const enabled = await isBiometricEnabled();
-      if (enabled) {
-        await handleEnableBiometrics(response.user, response.token);
-      } else {
-        Alert.alert(
-          'Habilitar huella',
-          '¿Deseas vincular tu huella para un inicio de sesión rápido?',
-          [
-            { text: 'Ahora no', style: 'cancel' },
-            { text: 'Habilitar', onPress: () => handleEnableBiometrics(response.user, response.token) }
-          ]
-        );
-      }
+    if (foundUser) {
+      // Configuramos el tipo de usuario y datos de negocio para que el Navbar reaccione
+      setUserType(foundUser.userType);
+      setBusinessData(foundUser.business || null);
+      
+      // Lanzamos la acción de login (lo que quita el AuthNavigator y pone el MainNavigator)
+      setLogin(foundUser, 'mock_token_123', null);
+      
+    } else {
+      Alert.alert('Error de acceso', 'El correo o la contraseña son incorrectos.');
     }
   };
 
@@ -165,14 +172,13 @@ const LoginScreen = () => {
   return (
     <AuthLayout>
        <View style={styles.headerContainer}>
-                <Image
-                  source={require('../../../utils/images/icon.png')}
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-      
-                <Text style={styles.appName}>CuentaClara</Text>
-              </View>
+          <Image
+            source={require('../../../utils/images/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.appName}>CuentaClara</Text>
+        </View>
       <View style={styles.container}>
         <Text style={styles.title}>Bienvenido</Text>
         <Text style={styles.subtitle}>Ingresa tus credenciales para continuar</Text>
@@ -222,9 +228,9 @@ const LoginScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.button, (loading || !email || !password) && styles.buttonDisabled]} 
+            style={[styles.button, (!email || !password) && styles.buttonDisabled]} 
             onPress={handleLogin}
-            disabled={loading || !email || !password}
+            disabled={!email || !password}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" />
@@ -245,6 +251,7 @@ const LoginScreen = () => {
         </View>
       </View>
 
+      {/* Modal biométrico */}
       <Modal
         transparent
         visible={showBiometricModal}
@@ -294,6 +301,5 @@ const LoginScreen = () => {
     </AuthLayout>
   );
 };
-
 
 export default LoginScreen;

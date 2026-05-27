@@ -4,20 +4,31 @@ import React, { createContext, useContext, useEffect } from 'react';
 import useAuthStore from '../../store/useAuthStore';
 import useUserStore from '../../store/useUserStore';
 import useBlueprintStore from '../../store/useBlueprintStore';
+import { getBlueprintByRole } from '../../data/sessionTemporal';
 import authService from '../../modules/auth/services/authService';
 
 const AuthContext = createContext({});
 
 // El blueprint define qué tabs ve el usuario; se construye con datos que
-// vienen de /auth/context (userType, business, enabled_modules)
-const buildBlueprint = (user) => ({
-  userType: user?.userType || 'informal',
-  config: {
-    source: 'api',
-    business: user?.business || null,
-  },
-  enabled_modules: user?.enabled_modules || ['dashboard', 'profile'],
-});
+// vienen de /auth/context (userType, business, enabled_modules).
+// Si el API no devuelve enabled_modules, usa el fallback local de sessionTemporal
+// para que los menús de navegación siempre se muestren correctamente.
+const buildBlueprint = (user) => {
+  // Si el API devolvió enabled_modules, usar esos directamente
+  if (user?.enabled_modules?.length) {
+    return {
+      userType: user.userType || 'informal',
+      config: {
+        source: 'api',
+        business: user.business || null,
+      },
+      enabled_modules: user.enabled_modules,
+    };
+  }
+
+  // Fallback: usar los módulos definidos localmente por rol/tipo de usuario
+  return getBlueprintByRole(user?.userType || user?.role);
+};
 
 export const AuthProvider = ({ children }) => {
   const { isAuthenticated, user, setLogin, setLogout, setInitializing } = useAuthStore();

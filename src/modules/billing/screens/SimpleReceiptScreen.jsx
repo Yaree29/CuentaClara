@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
 } from 'react-native';
-import MainLayout from '../../../layouts/MainLayout';
+import MainLayout from '../../../views/layouts/MainLayout';
 import useReceiptData from '../hooks/useReceiptData';
 import { formatCurrency, shareReceipt } from '../services/receiptService';
 import styles from '../styles/receiptStyles';

@@ -95,3 +95,26 @@ export default StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+// ── Nuevos estilos agregados ──
+const extra = StyleSheet.create({
+  totalsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  totalLabel: { fontSize: 14, color: '#64748b' },
+  totalValue: { fontSize: 14, color: '#1e293b', fontWeight: '500' },
+  grandRow: { marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  grandLabel: { fontSize: 17, fontWeight: 'bold', color: '#1e293b' },
+  grandValue: { fontSize: 17, fontWeight: 'bold', color: '#2563eb' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 16 },
+  cancelBtn: { marginTop: 12, alignItems: 'center', padding: 12 },
+  cancelBtnText: { color: '#64748b', fontSize: 15 },
+});

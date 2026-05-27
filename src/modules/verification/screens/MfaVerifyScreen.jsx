@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import AuthLayout from '../../../layouts/AuthLayout';
+import AuthLayout from '../../../views/layouts/AuthLayout';
 import useMfaVerification from '../hooks/useMfaVerification';
 import styles from '../styles/mfaStyles';
 

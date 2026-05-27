@@ -1,43 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
+import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+
+// 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
+import { SafeAreaView } from 'react-native-safe-area-context';
+import colors from '../../../theme/colors';
+
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
+import products from '../../../data/products';
+import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon} from 'react-native-heroicons/solid';
+
+// Importación del HEADER
+import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
+
+
+// Impotacion de datos de pruebas para el historial
+import historyData from '../../../data/history';
 
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(0);
   const [total, setTotal] = useState(0);
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [activeTab, setActiveTab] = useState('sales'); // 'sales' o 'reports'
+  const [activeTab, setActiveTab] = useState('sales');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  
-  const { processSale, loading, error, fetchProfitsAndExpenses, profitsData } = useSales();
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
-  // Inicializar fechas con valores por defecto
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [saleNote, setSaleNote] = useState('');
+
+  const {
+    processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();
+
   useEffect(() => {
     const today = new Date();
     const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
+
     setDateFrom(lastMonth.toISOString().split('T')[0]);
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
 
-  const handleQuickAdd = (price) => {
-    setCartCount(prev => prev + 1);
-    setTotal(prev => prev + price);
+    {/* aumentar cantidad en el carrito */}
+  const handleQuickAdd = (amount) => {
+    setCartCount((prev) => prev + 1);
+    setTotal((prev) => prev + amount);
   };
 
+    {/* Revisar el carrito */}
   const handleCheckout = async () => {
     if (cartCount === 0) {
       Alert.alert('Carrito vacío', 'Agrega productos antes de registrar una venta.');
       return;
     }
-    
+
     try {
       await processSale([], total, description, paymentMethod);
-      Alert.alert('Éxito', 'Venta registrada correctamente');
+
+      Alert.alert('Éxito', `Venta registrada correctamente por $${total.toFixed(2)}`);
+
       setCartCount(0);
       setTotal(0);
       setDescription('');
@@ -46,323 +70,519 @@ const SalesScreen = () => {
     }
   };
 
-  const handleGetReport = async () => {
-    if (!dateFrom || !dateTo) {
-      Alert.alert('Campos requeridos', 'Completa ambas fechas para generar el reporte.');
-      return;
-    }
-
-    try {
-      await fetchProfitsAndExpenses(dateFrom, dateTo);
-      Alert.alert('Reporte cargado', 'Los datos se han actualizado correctamente.');
-    } catch (err) {
-      Alert.alert('Error', error || 'No se pudo obtener el reporte');
-    }
-  };
 
   return (
-    <MainLayout>
-      <ScrollView style={localStyles.container}>
-        {/* Tabs */}
-        <View style={localStyles.tabsContainer}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      
+      <DashboardHeader title="Venta Rápida" isHome={false} />
+
+      {/* TABS DE NAVEGACIÓN INTERNA */}
+      <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={[localStyles.tab, activeTab === 'sales' && localStyles.tabActive]}
+            style={[styles.tab, activeTab === 'sales' && styles.tabActive]}
             onPress={() => setActiveTab('sales')}
           >
-            <Text style={[localStyles.tabText, activeTab === 'sales' && localStyles.tabTextActive]}>
-              Registrar Venta
+            <Text style={[styles.tabText, activeTab === 'sales' && styles.tabTextActive]}>
+              Ventas
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[localStyles.tab, activeTab === 'reports' && localStyles.tabActive]}
-            onPress={() => setActiveTab('reports')}
+            style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+            onPress={() => setActiveTab('history')}
           >
-            <Text style={[localStyles.tabText, activeTab === 'reports' && localStyles.tabTextActive]}>
-              Reportes
+            <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+              Historial
             </Text>
           </TouchableOpacity>
+      </View>
+
+      {activeTab === 'sales' && (
+        <View style={styles.displayCard}>
+          <Text style={styles.displayLabel}>
+            TOTAL ACUMULADO
+          </Text>
+      
+          <View style={styles.totalRow}>
+            <Text style={styles.currency}>$</Text>
+      
+            <Text style={styles.displayValue}>
+              {total.toFixed(2)}
+            </Text>
+          </View>
+      
+          <View style={styles.badge}>
+            <Text style={styles.badgeIcon}>
+                <ShoppingBagIcon size={16} color="#64748B" />
+            </Text>
+      
+            <Text style={styles.badgeText}>
+                {cartCount} artículos seleccionados
+            </Text>
+          </View>
         </View>
+      )}
 
-        {/* PESTAÑA: REGISTRAR VENTA */}
-        {activeTab === 'sales' && (
-          <>
-            <Text style={styles.title}>Registro de Ventas</Text>
-            
-            <View style={styles.display}>
-              <Text style={styles.displayLabel}>Total a cobrar:</Text>
-              <Text style={styles.displayValue}>${total.toFixed(2)}</Text>
-              <Text style={styles.displaySub}>{cartCount} productos en carrito</Text>
-            </View>
+      {/* CONTENIDO PRINCIPAL */}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
 
-            <View style={styles.quickActions}>
-              {[1, 5, 10, 20].map((amount) => (
-                <TouchableOpacity 
-                  key={amount} 
-                  style={styles.amountBtn}
-                  onPress={() => handleQuickAdd(amount)}
-                >
-                  <Text style={styles.amountBtnText}>+${amount}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          {/* PANTALLA VENTAS */}
+          {activeTab === 'sales' && (
+            <View>
 
-            <Text style={localStyles.label}>Método de pago:</Text>
-            <View style={localStyles.methodContainer}>
-              {['cash', 'card', 'transfer'].map((method) => (
+              {/* CARRITO DE PRODUCTOS */}
+              <View style={styles.quickGrid}>
+                  <ScrollView 
+                    nestedScrollEnabled 
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{paddingBottom: 4,}}
+                  >
+                    {selectedProducts.length === 0 ? (
+                      <View style={styles.emptyProducts}>
+                        <Text style={styles.emptyProductsText}>
+                          No hay productos seleccionados
+                        </Text>
+                      </View>
+                    ) : (
+                      selectedProducts.map((product) => (
+                        <View
+                          key={product.id}
+                          style={styles.selectedProductCard}
+                        >
+                          <View>
+                            <Text style={styles.selectedProductName}>
+                              {product.name}
+                            </Text>
+
+                            <Text style={styles.selectedProductPrice}>
+                              ${product.price}
+                            </Text>
+                          </View>
+
+                          <View style={styles.selectedProductRight}>
+                            <Text style={styles.selectedProductQty}>
+                              x{product.quantity}
+                            </Text>
+
+                            <TouchableOpacity
+                              style={styles.removeBtn}
+                              onPress={() => {
+                                setSelectedProducts((prev) =>
+                                  prev
+                                    .map((item) => {
+                                      if (item.id === product.id) {
+                                        return {
+                                          ...item,
+                                          quantity: item.quantity - 1,
+                                        };
+                                      }
+
+                                      return item;
+                                    })
+                                    .filter((item) => item.quantity > 0)
+                                );
+
+                                setCartCount((prev) =>
+                                  Math.max(prev - 1, 0)
+                                );
+
+                                setTotal((prev) =>
+                                  Math.max(prev - product.price, 0)
+                                );
+                              }}
+                            >
+                              <Text style={styles.removeBtnText}>
+                                −
+                              </Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                              style={styles.addBtn}
+                              onPress={() => {
+                                setSelectedProducts((prev) =>
+                                  prev.map((item) => {
+                                    if (item.id === product.id) {
+                                      return {
+                                        ...item,
+                                        quantity: item.quantity + 1,
+                                      };
+                                    }
+
+                                    return item;
+                                  })
+                                );
+
+                                setCartCount((prev) => prev + 1);
+
+                                setTotal((prev) => prev + product.price);
+                              }}
+                            >
+                              <Text style={styles.addBtnText}>
+                                +
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </ScrollView>
+              </View>
+
+              {/* ACCIONES EXTRA */}
+              <View style={styles.actionsTopRow}>
+
+                {/* LIMPIAR MONTO */}
                 <TouchableOpacity
-                  key={method}
-                  style={[
-                    localStyles.methodBtn,
-                    paymentMethod === method && localStyles.methodBtnActive
-                  ]}
-                  onPress={() => setPaymentMethod(method)}
+                  style={styles.clearAmountBtn}
+                  onPress={() => {
+                    setTotal(0);
+                    setCartCount(0);
+                    setSelectedProduct(null);
+                    setSelectedProducts([]);
+                    setShowProducts(false);
+                    setShowAllProducts(false);
+                  }}
                 >
-                  <Text style={[
-                    localStyles.methodBtnText,
-                    paymentMethod === method && localStyles.methodBtnTextActive
-                  ]}>
-                    {method === 'cash' ? 'Efectivo' : method === 'card' ? 'Tarjeta' : 'Transferencia'}
+                  <Text style={styles.clearAmountText}>
+                    Limpiar monto
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            <TextInput
-              style={localStyles.input}
-              placeholder="Descripción (opcional)"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-            />
+                 {/* BOTÓN DROPDOWN */}
+                <TouchableOpacity
+                  style={styles.productDropdown}
+                  onPress={() => setShowProducts(!showProducts)}
+                >
+                  <Text style={styles.productDropdownText}>
+                    {selectedProduct
+                      ? selectedProduct.name
+                      : 'Seleccionar producto'}
+                  </Text>
 
-            {error && <Text style={localStyles.errorText}>{error}</Text>}
-            
-            <TouchableOpacity 
-              style={[styles.checkoutBtn, (cartCount === 0 || loading) && styles.disabledBtn]}
-              onPress={handleCheckout}
-              disabled={cartCount === 0 || loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.checkoutBtnText}>Registrar Venta</Text>
+                  <Text style={styles.dropdownArrow}>
+                    {showProducts ? '▲' : '▼'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* LISTA PRODUCTOS */}
+                {showProducts && (
+                  <View style={styles.productsContainer}>
+                    {(showAllProducts
+                      ? products
+                      : products.slice(0, 5)
+                    ).map((product) => (
+                      <TouchableOpacity
+                        key={product.id}
+                        style={styles.productItem}
+                        onPress={() => {
+                          setSelectedProducts((prev) => {
+                            const existing = prev.find(
+                              (item) => item.id === product.id
+                            );
+
+                            if (existing) {
+                              return prev.map((item) =>
+                                item.id === product.id
+                                  ? {
+                                      ...item,
+                                      quantity: item.quantity + 1,
+                                    }
+                                  : item
+                              );
+                            }
+
+                            return [
+                              ...prev,
+                              {
+                                ...product,
+                                quantity: 1,
+                              },
+                            ];
+                          });
+
+                          setShowProducts(false);
+
+                          // AGREGAR PRECIO AUTOMÁTICAMENTE
+                          setCartCount((prev) => prev + 1);
+                          setTotal((prev) => prev + product.price);
+                        }}
+                      >
+                        <View>
+                          <Text style={styles.productName}>
+                            {product.name}
+                          </Text>
+
+                          <Text style={styles.productPrice}>
+                            ${product.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* VER MÁS */}
+                    {products.length > 5 && !showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(true)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver más productos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* VER MENOS */}
+                    {showAllProducts && (
+                      <TouchableOpacity
+                        style={styles.showMoreBtn}
+                        onPress={() => setShowAllProducts(false)}
+                      >
+                        <Text style={styles.showMoreText}>
+                          Ver menos
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* MÉTODO DE PAGO */}
+              <Text style={styles.label}>
+                Método de pago
+              </Text>
+
+              <View style={styles.methodContainer}>
+                {['cash', 'card', 'transfer'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    style={[
+                      styles.methodBtn,
+                      paymentMethod === method &&
+                        styles.methodBtnActive,
+                    ]}
+                    onPress={() => setPaymentMethod(method)}
+                  >
+                    <Text
+                      style={[
+                        styles.methodBtnText,
+                        paymentMethod === method &&
+                          styles.methodBtnTextActive,
+                      ]}
+                    >
+                      {method === 'cash'
+                        ? 'Efectivo'
+                        : method === 'card'
+                        ? 'Tarjeta'
+                        : 'Transferencia'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* BOTONES EXTRA */}
+              <View style={styles.actionsRow}>
+
+                {/* Agregar Nota */}
+                <TouchableOpacity
+                  style={styles.secondaryBtnGray}
+                  onPress={() => setNoteModalVisible(true)}
+                >
+                  <DocumentTextIcon size={18} color="#0F2747" style={styles.secondaryBtnIcon}/>
+
+                  <Text style={styles.secondaryBtnTextGray}>
+                    {saleNote ? 'Editar Nota' : 'Agregar Nota'}
+                  </Text>
+                </TouchableOpacity>
+
+                <Modal
+                  visible={noteModalVisible}
+                  transparent
+                  animationType="fade"
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.noteModal}>
+
+                      <View style={styles.noteHeader}>
+
+                        <Text style={styles.noteModalTitle}>
+                          Nota de la venta
+                        </Text>
+
+                        <TouchableOpacity
+                          style={styles.closeIconBtn}
+                          onPress={() => setNoteModalVisible(false)}
+                        >
+                          <Text style={styles.closeIconText}>
+                            ✕
+                          </Text>
+                        </TouchableOpacity>
+
+                      </View>
+
+                      <TextInput
+                        style={styles.noteInput}
+                        placeholder="Escribe una nota..."
+                        placeholderTextColor="#94A3B8"
+                        multiline
+                        value={saleNote}
+                        onChangeText={setSaleNote}
+                      />
+
+                      <View style={styles.noteActions}>
+
+                        {/* ELIMINAR */}
+                        <TouchableOpacity
+                          style={styles.deleteNoteBtn}
+                          onPress={() => {
+                            setSaleNote('');
+                          }}
+                        >
+                          <Text style={styles.deleteNoteText}>
+                            Eliminar nota
+                          </Text>
+                        </TouchableOpacity>
+
+                        {/* CERRAR */}
+                        <TouchableOpacity
+                          style={styles.closeNoteBtn}
+                          onPress={() => setNoteModalVisible(false)}
+                        >
+                          <Text style={styles.closeNoteText}>
+                            Listo
+                          </Text>
+                        </TouchableOpacity>
+
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+
+                {/* Vincular Fiado */}
+                <TouchableOpacity
+                  style={styles.secondaryBtnBlue}
+                >
+                  <Text style={styles.secondaryBtnIconBlue}>
+                      <UserPlusIcon size={18} color="#1E3A8A" style={styles.secondaryBtnIconBlue} />
+                  </Text>
+
+                  <Text style={styles.secondaryBtnTextBlue}>
+                    Vincular Fiado
+                  </Text>
+                </TouchableOpacity>
+
+              </View>
+
+              {/* ERROR */}
+              {error && (
+                <Text style={styles.errorText}>
+                  {error}
+                </Text>
               )}
-            </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.clearBtn}
-              onPress={() => {
-                setCartCount(0);
-                setTotal(0);
-                setDescription('');
-              }}
-            >
-              <Text style={styles.clearBtnText}>Limpiar</Text>
-            </TouchableOpacity>
-          </>
+              {/* BOTÓN REGISTRAR VENTA */}
+              <TouchableOpacity
+                style={[
+                  styles.checkoutBtn,
+                  (cartCount === 0 || loading) &&
+                    styles.disabledBtn,
+                ]}
+                onPress={handleCheckout}
+                disabled={cartCount === 0 || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <View style={styles.checkoutBtnContent}>
+                    <Text style={styles.checkMark}>✓</Text>
+
+                    <Text style={styles.checkoutBtnText}>
+                      Registrar Venta
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
         )}
 
-        {/* PESTAÑA: REPORTES */}
-        {activeTab === 'reports' && (
+          {/* PANTALLA REPORTES / HISTORIAL */}
+        {activeTab === 'history' && (
           <>
-            <Text style={styles.title}>Reportes de Ganancias</Text>
+            <Text style={styles.reportTitle}>
+              Historial Financiero
+            </Text>
 
-            <Text style={localStyles.label}>Desde:</Text>
-            <TextInput
-              style={localStyles.input}
-              placeholder="YYYY-MM-DD"
-              value={dateFrom}
-              onChangeText={setDateFrom}
-            />
+            {/* RESUMEN */}
+            <View style={styles.historySummary}>
 
-            <Text style={localStyles.label}>Hasta:</Text>
-            <TextInput
-              style={localStyles.input}
-              placeholder="YYYY-MM-DD"
-              value={dateTo}
-              onChangeText={setDateTo}
-            />
+              <View style={styles.summaryCardIncome}>
+                <Text style={styles.summaryLabel}>
+                  Ganancias
+                </Text>
 
-            {error && <Text style={localStyles.errorText}>{error}</Text>}
-
-            <TouchableOpacity 
-              style={[localStyles.reportBtn, loading && styles.disabledBtn]}
-              onPress={handleGetReport}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={localStyles.reportBtnText}>Generar Reporte</Text>
-              )}
-            </TouchableOpacity>
-
-            {profitsData && (
-              <View style={localStyles.reportCard}>
-                <View style={localStyles.reportRow}>
-                  <Text style={localStyles.reportLabel}>Período:</Text>
-                  <Text style={localStyles.reportValue}>
-                    {profitsData.period?.from} a {profitsData.period?.to}
-                  </Text>
-                </View>
-
-                <View style={localStyles.reportRow}>
-                  <Text style={localStyles.reportLabel}>Ingresos:</Text>
-                  <Text style={[localStyles.reportValue, { color: '#10b981' }]}>
-                    ${profitsData.income?.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={localStyles.reportRow}>
-                  <Text style={localStyles.reportLabel}>Gastos:</Text>
-                  <Text style={[localStyles.reportValue, { color: '#ef4444' }]}>
-                    ${profitsData.expenses?.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={[localStyles.reportRow, localStyles.reportRowHighlight]}>
-                  <Text style={localStyles.reportLabel}>Ganancia neta:</Text>
-                  <Text style={[localStyles.reportValue, { color: '#3b82f6', fontWeight: 'bold' }]}>
-                    ${profitsData.profit?.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={localStyles.reportRow}>
-                  <Text style={localStyles.reportLabel}>Facturas:</Text>
-                  <Text style={localStyles.reportValue}>{profitsData.invoices_count}</Text>
-                </View>
+                <Text style={styles.summaryIncome}>
+                  $
+                  {historyData
+                    .filter((item) => item.type === 'income')
+                    .reduce((acc, item) => acc + item.amount, 0)
+                    .toFixed(2)}
+                </Text>
               </View>
-            )}
+
+              <View style={styles.summaryCardExpense}>
+                <Text style={styles.summaryLabel}>
+                  Pérdidas
+                </Text>
+
+                <Text style={styles.summaryExpense}>
+                  $
+                  {historyData
+                    .filter((item) => item.type === 'expense')
+                    .reduce((acc, item) => acc + item.amount, 0)
+                    .toFixed(2)}
+                </Text>
+              </View>
+
+            </View>
+
+            {/* HISTORIAL */}
+            <View style={styles.historyContainer}>
+              {historyData.map((item) => (
+                <View
+                  key={item.id}
+                  style={styles.historyCard}
+                >
+                  <View>
+                    <Text style={styles.historyTitle}>
+                      {item.title}
+                    </Text>
+
+                    <Text style={styles.historyDate}>
+                      {item.date}
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={
+                      item.type === 'income'
+                        ? styles.historyIncome
+                        : styles.historyExpense
+                    }
+                  >
+                    {item.type === 'income' ? '+' : '-'}$
+                    {item.amount.toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>
-    </MainLayout>
+    </SafeAreaView>
   );
 };
 
 export default SalesScreen;
-
-const localStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: '#2563eb',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#64748b',
-  },
-  tabTextActive: {
-    color: '#2563eb',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 12,
-    fontSize: 14,
-  },
-  methodContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    gap: 8,
-  },
-  methodBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-  },
-  methodBtnActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  methodBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  methodBtnTextActive: {
-    color: '#fff',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 13,
-    marginBottom: 12,
-    paddingHorizontal: 8,
-  },
-  reportBtn: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  reportBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  reportCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  reportRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  reportRowHighlight: {
-    backgroundColor: '#f0f9ff',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    marginVertical: 8,
-    borderBottomWidth: 0,
-  },
-  reportLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  reportValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-});

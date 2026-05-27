@@ -1,47 +1,47 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
-import { useDashboard } from '../hooks/useDashboard';
-import styles from '../styles/home.styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import colors from '../../../theme/colors';
+import useUserStore from '../../../store/useUserStore';
+
+//Importacion del header
+import DashboardHeader from '../components/shared/DashboardHeader';
+
+//Importacion de componentes específicos para cada tipo de usuario
+import InformalDashboard from '../components/InformalDashboard';
+import PymeFoodDashboard from '../components/PymeFoodDashboard';
+import PymeServiceDashboard from '../components/PymeServiceDashboard';
+import PymePrepFoodDashboard from '../components/PymePrepFoodDashboard';
+import PymeRetailDashboard from '../components/PymeRetailDashboard';
+import PymeGeneralDashboard from '../components/PymeGeneralDashboard';
 
 const HomeScreen = () => {
-  const { metrics, loading } = useDashboard();
+  // Obtenemos los valores reales del usuario activo
+  const userType = useUserStore((state) => state.userType);
+  const businessData = useUserStore((state) => state.businessData);
 
-  if (loading) {
-    return (
-      <MainLayout>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563eb" />
-        </View>
-      </MainLayout>
-    );
-  }
+  const pymeDashboards = {
+    food: <PymeFoodDashboard />,
+    service: <PymeServiceDashboard />,
+    prepared_food: <PymePrepFoodDashboard />,
+    retail: <PymeRetailDashboard />,
+    general: <PymeGeneralDashboard />
+  };
+
+  const renderDashboardContent = () => {
+    if (userType === 'informal') {
+      return <InformalDashboard />;
+    } 
+    
+    // Si es PYME, busca por su categoría
+    const category = businessData?.category || 'general';
+    return pymeDashboards[category] || <PymeGeneralDashboard />;
+  };
 
   return (
-    <MainLayout>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.greeting}>Panel de Control</Text>
-        <Text style={styles.date}>Resumen de hoy</Text>
-
-        <View style={styles.grid}>
-          {metrics?.cards.map((card) => (
-            <View key={card.id} style={styles.card}>
-              <Text style={styles.cardTitle}>{card.title}</Text>
-              <Text style={styles.cardValue}>{card.value}</Text>
-              {card.trend && (
-                <Text style={styles.cardTrend}>{card.trend}</Text>
-              )}
-            </View>
-          ))}
-        </View>
-
-        {metrics?.charts && (
-          <View style={styles.chartPlaceholder}>
-            <Text style={styles.placeholderText}>Gráficos Avanzados (Solo PYME)</Text>
-          </View>
-        )}
-      </ScrollView>
-    </MainLayout>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <DashboardHeader isHome={true} />
+      {renderDashboardContent()}
+    </SafeAreaView>
   );
 };
 

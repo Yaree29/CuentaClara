@@ -48,7 +48,7 @@ export default StyleSheet.create({
     fontWeight: '600',
   },
   button: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.addBackground,
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -67,4 +67,90 @@ export default StyleSheet.create({
     color: colors.textLink,
     fontSize: 14,
   },
+  dropdown: {
+  height: 50,
+  borderColor: '#ccc',
+  borderWidth: 1,
+  borderRadius: 10,
+  paddingHorizontal: 12,
+  backgroundColor: '#fff',
+  marginBottom: 20,
+},
+
+placeholderStyle: {
+  fontSize: 16,
+  color: '#999',
+},
+
+selectedTextStyle: {
+  fontSize: 16,
+  color: '#000',
+},
+
+headerContainer: {
+  alignItems: 'center',
+  marginBottom: 30,
+  marginTop: 10,
+},
+
+logo: {
+  width: 90,
+  height: 90,
+  marginBottom: 10,
+},
+
+appName: {
+  fontSize: 26,
+  fontWeight: '700',
+  color: colors.primary,
+},
+
+mainSubtitle: {
+  fontSize: 16,
+  color: colors.textSecondary,
+  marginTop: 8,
+  textAlign: 'center',
+  marginBottom: 20,
+},
+
+cardsContainer: {
+  gap: 20,
+},
+
+profileCard: {
+  backgroundColor: '#F5F8F5',
+  borderRadius: 20,
+  padding: 24,
+  borderWidth: 1,
+  borderColor: '#DCE3DC',
+},
+
+iconBox: {
+  width: 70,
+  height: 70,
+  borderRadius: 16,
+  backgroundColor: '#fff',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 20,
+},
+
+icon: {
+  fontSize: 50,
+},
+
+cardTitle: {
+  fontSize: 24,
+  fontWeight: '700',
+  color: colors.primary,
+  marginBottom: 14,
+},
+
+cardDescription: {
+  fontSize: 16,
+  color: colors.textSecondary,
+  lineHeight: 24,
+  marginBottom: 24,
+},
+
 });

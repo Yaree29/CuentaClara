@@ -1,3 +1,5 @@
 {
-    "java.format.onType.enabled": false
+    "java.format.onType.enabled": false,
+    "editor.minimap.autohide": "none",
+    "editor.minimap.enabled": true
 }

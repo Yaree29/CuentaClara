@@ -1,4 +1,5 @@
 import { supabase } from '../../../../src/services/supabaseClient';
+import { API_URL } from '../../../../src/config/env';
 import authService from './authService';
 import { API_URL } from '../../../config/env';
 
@@ -13,7 +14,7 @@ const registerService = {
     return data;
   },
 
-  async register(form) {
+  async register(form) {  
     // form: { name, lastName, email, password, phone, businessName, profileType, categoryId, nit, address, ... }
     const {
       name,

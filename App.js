@@ -6,6 +6,7 @@ import { AuthProvider } from './src/views/providers/AuthProvider';
 import { UserTypeProvider } from './src/views/providers/UserTypeProvider';
 import RootNavigator from './src/views/navigation/RootNavigator';
 import GlobalFAB from './src/components/ui/goblalFAB';
+import NotificationsListener from './src/modules/notifications/components/NotificationsListener';
 
 export default function App() {
     return ( 
@@ -13,6 +14,7 @@ export default function App() {
             <NavigationContainer>
                 <AuthProvider>
                     <UserTypeProvider>
+                        <NotificationsListener />
                         <RootNavigator />
                         <GlobalFAB />
                     </UserTypeProvider>

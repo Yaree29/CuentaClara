@@ -54,6 +54,24 @@ export default StyleSheet.create({
   },
   notificationsContainer: {
     marginRight: 25,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: colors.danger,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadgeText: {
+    color: colors.textWhite,
+    fontSize: 10,
+    fontWeight: '700',
   },
   settingsContainer: {
       marginRight: -1,

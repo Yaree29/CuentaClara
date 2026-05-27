@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
@@ -7,14 +8,23 @@ import styles from './styles/DashboardHeader.styles';
 // Importación local para extraer los datos del usuario logueado
 import useAuthStore from '../../../../store/useAuthStore';
 import useUserStore from '../../../../store/useUserStore';
+import useNotificationsStore from '../../../../store/useNotificationsStore';
 
 const DashboardHeader = ({ title, isHome = false }) => {
   // Obtenemos los datos del usuario actual y del negocio
   const user = useAuthStore((state) => state.user);
   const businessData = useUserStore((state) => state.businessData);
+  const unreadCount = useNotificationsStore((state) => state.unreadCount);
+  const markAllAsRead = useNotificationsStore((state) => state.markAllAsRead);
+  const navigation = useNavigation();
 
   // Fallbacks visuales por si algún dato no está cargado temporalmente
   const businessName = businessData?.name || 'CuentaClara';
+
+  const handleNotificationsPress = useCallback(() => {
+    markAllAsRead();
+    navigation.navigate('Notifications');
+  }, [markAllAsRead, navigation]);
 
   return (
     <View style={styles.headerContainer}>
@@ -39,9 +49,19 @@ const DashboardHeader = ({ title, isHome = false }) => {
       )}
       
       {/*boton de notificaciones alado izquierdo del boton de configuracion*/}
-      <View style={styles.notificationsContainer}>
+      <Pressable
+        style={styles.notificationsContainer}
+        onPress={handleNotificationsPress}
+      >
         <Ionicons name="notifications" size={22} color={colors.primary} />
-      </View>
+        {unreadCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationBadgeText}>
+              {unreadCount > 9 ? '9+' : String(unreadCount)}
+            </Text>
+          </View>
+        )}
+      </Pressable>
 
       {/*boton de configuracion a la derecha*/}
       <View style={styles.settingsContainer}>

@@ -7,7 +7,9 @@ import styles from './styles/InformalDashboard.styles';
 // Importación local para extraer los datos del usuario logueado
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
+import useNotificationsStore from '../../../store/useNotificationsStore';
 import { useLowStock } from '../hooks/useLowStock';
+import { useNotifications } from '../../notifications/hooks/useNotifications';
 import inventoryService from '../../inventory/services/inventoryService';
 
 const InformalDashboard = () => {
@@ -25,6 +27,10 @@ const InformalDashboard = () => {
 
   // Estado de inventario crítico desde Supabase
   const { lowStockProducts, okProducts, loading: stockLoading, error: stockError, refresh: refreshStock } = useLowStock();
+
+  // Notificaciones desde Supabase
+  const notifications = useNotificationsStore((state) => state.notifications);
+  useNotifications();
 
   // Estado del RefreshControl
   const [refreshing, setRefreshing] = useState(false);
@@ -187,55 +193,31 @@ const InformalDashboard = () => {
         </TouchableOpacity>
       </View>
 
-      {/* SECCIÓN HISTORIAL DE ACTIVIDADES RECIENTES */}
-      <Text style={styles.sectionTitle}>Actividades Recientes</Text>
-      <View style={styles.activityCard}>
-        
-        {/* FILA 1: VENTA */}
-        <View style={styles.activityRow}>
-          <View style={styles.activityLeft}>
-            <View style={[styles.activityIcon, { backgroundColor: colors.successLight }]}>
-              <Ionicons name="basket" size={18} color={colors.success} />
-            </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityTitle}>Venta rápida al contado</Text>
-              <Text style={styles.activityTime}>Hace 10 minutos • Caja General</Text>
-            </View>
-          </View>
-          <Text style={[styles.activityAmount, { color: colors.textSuccess }]}>+$12.50</Text>
+      {/* SECCIÓN DE NOTIFICACIONES */}
+      <Text style={styles.sectionTitle}>Notificaciones</Text>
+      <View style={styles.notificationsTable}>
+        <View style={styles.notificationHeaderRow}>
+          <Text style={[styles.notificationHeaderText, styles.notificationCellMessage]}>Mensaje</Text>
+          <Text style={[styles.notificationHeaderText, styles.notificationCellDate]}>Fecha</Text>
+          <Text style={[styles.notificationHeaderText, styles.notificationCellStatus]}>Estado</Text>
         </View>
-
-        <View style={styles.divider} />
-
-        {/* FILA 2: GASTO */}
-        <View style={styles.activityRow}>
-          <View style={styles.activityLeft}>
-            <View style={[styles.activityIcon, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="trending-down" size={18} color={colors.danger} />
+        {notifications && notifications.length > 0 ? (
+          notifications.map((notification) => (
+            <View key={notification.id} style={styles.notificationRow}>
+              <Text style={[styles.notificationCell, styles.notificationCellMessage]} numberOfLines={2}>
+                {notification.message || 'Stock bajo detectado'}
+              </Text>
+              <Text style={[styles.notificationCell, styles.notificationCellDate]}>
+                {notification.created_at ? new Date(notification.created_at).toLocaleDateString('es-ES') : (notification.timestamp ? new Date(notification.timestamp).toLocaleDateString('es-ES') : '-')}
+              </Text>
+              <Text style={[styles.notificationCell, styles.notificationCellStatus]}>
+                {notification.read_at ? 'Leída' : 'Nueva'}
+              </Text>
             </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityTitle}>Compra de Mercancía</Text>
-              <Text style={styles.activityTime}>Hace 1 hora • Proveedor El Machetazo</Text>
-            </View>
-          </View>
-          <Text style={[styles.activityAmount, { color: colors.textError }]}>-$45.00</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* FILA 3: CRÉDITO FIADO */}
-        <View style={styles.activityRow}>
-          <View style={styles.activityLeft}>
-            <View style={[styles.activityIcon, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="bookmark" size={18} color={colors.info} />
-            </View>
-            <View style={styles.activityInfo}>
-              <Text style={styles.activityTitle}>Fiado a Carlos Alvarado</Text>
-              <Text style={styles.activityTime}>Hace 3 horas • Saldo pendiente</Text>
-            </View>
-          </View>
-          <Text style={[styles.activityAmount, { color: colors.textPrimary }]}>$18.00</Text>
-        </View>
+          ))
+        ) : (
+          <Text style={styles.notificationEmpty}>Sin notificaciones</Text>
+        )}
       </View>
 
       {/* ── SECCIÓN DE INVENTARIO CRÍTICO (datos reales de Supabase) ── */}

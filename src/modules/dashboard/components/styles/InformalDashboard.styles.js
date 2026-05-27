@@ -357,6 +357,57 @@ export default StyleSheet.create({
     backgroundColor: colors.borderLight,
   },
 
+  /* --- NOTIFICACIONES (TABLA) --- */
+  notificationsTable: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  notificationHeaderRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.cardSecondary,
+  },
+  notificationHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  notificationCell: {
+    fontSize: 12,
+    color: colors.textPrimary,
+  },
+  notificationCellMessage: {
+    flex: 1.6,
+    marginRight: 8,
+  },
+  notificationCellDate: {
+    flex: 0.8,
+    color: colors.textMuted,
+  },
+  notificationCellStatus: {
+    flex: 0.6,
+    textAlign: 'right',
+    fontWeight: '600',
+  },
+  notificationEmpty: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+
   /* --- FORMULARIOS / VENTANAS EMERGENTES (MODALS) --- */
   modalOverlay: {
     flex: 1,

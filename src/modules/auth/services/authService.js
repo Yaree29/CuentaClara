@@ -5,7 +5,7 @@ const authService = {
   login: async (email, password) => {
 
     // SUPABASE DESACTIVADO
-    // const { data, error } = await supabase.auth.signInWithPassword()
+   const { data, error } = await supabase.auth.signInWithPassword()
 
     const foundUser = users.find(
       (u) =>

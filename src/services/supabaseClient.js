@@ -5,7 +5,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/env';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
-    'Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env.'
+    'Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_ANON_KEY in .env and app.config.js.'
   );
 }
 

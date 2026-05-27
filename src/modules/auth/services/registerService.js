@@ -1,7 +1,6 @@
 import { supabase } from '../../../../src/services/supabaseClient';
 import { API_URL } from '../../../../src/config/env';
 import authService from './authService';
-import { API_URL } from '../../../config/env';
 
 const mapProfileTypeToUiMode = (profileType) => {
   return profileType === 'empresa' ? 'advanced' : 'simple';
@@ -84,7 +83,7 @@ const registerService = {
     const fullName = `${name}${lastName ? ' ' + lastName : ''}`;
 
     // 3) Llamar a la API del backend para registrar el negocio y perfil
-    const apiUrl = API_URL || 'https://cuentaclara-api.onrender.com';
+    const apiUrl = API_URL || 'http://localhost:8000';
     
     const response = await fetch(`${apiUrl}/auth/register`, {
       method: 'POST',

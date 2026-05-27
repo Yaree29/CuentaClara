@@ -13,7 +13,7 @@ const registerService = {
     return data;
   },
 
-  async register(form) {
+  async register(form) {  
     // form: { name, lastName, email, password, phone, businessName, profileType, categoryId, nit, address, ... }
     const {
       name,

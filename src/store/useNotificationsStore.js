@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const countUnread = (items = []) => items.filter((item) => !item.read_at).length;
+const countUnread = (items = []) => items.filter((item) => !item.is_read).length;
 
 const useNotificationsStore = create((set) => ({
   notifications: [],
@@ -25,7 +25,7 @@ const useNotificationsStore = create((set) => ({
   markRead: (id) =>
     set((state) => {
       const notifications = state.notifications.map((item) =>
-        item.id === id ? { ...item, read_at: new Date().toISOString() } : item
+        item.id === id ? { ...item, is_read: true } : item
       );
       return {
         notifications,
@@ -35,14 +35,22 @@ const useNotificationsStore = create((set) => ({
 
   markAllAsRead: () =>
     set((state) => {
-      const now = new Date().toISOString();
       const notifications = state.notifications.map((item) => ({
         ...item,
-        read_at: item.read_at || now,
+        is_read: true,
       }));
       return {
         notifications,
         unreadCount: 0,
+      };
+    }),
+
+  removeReadNotifications: () =>
+    set((state) => {
+      const notifications = state.notifications.filter((item) => !item.is_read);
+      return {
+        notifications,
+        unreadCount: countUnread(notifications),
       };
     }),
 

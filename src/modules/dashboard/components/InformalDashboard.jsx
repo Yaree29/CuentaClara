@@ -211,7 +211,7 @@ const InformalDashboard = () => {
                 {notification.created_at ? new Date(notification.created_at).toLocaleDateString('es-ES') : (notification.timestamp ? new Date(notification.timestamp).toLocaleDateString('es-ES') : '-')}
               </Text>
               <Text style={[styles.notificationCell, styles.notificationCellStatus]}>
-                {notification.read_at ? 'Leída' : 'Nueva'}
+                {notification.is_read ? 'Leída' : 'Nueva'}
               </Text>
             </View>
           ))

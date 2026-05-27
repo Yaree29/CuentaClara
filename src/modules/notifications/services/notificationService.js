@@ -17,7 +17,7 @@ const notificationsService = {
         .eq('user_id', user.id);
 
       if (unreadOnly) {
-        query = query.is('read_at', null);
+        query = query.eq('is_read', false);
       }
 
       query = query.range(offset, offset + limit - 1);
@@ -45,7 +45,7 @@ const notificationsService = {
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
+        .update({ is_read: true })
         .eq('id', notificationId)
         .eq('user_id', user.id)
         .select()
@@ -90,6 +90,33 @@ const notificationsService = {
       return data;
     } catch (err) {
       console.error('[notificationService] Error registering push token:', err);
+      throw err;
+    }
+  },
+
+  deleteReadNotifications: async () => {
+    const user = useAuthStore.getState().user;
+    if (!user?.id) {
+      throw new Error('No hay sesión activa.');
+    }
+
+    try {
+      console.log('[notificationService] Deleting read notifications for user:', user.id);
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('is_read', true);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('[notificationService] Read notifications deleted successfully');
+      return { success: true };
+    } catch (err) {
+      console.error('[notificationService] Error deleting read notifications:', err);
       throw err;
     }
   },

@@ -9,10 +9,13 @@ import { validateEmail, validatePassword } from '../utils/validation';
 import users from '../../../data/users';
 import useUserStore from '../../../store/useUserStore';
 import useAuthStore from '../../../store/useAuthStore';
+import loginService from '../services/loginService';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Usuario de prueba
+  const [email, setEmail] = useState('prueba2@gmail.com');
+  const [password, setPassword] = useState('Prueba456*');
+  
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -89,42 +92,59 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async () => {
-    // Validar email
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.valid) {
-      setEmailError(emailValidation.error);
-      setPasswordError('');
-      Alert.alert('Correo inválido', emailValidation.error);
+    // Validar que no estén vacíos
+    if (!email.trim()) {
+      setEmailError('El correo es requerido');
+      Alert.alert('Correo requerido', 'Por favor ingresa tu correo');
       return;
     }
 
-    // Validar contraseña
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      setPasswordError(passwordValidation.error);
-      setEmailError('');
-      Alert.alert('Contraseña inválida', passwordValidation.error);
+    if (!password.trim()) {
+      setPasswordError('La contraseña es requerida');
+      Alert.alert('Contraseña requerida', 'Por favor ingresa tu contraseña');
+      return;
+    }
+
+    // Validación básica de email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setEmailError(emailValidation.error);
+      Alert.alert('Correo inválido', emailValidation.error);
       return;
     }
 
     setEmailError('');
     setPasswordError('');
 
-    // 3. LÓGICA DE LOGIN LOCAL: Validamos contra nuestro archivo users.js
-    const foundUser = users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    );
+    try {
+      // Intentar login con FastAPI
+      const result = await loginService.login(email, password);
 
-    if (foundUser) {
-      // Configuramos el tipo de usuario y datos de negocio para que el Navbar reaccione
-      setUserType(foundUser.userType);
-      setBusinessData(foundUser.business || null);
+      // Configurar datos en los stores
+      setUserType(result.user?.role || 'user');
+      setBusinessData(result.business || null);
+
+      // Login exitoso
+      setLogin(result.user, result.token, null);
+      Alert.alert('¡Bienvenido!', 'Inicio de sesión exitoso');
+    } catch (error) {
+      let errorMessage = 'Error desconocido';
       
-      // Lanzamos la acción de login (lo que quita el AuthNavigator y pone el MainNavigator)
-      setLogin(foundUser, 'mock_token_123', null);
+      // Extraer mensaje de error de forma segura
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
       
-    } else {
-      Alert.alert('Error de acceso', 'El correo o la contraseña son incorrectos.');
+      console.error('Error en login:', errorMessage, 'Status:', error?.statusCode, 'Code:', error?.errorCode);
+
+      // Por razones de seguridad, siempre mostrar que el problema es la contraseña/credenciales
+      // Esto evita revelar si el correo existe o no en la base de datos
+      setPasswordError('Credenciales incorrectas');
+      Alert.alert('Credenciales incorrectas', 'El correo o la contraseña son incorrectos.');
     }
   };
 
@@ -136,15 +156,16 @@ const LoginScreen = () => {
     }
 
     try {
-      await resetPassword(email.trim().toLowerCase());
+      await loginService.resetPassword(email.trim().toLowerCase());
       Alert.alert(
         'Correo enviado',
         'Revisa tu correo para continuar con la recuperación de contraseña.'
       );
     } catch (err) {
+      const errorMessage = err?.message || String(err);
       Alert.alert(
         'No se pudo enviar',
-        'Verifica tu correo e intenta nuevamente.'
+        errorMessage || 'Verifica tu correo e intenta nuevamente.'
       );
     }
   };

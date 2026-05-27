@@ -235,12 +235,28 @@ export default StyleSheet.create({
     color: colors.primary, 
     fontWeight: '700' },
 
+  /* --- Estilos de Validación --- */
+  inputError: {
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+    backgroundColor: colors.danger + '08',
+  },
+
+  errorText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    marginLeft: 2,
+  },
+
   saveBtn: { 
     backgroundColor: colors.success, 
     padding: 16, 
     borderRadius: 12, 
     alignItems: 'center', 
     marginTop: 10 },
+
 
   saveBtnText: { 
     color: '#FFF', 
@@ -258,4 +274,91 @@ export default StyleSheet.create({
     color: colors.danger, 
     fontSize: 16, 
     fontWeight: 'bold' },
+
+  /* --- Modal de Nueva Categoría --- */
+  addCatOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+
+  addCatCard: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 24,
+  },
+
+  addCatTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+
+  addCatInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 48,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
+
+  addCatActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+
+  addCatCancelBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+
+  addCatCancelText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+
+  addCatConfirmBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+
+  addCatConfirmText: {
+    color: '#FFF',
+    fontWeight: '700',
+  },
+
+  /* Píldora especial para el botón "+ Categoría" en el filtro */
+  categoryPillAdd: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '12',
+    marginRight: 8,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  categoryPillAddText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
 });

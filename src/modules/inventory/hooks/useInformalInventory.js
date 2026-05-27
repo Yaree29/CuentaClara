@@ -1,24 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
-
-// Lista de categorías controladas por nosotros
-export const CONTROLLED_CATEGORIES = ['Servicios', 'Lotería', 'Snacks', 'Bebidas', 'Otros'];
-
-const INITIAL_MOCK_PRODUCTS = [
-  { id: '1', name: 'Recarga +Móvil $5', price: 5.00, category: 'Servicios', stock: null },
-  { id: '2', name: 'Recarga Tigo $3', price: 3.00, category: 'Servicios', stock: null },
-  { id: '3', name: 'Chances (Miercoles)', price: 0.25, category: 'Lotería', stock: 40 },
-  { id: '4', name: 'Billetes (Domingo)', price: 1.00, category: 'Lotería', stock: 15 },
-  { id: '5', name: 'Chocolate Snickers', price: 1.25, category: 'Snacks', stock: 12 },
-];
+import useAuthStore from '../../../store/useAuthStore';
+import useUserStore from '../../../store/useUserStore';
+import inventoryService from '../services/inventoryService';
 
 export const useInformalInventory = () => {
-  // Convertimos los datos a un estado para poder agregar/editar
-  const [products, setProducts] = useState(INITIAL_MOCK_PRODUCTS);
-  
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // --- Categorías dinámicas cargadas desde Supabase ---
+  const [userCategories, setUserCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [isAddCategoryModalVisible, setIsAddCategoryModalVisible] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
-  
+
   // Estados de Promoción
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedProductsForPromo, setSelectedProductsForPromo] = useState([]);
@@ -26,40 +24,128 @@ export const useInformalInventory = () => {
 
   // Estados del Formulario (Agregar/Editar)
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null); // null = Modo Crear
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  const categories = ['Todas', ...CONTROLLED_CATEGORIES];
+  // Obtener negocio del usuario actual
+  const user = useAuthStore((state) => state.user);
+  const businessData = useUserStore((state) => state.businessData);
 
-  const filteredProducts = products.filter(p => {
+  const resolveBusinessId = useCallback(() =>
+    businessData?.id ||
+    businessData?.business_id ||
+    user?.business_id ||
+    user?.businessId ||
+    null,
+  [businessData, user]);
+
+  // ─── Carga de categorías del negocio ───────────────────────────────────────
+  const loadCategories = useCallback(async () => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      setUserCategories([]);
+      return;
+    }
+    setCategoriesLoading(true);
+    try {
+      const data = await inventoryService.getCategories(businessId);
+      setUserCategories(data);
+    } catch (err) {
+      console.error('Error loading categories:', err);
+      // No mostramos alert, el inventario ya muestra el error general
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, [resolveBusinessId]);
+
+  // ─── Carga de productos del negocio ────────────────────────────────────────
+  const loadInventory = useCallback(async () => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      setProducts([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await inventoryService.getProducts(businessId);
+      setProducts(data);
+    } catch (err) {
+      console.error('Error loading inventory:', err);
+      setError('No se pudo cargar el inventario.');
+      Alert.alert('Error', 'No se pudo cargar el inventario desde Supabase.');
+    } finally {
+      setLoading(false);
+    }
+  }, [resolveBusinessId]);
+
+  useEffect(() => {
+    loadInventory();
+    loadCategories();
+  }, [user, businessData]);
+
+  // Listado final de categorías para el filtro de cabecera: "Todas" + las del negocio
+  const categories = ['Todas', ...userCategories.map((c) => c.name)];
+
+  // Las categorías disponibles para el formulario de producto (sin "Todas")
+  const productCategories = userCategories.map((c) => c.name);
+
+  const filteredProducts = products.filter((p) => {
     const matchCat = selectedCategory === 'Todas' || p.category === selectedCategory;
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const toggleProductForPromo = (product) => {
-    if (selectedProductsForPromo.find(p => p.id === product.id)) {
-      setSelectedProductsForPromo(prev => prev.filter(p => p.id !== product.id));
-    } else {
-      setSelectedProductsForPromo(prev => [...prev, product]);
+  // ─── Crear nueva categoría ──────────────────────────────────────────────────
+  const addCategory = async (categoryName) => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      Alert.alert('Error', 'No se encontró el negocio activo.');
+      return;
+    }
+    if (!categoryName?.trim()) {
+      Alert.alert('Error', 'El nombre de la categoría no puede estar vacío.');
+      return;
+    }
+    try {
+      const response = await inventoryService.createCategory(businessId, categoryName);
+      if (response.alreadyExists) {
+        Alert.alert('Aviso', `La categoría "${response.category.name}" ya existe.`);
+      } else {
+        setUserCategories((prev) => [...prev, response.category].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+    } catch (err) {
+      console.error('Error creating category:', err);
+      Alert.alert('Error', 'No se pudo crear la categoría.');
     }
   };
 
-  const generateWhatsAppPromo = (discountText = "") => {
+  // ─── Promoción ──────────────────────────────────────────────────────────────
+  const toggleProductForPromo = (product) => {
+    if (selectedProductsForPromo.find((p) => p.id === product.id)) {
+      setSelectedProductsForPromo((prev) => prev.filter((p) => p.id !== product.id));
+    } else {
+      setSelectedProductsForPromo((prev) => [...prev, product]);
+    }
+  };
+
+  const generateWhatsAppPromo = (discountText = '') => {
     if (selectedProductsForPromo.length === 0) return;
     let text = `🔥 *¡Mira lo que tengo disponible hoy!* 🔥\n\n`;
-    selectedProductsForPromo.forEach(p => { text += `✅ *${p.name}* - a solo *$${p.price.toFixed(2)}*\n`; });
+    selectedProductsForPromo.forEach((p) => {
+      text += `✅ *${p.name}* - a solo *$${p.price.toFixed(2)}*\n`;
+    });
     if (discountText) text += `\n🎁 *Aviso:* ${discountText}\n`;
     text += `\n📲 Escríbeme por aquí si te interesa algo.`;
 
     const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    Linking.canOpenURL(url).catch(err => console.error('Error al abrir WA', err));
-      
+    Linking.canOpenURL(url).catch((err) => console.error('Error al abrir WA', err));
+
     setIsPromoModalVisible(false);
     setIsSelectionMode(false);
     setSelectedProductsForPromo([]);
   };
 
-  // --- LÓGICA DE FORMULARIO (CRUD) ---
+  // ─── CRUD Productos ─────────────────────────────────────────────────────────
   const openAddForm = () => {
     setEditingProduct(null);
     setIsFormModalVisible(true);
@@ -70,29 +156,83 @@ export const useInformalInventory = () => {
     setIsFormModalVisible(true);
   };
 
-  const saveProduct = (productData) => {
-    if (editingProduct) {
-      // Editar
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productData } : p));
-    } else {
-      // Crear (Generamos un ID falso)
-      const newProduct = { ...productData, id: Date.now().toString() };
-      setProducts(prev => [newProduct, ...prev]);
+  const saveProduct = async (productData) => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      Alert.alert('Error', 'No se encontró el negocio activo para guardar el producto.');
+      return;
     }
-    setIsFormModalVisible(false);
+
+    setLoading(true);
+    try {
+      if (editingProduct) {
+        const response = await inventoryService.updateProduct(businessId, editingProduct.id, productData);
+        if (response.success) {
+          setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? response.product : p)));
+        }
+      } else {
+        const response = await inventoryService.createProduct(businessId, productData);
+        if (response.success) {
+          setProducts((prev) => [response.product, ...prev]);
+          // Si se usó una categoría que no estaba en la lista local, recargamos
+          const catExists = userCategories.some((c) => c.name === productData.category);
+          if (!catExists) await loadCategories();
+        }
+      }
+      setIsFormModalVisible(false);
+    } catch (err) {
+      console.error('Error saving product:', err);
+      Alert.alert('Error', 'No se pudo guardar el producto en Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    setIsFormModalVisible(false);
+  const deleteProduct = async (id) => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      Alert.alert('Error', 'No se encontró el negocio activo para eliminar.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await inventoryService.deleteProduct(businessId, id);
+      if (response.success) {
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+      }
+      setIsFormModalVisible(false);
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      Alert.alert('Error', 'No se pudo eliminar el producto de Supabase.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
-    searchQuery, setSearchQuery, selectedCategory, setSelectedCategory,
-    categories, filteredProducts,
+    // Productos
+    filteredProducts,
+    loading,
+    error,
+    refreshInventory: loadInventory,
+    // Búsqueda y filtros
+    searchQuery, setSearchQuery,
+    selectedCategory, setSelectedCategory,
+    categories,
+    // Categorías dinámicas
+    productCategories,
+    userCategories,
+    categoriesLoading,
+    addCategory,
+    isAddCategoryModalVisible, setIsAddCategoryModalVisible,
+    // Promoción
     isSelectionMode, setIsSelectionMode,
-    selectedProductsForPromo, toggleProductForPromo,
+    selectedProductsForPromo, setSelectedProductsForPromo, toggleProductForPromo,
     isPromoModalVisible, setIsPromoModalVisible, generateWhatsAppPromo,
-    isFormModalVisible, setIsFormModalVisible, editingProduct, openAddForm, openEditForm, saveProduct, deleteProduct
+    // Formulario producto
+    isFormModalVisible, setIsFormModalVisible,
+    editingProduct,
+    openAddForm, openEditForm, saveProduct, deleteProduct,
   };
 };

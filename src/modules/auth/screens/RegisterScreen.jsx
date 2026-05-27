@@ -17,12 +17,12 @@ const RegisterScreen = ({ navigation }) => {
   const [biometricLoading, setBiometricLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '',
-    lastName: '',
-    email: '',
-    password: '',
+    name: 'Prueba',
+    lastName: 'Usuario',
+    email: 'prueba2@gmail.com',
+    password: 'Prueba456*',
     phone: '',
-    businessName: '',
+    businessName: 'Prueba Negocio',
     profileType: '', 
     category: '',
     measureUnit: '',
@@ -31,8 +31,8 @@ const RegisterScreen = ({ navigation }) => {
     nit: '',
     address: '',
 
-    businessType: '',
-    avgPrice: '',
+    businessType: 'Pruebas',
+    avgPrice: '1',
     taxEnabled: false,
     handlesTips: false,
   });

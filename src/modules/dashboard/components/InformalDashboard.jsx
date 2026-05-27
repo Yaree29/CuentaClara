@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../theme/colors';
 import styles from './styles/InformalDashboard.styles';
@@ -8,6 +8,7 @@ import styles from './styles/InformalDashboard.styles';
 // Importación local para extraer los datos del usuario logueado
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
+import { useLowStock } from '../hooks/useLowStock';
 
 const InformalDashboard = () => {
   // Control de visibilidad para las ventanas de registro rápido
@@ -15,8 +16,11 @@ const InformalDashboard = () => {
   const [modalFiado, setModalFiado] = useState(false);
   const [modalProducto, setModalProducto] = useState(false);
 
-  // Simulación de estados del Inventario Crítico
-  const lowStockProducts = ["Queso Blanco", "Leche Entera", "Pan de Molde", "Huevos de Patio"];
+  // Estado de inventario crítico desde Supabase
+  const { lowStockProducts, okProducts, loading: stockLoading, error: stockError, refresh: refreshStock } = useLowStock();
+
+  // Toggle para mostrar/ocultar la lista de productos OK
+  const [showOkProducts, setShowOkProducts] = useState(false);
 
 // Extraemos los datos del usuario actual desde Zustand
   const user = useAuthStore((state) => state.user);
@@ -153,24 +157,117 @@ const InformalDashboard = () => {
         </View>
       </View>
 
-      {/* ALERTA INTELIGENTE */}
-      {lowStockProducts.length > 0 && (
-        <View style={[styles.stockBanner, { marginTop: 20, marginBottom: 4 }]}>
-          <View style={styles.stockBannerHeader}>
-            <Ionicons name="alert-circle" size={20} color={colors.warning} />
-            <Text style={styles.stockBannerTitle}>
-              Alerta de Inventario ({lowStockProducts.length} productos bajos)
-            </Text>
-          </View>
-          <View style={styles.stockItemsContainer}>
-            {lowStockProducts.map((product, idx) => (
-              <View key={idx} style={styles.stockBadge}>
-                <Text style={styles.stockBadgeText}>{product}</Text>
-              </View>
-            ))}
+      {/* ── SECCIÓN DE INVENTARIO CRÍTICO (datos reales de Supabase) ── */}
+      <Text style={styles.sectionTitle}>Estado del Inventario</Text>
+
+      {/* Estado: Cargando */}
+      {stockLoading && (
+        <View style={styles.stockLoadingContainer}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.stockLoadingText}>Verificando niveles de stock...</Text>
+        </View>
+      )}
+
+      {/* Estado: Error */}
+      {!stockLoading && stockError && (
+        <View style={[styles.stockSection, { borderColor: colors.border }]}>
+          <View style={styles.stockSectionHeader}>
+            <Ionicons name="warning-outline" size={18} color={colors.textMuted} />
+            <Text style={[styles.stockSectionTitle, { color: colors.textMuted }]}>{stockError}</Text>
+            <TouchableOpacity style={styles.stockRefreshBtn} onPress={refreshStock}>
+              <Ionicons name="refresh" size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* Estado: Sin datos (negocio sin inventario aún) */}
+      {!stockLoading && !stockError && lowStockProducts.length === 0 && okProducts.length === 0 && (
+        <View style={[styles.stockSection, { borderColor: colors.border }]}>
+          <View style={[styles.stockSectionHeader, { backgroundColor: colors.cardSecondary }]}>
+            <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+            <Text style={[styles.stockSectionTitle, { color: colors.textMuted }]}>
+              Aún no tienes productos en tu inventario.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* ── BLOQUE ROJO/ÁMBAR: Productos con stock bajo ── */}
+      {!stockLoading && lowStockProducts.length > 0 && (
+        <View style={[styles.stockSection, { borderColor: colors.warning }]}>
+          {/* Encabezado */}
+          <View style={[styles.stockSectionHeader, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="alert-circle" size={18} color={colors.warning} />
+            <Text style={[styles.stockSectionTitle, { color: '#92400E' }]}>
+              Stock bajo
+            </Text>
+            <Text style={[styles.stockSectionCount, { backgroundColor: '#FDE68A', color: '#78350F' }]}>
+              {lowStockProducts.length}
+            </Text>
+            <TouchableOpacity style={styles.stockRefreshBtn} onPress={refreshStock}>
+              <Ionicons name="refresh-outline" size={14} color="#92400E" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Fila por cada producto bajo */}
+          {lowStockProducts.map((item) => (
+            <View key={item.id} style={styles.stockProductRow}>
+              <View style={[styles.stockProductDot, { backgroundColor: colors.danger }]} />
+              <Text style={styles.stockProductName} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.stockProductQty, { color: colors.danger }]}>
+                {item.stock !== null ? item.stock : '∞'}
+              </Text>
+              <Text style={styles.stockProductMin}>
+                / mín {item.minStock} {item.unit || 'u.'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* ── BLOQUE VERDE: Productos con stock suficiente ── */}
+      {!stockLoading && okProducts.length > 0 && (
+        <View style={[styles.stockSection, { borderColor: colors.successBorder }]}>
+          {/* Encabezado — toca para expandir/colapsar */}
+          <TouchableOpacity
+            style={[styles.stockSectionHeader, { backgroundColor: colors.successLight }]}
+            onPress={() => setShowOkProducts((prev) => !prev)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+            <Text style={[styles.stockSectionTitle, { color: colors.successDark }]}>
+              Stock suficiente
+            </Text>
+            <Text style={[styles.stockSectionCount, { backgroundColor: colors.successBorder, color: colors.successDark }]}>
+              {okProducts.length}
+            </Text>
+            <Ionicons
+              name={showOkProducts ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={colors.successDark}
+              style={{ marginLeft: 6 }}
+            />
+          </TouchableOpacity>
+
+          {/* Lista colapsable */}
+          {showOkProducts && okProducts.map((item) => (
+            <View key={item.id} style={styles.stockProductRow}>
+              <View style={[styles.stockProductDot, { backgroundColor: colors.success }]} />
+              <Text style={styles.stockProductName} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.stockProductQty, { color: colors.success }]}>
+                {item.stock !== null ? item.stock : '∞'}
+              </Text>
+              {item.minStock > 0 && (
+                <Text style={styles.stockProductMin}>
+                  / mín {item.minStock} {item.unit || 'u.'}
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+
 
       {/* VENTANA EMERGENTE: REGISTRAR GASTO */}
       <Modal visible={modalGasto} animationType="slide" transparent={true}>

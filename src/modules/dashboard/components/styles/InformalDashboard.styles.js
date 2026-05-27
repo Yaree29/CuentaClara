@@ -93,6 +93,103 @@ export default StyleSheet.create({
     fontWeight: '600',
   },
 
+  /* --- SECCIÓN STOCK OK --- */
+  stockOkBanner: {
+    backgroundColor: colors.successLight,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+  },
+  stockOkTitle: {
+    color: colors.successDark,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+
+  /* --- FILAS DE PRODUCTO EN LA ALERTA --- */
+  stockSection: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  stockSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  stockSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 8,
+    flex: 1,
+  },
+  stockSectionCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  stockProductRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    backgroundColor: colors.card,
+  },
+  stockProductDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  stockProductName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  stockProductQty: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: 4,
+  },
+  stockProductMin: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+
+  /* --- ESTADO DE CARGA --- */
+  stockLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stockLoadingText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginLeft: 10,
+  },
+
+  /* --- BOTÓN DE REFRESH --- */
+  stockRefreshBtn: {
+    padding: 4,
+  },
+
+
   /* --- TARJETAS FINANCIERAS --- */
   mainCard: {
     backgroundColor: colors.salesDisplayBackground,

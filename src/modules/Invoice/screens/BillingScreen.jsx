@@ -7,7 +7,16 @@ import styles from '../styles/billing.styles';
 const BillingScreen = () => {
   const [customer, setCustomer] = useState('');
   const [items, setItems] = useState([{ id: 1, desc: '', price: '', quantity: '1', productId: null }]);
-  const { createInvoice, loading, inventory, inventoryLoading, inventoryError, refreshInventory } = useBilling();
+  const { 
+    createInvoice, 
+    loading, 
+    inventory, 
+    inventoryLoading, 
+    inventoryError, 
+    refreshInventory,
+    invoices,
+    refreshInvoices 
+  } = useBilling();
 
   const addItem = () => {
     setItems([...items, { id: Date.now(), desc: '', price: '', quantity: '1', productId: null }]);
@@ -180,6 +189,42 @@ const BillingScreen = () => {
             <Text style={styles.mainButtonText}>Generar Factura Fiscal</Text>
           )}
         </TouchableOpacity>
+
+        {/* FACTURAS RECIENTES */}
+        <View style={[styles.section, { marginTop: 24 }]}>
+          <View style={styles.rowHeader}>
+            <Text style={styles.label}>Facturas Recientes</Text>
+            <TouchableOpacity onPress={refreshInvoices}>
+              <Text style={styles.addText}>Actualizar</Text>
+            </TouchableOpacity>
+          </View>
+
+          {invoices && invoices.length > 0 ? (
+            invoices.map((inv) => (
+              <View key={inv.id} style={[styles.itemRow, { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', color: '#1e293b' }}>
+                    FAC-{inv.id}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748b' }}>
+                    {new Date(inv.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                    ${Number(inv.total || 0).toFixed(2)}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: inv.status === 'paid' ? '#10b981' : '#f59e0b', textTransform: 'capitalize' }}>
+                    {inv.status || 'pending'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No hay facturas registradas aún.</Text>
+          )}
+        </View>
+
       </ScrollView>
     </MainLayout>
   );

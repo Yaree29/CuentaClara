@@ -7,15 +7,10 @@ import colors from '../../../theme/colors';
 
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
-import products from '../../../data/products';
 import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon} from 'react-native-heroicons/solid';
 
 // Importación del HEADER
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
-
-
-// Impotacion de datos de pruebas para el historial
-import historyData from '../../../data/history';
 
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(0);
@@ -34,7 +29,8 @@ const SalesScreen = () => {
   const [saleNote, setSaleNote] = useState('');
 
   const {
-    processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();
+    processSale, loading, error, fetchProfitsAndExpenses, profitsData, inventory, historyList
+  } = useSales();
 
   useEffect(() => {
     const today = new Date();
@@ -271,14 +267,17 @@ const SalesScreen = () => {
                 {/* LISTA PRODUCTOS */}
                 {showProducts && (
                   <View style={styles.productsContainer}>
-                    {(showAllProducts
-                      ? products
-                      : products.slice(0, 5)
-                    ).map((product) => (
-                      <TouchableOpacity
-                        key={product.id}
-                        style={styles.productItem}
-                        onPress={() => {
+                    {inventory.length === 0 ? (
+                      <Text style={{ padding: 12, color: '#64748b' }}>No hay productos en tu inventario.</Text>
+                    ) : (
+                      (showAllProducts
+                        ? inventory
+                        : inventory.slice(0, 5)
+                      ).map((product) => (
+                        <TouchableOpacity
+                          key={product.id}
+                          style={styles.productItem}
+                          onPress={() => {
                           setSelectedProducts((prev) => {
                             const existing = prev.find(
                               (item) => item.id === product.id
@@ -321,10 +320,9 @@ const SalesScreen = () => {
                           </Text>
                         </View>
                       </TouchableOpacity>
-                    ))}
-
+                    )))}
                     {/* VER MÁS */}
-                    {products.length > 5 && !showAllProducts && (
+                    {inventory.length > 5 && !showAllProducts && (
                       <TouchableOpacity
                         style={styles.showMoreBtn}
                         onPress={() => setShowAllProducts(true)}
@@ -525,7 +523,7 @@ const SalesScreen = () => {
 
                 <Text style={styles.summaryIncome}>
                   $
-                  {historyData
+                  {historyList
                     .filter((item) => item.type === 'income')
                     .reduce((acc, item) => acc + item.amount, 0)
                     .toFixed(2)}
@@ -539,7 +537,7 @@ const SalesScreen = () => {
 
                 <Text style={styles.summaryExpense}>
                   $
-                  {historyData
+                  {historyList
                     .filter((item) => item.type === 'expense')
                     .reduce((acc, item) => acc + item.amount, 0)
                     .toFixed(2)}
@@ -550,7 +548,10 @@ const SalesScreen = () => {
 
             {/* HISTORIAL */}
             <View style={styles.historyContainer}>
-              {historyData.map((item) => (
+              {historyList.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#64748b', marginTop: 20 }}>No hay historial registrado en los últimos 30 días.</Text>
+              ) : (
+                historyList.map((item) => (
                 <View
                   key={item.id}
                   style={styles.historyCard}
@@ -576,7 +577,7 @@ const SalesScreen = () => {
                     {item.amount.toFixed(2)}
                   </Text>
                 </View>
-              ))}
+              )))}
             </View>
           </>
         )}

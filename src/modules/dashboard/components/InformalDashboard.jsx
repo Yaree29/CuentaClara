@@ -11,6 +11,7 @@ import useNotificationsStore from '../../../store/useNotificationsStore';
 import { useLowStock } from '../hooks/useLowStock';
 import { useNotifications } from '../../notifications/hooks/useNotifications';
 import inventoryService from '../../inventory/services/inventoryService';
+import { useDashboard } from '../hooks/useDashboard';
 
 const InformalDashboard = () => {
   // Control de visibilidad para las ventanas de registro rápido
@@ -31,6 +32,9 @@ const InformalDashboard = () => {
   // Notificaciones desde Supabase
   const notifications = useNotificationsStore((state) => state.notifications);
   useNotifications();
+
+  // Métricas del Dashboard (Ventas y Fiados)
+  const { metrics, loading: metricsLoading, refresh: refreshMetrics } = useDashboard();
 
   // Estado del RefreshControl
   const [refreshing, setRefreshing] = useState(false);
@@ -77,10 +81,13 @@ const InformalDashboard = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshStock();
-    await loadCategories();
+    await Promise.all([
+      refreshStock(),
+      loadCategories(),
+      refreshMetrics()
+    ]);
     setRefreshing(false);
-  }, [refreshStock, loadCategories]);
+  }, [refreshStock, loadCategories, refreshMetrics]);
 
   // Toggle para mostrar/ocultar la lista de productos OK
   const [showOkProducts, setShowOkProducts] = useState(false);
@@ -130,11 +137,15 @@ const InformalDashboard = () => {
           <Text style={styles.mainCardTitle}>Ventas del Día</Text>
           <View style={styles.badgeSuccess}>
             <Ionicons name="trending-up" size={14} color={colors.textSuccess} />
-            <Text style={styles.badgeText}>+12%</Text>
+            <Text style={styles.badgeText}>Hoy</Text>
           </View>
         </View>
-        <Text style={styles.mainCardAmount}>$145.50</Text>
-        <Text style={styles.mainCardSubtext}>Dinero total recibido en caja hoy</Text>
+        {metricsLoading ? (
+           <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
+        ) : (
+           <Text style={styles.mainCardAmount}>${metrics?.salesToday?.toFixed(2) || '0.00'}</Text>
+        )}
+        <Text style={styles.mainCardSubtext}>Dinero total facturado hoy</Text>
       </View>
 
       <View style={styles.gridContainer}>
@@ -143,7 +154,11 @@ const InformalDashboard = () => {
             <Ionicons name="card" size={20} color={colors.danger} />
           </View>
           <Text style={styles.gridCardLabel}>Por Cobrar (Fiado)</Text>
-          <Text style={[styles.gridCardValue, { color: colors.danger }]}>$68.00</Text>
+          {metricsLoading ? (
+            <ActivityIndicator size="small" color={colors.danger} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+          ) : (
+            <Text style={[styles.gridCardValue, { color: colors.danger }]}>${metrics?.debtTotal?.toFixed(2) || '0.00'}</Text>
+          )}
         </View>
 
         <View style={[styles.gridCard, { marginLeft: 8 }]}>
@@ -151,7 +166,11 @@ const InformalDashboard = () => {
             <Ionicons name="people" size={20} color={colors.info} />
           </View>
           <Text style={styles.gridCardLabel}>Clientes Fiados</Text>
-          <Text style={styles.gridCardValue}>4 personas</Text>
+          {metricsLoading ? (
+            <ActivityIndicator size="small" color={colors.info} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+          ) : (
+            <Text style={styles.gridCardValue}>{metrics?.debtCustomersCount || 0} personas</Text>
+          )}
         </View>
       </View>
 

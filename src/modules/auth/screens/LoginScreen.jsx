@@ -22,13 +22,19 @@ const LoginScreen = () => {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [showSaveBiometricPrompt, setShowSaveBiometricPrompt] = useState(false);
+
+  // Refs para evitar múltiples intentos
   const biometricAttemptedRef = useRef(false);
   const biometricPromptedRef = useRef(false);
   const biometricAutoAttemptRef = useRef(false);
+  // Almacena temporalmente las credenciales usadas en el login manual
+  const pendingCredentialsRef = useRef(null);
 
   const { 
-    loginWithBiometrics, 
-    linkBiometricSession, 
+    loginWithStoredCredentials,
+    saveCredentialsForBiometric,
+    hasStoredCredentials,
     isBiometricAvailable,
     isBiometricEnabled,
     resetPassword,
@@ -41,6 +47,7 @@ const LoginScreen = () => {
   const setBusinessData = useUserStore((state) => state.setBusinessData);
   const setLogin = useAuthStore((state) => state.setLogin);
 
+  // Verificar disponibilidad biométrica al montar
   useEffect(() => {
     let isMounted = true;
 
@@ -62,10 +69,15 @@ const LoginScreen = () => {
     return () => { isMounted = false; };
   }, []);
 
+  // Auto-trigger: si el modal biométrico se abre y hay credenciales guardadas, intentar login
   const handleBiometricLogin = async() => {
     biometricAttemptedRef.current = true;
     try {
-      await loginWithBiometrics();
+      const result = await loginWithStoredCredentials();
+      if (result) {
+        setShowBiometricModal(false);
+        Alert.alert('¡Bienvenido!', 'Inicio de sesión exitoso');
+      }
     } catch (err) {
       // Error manejado por el hook
     }
@@ -79,20 +91,8 @@ const LoginScreen = () => {
     handleBiometricLogin();
   }, [showBiometricModal, biometricChecked, biometricAvailable, biometricEnabled]);
 
-  const handleEnableBiometrics = async(user, token) => {
-    try {
-      await linkBiometricSession(user, token);
-      setBiometricEnabled(true);
-    } catch (err) {
-      Alert.alert(
-        'No se pudo habilitar',
-        'Ocurrió un problema al vincular tu huella. Intenta nuevamente.'
-      );
-    }
-  };
-
+  // Login manual con email + password
   const handleLogin = async () => {
-    // Validar que no estén vacíos
     if (!email.trim()) {
       setEmailError('El correo es requerido');
       Alert.alert('Correo requerido', 'Por favor ingresa tu correo');
@@ -105,7 +105,6 @@ const LoginScreen = () => {
       return;
     }
 
-    // Validación básica de email
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
       setEmailError(emailValidation.error);
@@ -117,20 +116,37 @@ const LoginScreen = () => {
     setPasswordError('');
 
     try {
-      // Intentar login con FastAPI
       const result = await loginService.login(email, password);
 
-      // Configurar datos en los stores
       setUserType(result.user?.role || 'user');
       setBusinessData(result.business || null);
 
-      // Login exitoso
-      setLogin(result.user, result.token, null);
-      Alert.alert('¡Bienvenido!', 'Inicio de sesión exitoso');
+      // Guardar temporalmente las credenciales para posible vinculación biométrica
+      pendingCredentialsRef.current = { email: email.trim().toLowerCase(), password };
+
+      // Verificar si ya tiene biometría habilitada
+      const alreadyEnabled = await hasStoredCredentials();
+      const hwAvailable = await isBiometricAvailable();
+
+      if (hwAvailable && !alreadyEnabled) {
+        // Primera vez: preguntar si quiere guardar credenciales con huella
+        setShowSaveBiometricPrompt(true);
+        // No hacemos setLogin todavía, esperamos respuesta del prompt
+        // Pero guardamos result para usarlo después
+        pendingCredentialsRef.current.loginResult = result;
+      } else {
+        // Ya tiene huella habilitada o no hay biometría → actualizar credenciales silenciosamente
+        if (hwAvailable && alreadyEnabled) {
+          try {
+            await saveCredentialsForBiometric(email.trim().toLowerCase(), password);
+          } catch (_) { /* no bloquear login si falla actualización */ }
+        }
+        setLogin(result.user, result.token, null);
+        Alert.alert('¡Bienvenido!', 'Inicio de sesión exitoso');
+      }
     } catch (error) {
       let errorMessage = 'Error desconocido';
       
-      // Extraer mensaje de error de forma segura
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
@@ -139,13 +155,48 @@ const LoginScreen = () => {
         errorMessage = error.message;
       }
       
-      console.error('Error en login:', errorMessage, 'Status:', error?.statusCode, 'Code:', error?.errorCode);
-
-      // Por razones de seguridad, siempre mostrar que el problema es la contraseña/credenciales
-      // Esto evita revelar si el correo existe o no en la base de datos
+      console.error('Error en login:', errorMessage);
       setPasswordError('Credenciales incorrectas');
       Alert.alert('Credenciales incorrectas', 'El correo o la contraseña son incorrectos.');
     }
+  };
+
+  // Confirmar guardar credenciales con huella
+  const handleConfirmSaveBiometric = async () => {
+    setShowSaveBiometricPrompt(false);
+    const creds = pendingCredentialsRef.current;
+    if (!creds) return;
+
+    try {
+      await saveCredentialsForBiometric(creds.email, creds.password);
+      setBiometricEnabled(true);
+      Alert.alert(
+        '¡Huella vinculada!',
+        'La próxima vez podrás iniciar sesión solo con tu huella dactilar.'
+      );
+    } catch (err) {
+      Alert.alert(
+        'No se pudo vincular',
+        'Ocurrió un problema al guardar tus credenciales. Podrás intentarlo después.'
+      );
+    }
+
+    // Completar el login con el resultado guardado
+    if (creds.loginResult) {
+      setLogin(creds.loginResult.user, creds.loginResult.token, null);
+    }
+    pendingCredentialsRef.current = null;
+  };
+
+  // Rechazar guardar credenciales con huella
+  const handleDeclineSaveBiometric = () => {
+    setShowSaveBiometricPrompt(false);
+    const creds = pendingCredentialsRef.current;
+    if (creds?.loginResult) {
+      setLogin(creds.loginResult.user, creds.loginResult.token, null);
+      Alert.alert('¡Bienvenido!', 'Inicio de sesión exitoso');
+    }
+    pendingCredentialsRef.current = null;
   };
 
   const handleResetPassword = async () => {
@@ -266,13 +317,13 @@ const LoginScreen = () => {
               onPress={handleOpenBiometricModal}
               disabled={loading}
             >
-              <Text style={styles.biometricButtonText}>Entrar con huella</Text>
+              <Text style={styles.biometricButtonText}>🔒 Entrar con huella</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Modal biométrico */}
+      {/* Modal: Prompt biométrico para login rápido */}
       <Modal
         transparent
         visible={showBiometricModal}
@@ -314,6 +365,44 @@ const LoginScreen = () => {
                 onPress={handleUseCredentials}
               >
                 <Text style={styles.modalSecondaryButtonText}>Usar credenciales</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: ¿Guardar credenciales con huella? */}
+      <Modal
+        transparent
+        visible={showSaveBiometricPrompt}
+        animationType="fade"
+        onRequestClose={handleDeclineSaveBiometric}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>🔐 Acceso rápido</Text>
+            <Text style={styles.modalText}>
+              ¿Deseas guardar tus credenciales de forma segura para iniciar sesión
+              con tu huella dactilar la próxima vez?
+            </Text>
+            <Text style={[styles.modalText, { fontSize: 12, color: '#888', marginTop: 4 }]}>
+              Tus datos se almacenan cifrados dentro del dispositivo y solo se
+              liberan al verificar tu identidad biométrica.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalPrimaryButton}
+                onPress={handleConfirmSaveBiometric}
+              >
+                <Text style={styles.modalPrimaryButtonText}>Sí, vincular huella</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalSecondaryButton}
+                onPress={handleDeclineSaveBiometric}
+              >
+                <Text style={styles.modalSecondaryButtonText}>No, gracias</Text>
               </TouchableOpacity>
             </View>
           </View>

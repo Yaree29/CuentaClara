@@ -42,8 +42,24 @@ export const useBilling = () => {
     }
   };
 
+  const fetchInvoices = async () => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      setInvoices([]);
+      return;
+    }
+
+    try {
+      const data = await billingService.getInvoices(businessId);
+      setInvoices(data || []);
+    } catch (err) {
+      console.error('Error al cargar facturas:', err);
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
+    fetchInvoices();
   }, [businessData, user]);
 
   const createInvoice = async (customer, items, taxRate = 0.07) => {
@@ -90,6 +106,7 @@ export const useBilling = () => {
         tax,
         total
       });
+      await fetchInvoices();
       return result;
     } catch (error) {
       console.error("Error al generar factura:", error);
@@ -107,5 +124,6 @@ export const useBilling = () => {
     inventoryLoading,
     inventoryError,
     refreshInventory: fetchInventory,
+    refreshInvoices: fetchInvoices,
   };
 };

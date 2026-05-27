@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView, Alert, RefreshControl } from 'react-native';
 import { MagnifyingGlassIcon, PlusIcon, CurrencyDollarIcon, XMarkIcon, PencilIcon } from 'react-native-heroicons/solid';
 import { FontAwesome } from '@expo/vector-icons';
 import { useInformalCredit, MOCK_INVENTORY_QUICK_ADD } from '../hooks/useInformalCredit';
@@ -12,8 +12,18 @@ const InformalCredit = () => {
     isFormModalVisible, setIsFormModalVisible, editingCredit,
     isPaymentModalVisible, setIsPaymentModalVisible,
     selectedClient, openPaymentModal, openAddModal, openEditModal,
-    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit
+    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
+    loading, refresh
   } = useInformalCredit();
+
+  // Estado para el RefreshControl
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   // Estados del Formulario
   const [formClientName, setFormClientName] = useState('');
@@ -102,6 +112,14 @@ const InformalCredit = () => {
         renderItem={renderCreditCard}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       />
 
       <View style={styles.fabContainer}>

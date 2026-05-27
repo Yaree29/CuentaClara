@@ -5,6 +5,7 @@ const BIOMETRIC_SESSION_KEY = 'cc_biometric_session';
 const BIOMETRIC_ENABLED_KEY = 'cc_biometric_enabled';
 const BIOMETRIC_TYPE_KEY = 'cc_biometric_type';
 const SESSION_TIMESTAMP_KEY = 'cc_session_timestamp';
+const BIOMETRIC_CREDENTIALS_KEY = 'cc_biometric_credentials';
 
 // 24 horas en milisegundos
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -124,6 +125,73 @@ const biometricService = {
       await SecureStore.deleteItemAsync(BIOMETRIC_TYPE_KEY);
     } catch (err) {
       console.error('Error limpiando sesión biométrica:', err);
+    }
+  },
+
+  // ── Credenciales protegidas por biometría ──────────────────────────────
+
+  /**
+   * Guarda las credenciales (email + password) cifradas en SecureStore.
+   * Se protegen con requireAuthentication para que solo puedan leerse
+   * presentando huella dactilar / Face ID.
+   */
+  saveCredentials: async (email, password) => {
+    try {
+      const payload = JSON.stringify({ email, password });
+      await SecureStore.setItemAsync(BIOMETRIC_CREDENTIALS_KEY, payload, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        requireAuthentication: true,
+      });
+      // Marcar biometría como habilitada
+      await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
+      await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
+    } catch (err) {
+      console.error('Error guardando credenciales biométricas:', err);
+      throw new Error('No se pudieron guardar las credenciales');
+    }
+  },
+
+  /**
+   * Recupera las credenciales almacenadas. El sistema operativo solicitará
+   * huella dactilar / Face ID automáticamente antes de liberar los datos.
+   */
+  getCredentials: async () => {
+    try {
+      const stored = await SecureStore.getItemAsync(BIOMETRIC_CREDENTIALS_KEY, {
+        requireAuthentication: true,
+      });
+      if (!stored) return null;
+      return JSON.parse(stored);
+    } catch (err) {
+      if (err.message?.includes('cancelled') || err.message?.includes('cancel')) {
+        throw new Error('Autenticación cancelada');
+      }
+      console.error('Error obteniendo credenciales biométricas:', err);
+      throw new Error('No se pudo autenticar con huella');
+    }
+  },
+
+  /**
+   * Verifica si existen credenciales almacenadas (sin pedir huella).
+   */
+  hasStoredCredentials: async () => {
+    try {
+      // Solo chequeamos la flag, no las credenciales en sí (eso pediría huella)
+      const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
+      return enabled === 'true';
+    } catch (err) {
+      return false;
+    }
+  },
+
+  /**
+   * Elimina las credenciales almacenadas.
+   */
+  clearCredentials: async () => {
+    try {
+      await SecureStore.deleteItemAsync(BIOMETRIC_CREDENTIALS_KEY);
+    } catch (err) {
+      console.error('Error eliminando credenciales biométricas:', err);
     }
   },
 };

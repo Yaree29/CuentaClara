@@ -1,5 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import tokenManager from './tokenManager';
 
 const BIOMETRIC_SESSION_KEY = 'cc_biometric_session';
 const BIOMETRIC_ENABLED_KEY = 'cc_biometric_enabled';
@@ -87,6 +88,9 @@ const biometricService = {
       await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
       await SecureStore.setItemAsync(SESSION_TIMESTAMP_KEY, Date.now().toString());
       await SecureStore.setItemAsync(BIOMETRIC_TYPE_KEY, JSON.stringify(biometryTypes));
+      if (session?.token) {
+        await tokenManager.saveToken(session.token);
+      }
     } catch (err) {
       console.error('Error guardando sesión biométrica:', err);
       throw new Error('No se pudo vincular la huella');

@@ -1,5 +1,6 @@
 import { supabase } from '../../../services/supabaseClient';
 import { API_URL } from '../../../config/env';
+import tokenManager from './tokenManager';
 
 const BASE_MODULES = ['dashboard', 'profile'];
 
@@ -133,9 +134,17 @@ const authService = {
         }
       : user;
 
+    try {
+      await tokenManager.saveToken(apiSession.access_token);
+    } catch (tokenError) {
+      await supabase.auth.signOut({ scope: 'local' });
+      throw tokenError;
+    }
+
     return {
       user: enrichedUser,
-      token: data.session?.access_token,
+      token: apiSession?.access_token ?? null,
+      supabase_token: data.session?.access_token ?? null,
       session: data.session,
       api_token: apiSession?.access_token ?? null,
     };
@@ -154,6 +163,8 @@ const authService = {
   logout: async () => {
     const { error } = await supabase.auth.signOut();
 
+    await tokenManager.removeToken();
+
     if (error) {
       throw error;
     }
@@ -163,6 +174,7 @@ const authService = {
 
   clearLocalSession: async () => {
     await supabase.auth.signOut({ scope: 'local' });
+    await tokenManager.removeToken();
   },
 
   getCurrentSession: async () => {
@@ -172,11 +184,23 @@ const authService = {
       return null;
     }
 
+    // La sesión de Supabase valida la identidad; el JWT seguro mantiene el acceso al backend.
+    const authToken = await tokenManager.getToken();
+
+    if (!authToken) {
+      await tokenManager.removeToken();
+      return null;
+    }
+
     const user = await getUserContext(data.session);
 
     return {
-      user,
-      token: data.session.access_token,
+      user: {
+        ...user,
+        api_token: authToken,
+      },
+      token: authToken,
+      supabase_token: data.session.access_token,
       session: data.session,
     };
   },

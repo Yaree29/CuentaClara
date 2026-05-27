@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useAuthStore from '../../../store/useAuthStore';
 import authService from '../services/authService';
 import biometricService from '../services/biometricService';
+import tokenManager from '../services/tokenManager';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,7 @@ export const useAuth = () => {
             setError('No hay una sesión biométrica vinculada');
             return null;
         }
+        await tokenManager.saveToken(session.token);
         setLogin(session.user, session.token);
         return session;
     } catch (err) {

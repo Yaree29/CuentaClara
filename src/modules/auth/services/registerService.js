@@ -128,7 +128,9 @@ const registerService = {
     return { 
       user: { id: apiData.user_id, role: apiData.role, business_id: apiData.business_id }, 
       business: { id: apiData.business_id }, 
-      token: session?.access_token || apiData.access_token 
+      token: apiData.access_token,
+      supabase_token: session?.access_token || null,
+      api_token: apiData.access_token 
     };
   },
 };

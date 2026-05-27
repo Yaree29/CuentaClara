@@ -10,6 +10,10 @@ export default {
 
   //colors estado (usados en sales/credit, integrados desde Fronted)
   success: '#10b981',
+  successLight: '#E8F5E9',
+  successDark: '#328339',
+  successBorder: '#96c29b',
+  textSuccess: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
   info: '#3b82f6',
@@ -32,10 +36,22 @@ export default {
   textError:'#ef4444',
 
   // cards
-  card: '#ffffff', 
+  card: '#ffffff',
+  cardSecondary: '#f8fafc',
   trendCard: '#10b981',
   border: '#e2e8f0',
+  borderLight: '#f1f5f9',
   shadowCard: '#000',
+
+  // overlay / placeholders
+  overlay: 'rgba(0,0,0,0.4)',
+  placeholder: '#a3a3a3',
+  textWhite: '#ffffff',
+
+  // sales display (usados por dashboard y sales)
+  salesDisplayBackground: '#0F2747',
+  salesDisplayText: '#ffffff',
+  salesDisplaySubtext: '#93C5FD',
 
   //product Card
   productBackground: '#ffffff',

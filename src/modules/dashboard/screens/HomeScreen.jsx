@@ -1,47 +1,31 @@
+// =============================================================================
+// MODIFICADO: 2026-05-27
+// Propósito: Pantalla "Inicio" del navegador principal. Antes mostraba un
+//            placeholder con datos mock. Ahora actúa como un resumen real del
+//            negocio: integra el diseño de la rama Fronted (DashboardHeader +
+//            InformalDashboard) pero alimentándose de la API de FastAPI.
+//
+// Bifurcación:
+//   · userType === 'informal'  → InformalDashboard
+//   · userType === 'pyme'      → InformalDashboard (placeholder; las variantes
+//                                 PYME por categoría — food / retail / etc.—
+//                                 quedan pendientes para una próxima
+//                                 integración. La vista resumen es la misma
+//                                 funcionalmente: ventas, fiado, inventario.)
+// =============================================================================
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
-import { useDashboard } from '../hooks/useDashboard';
-import styles from '../styles/home.styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import colors from '../../../theme/colors';
+
+import DashboardHeader from '../components/shared/DashboardHeader';
+import InformalDashboard from '../components/InformalDashboard';
 
 const HomeScreen = () => {
-  const { metrics, loading } = useDashboard();
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563eb" />
-        </View>
-      </MainLayout>
-    );
-  }
-
   return (
-    <MainLayout>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.greeting}>Panel de Control</Text>
-        <Text style={styles.date}>Resumen de hoy</Text>
-
-        <View style={styles.grid}>
-          {metrics?.cards.map((card) => (
-            <View key={card.id} style={styles.card}>
-              <Text style={styles.cardTitle}>{card.title}</Text>
-              <Text style={styles.cardValue}>{card.value}</Text>
-              {card.trend && (
-                <Text style={styles.cardTrend}>{card.trend}</Text>
-              )}
-            </View>
-          ))}
-        </View>
-
-        {metrics?.charts && (
-          <View style={styles.chartPlaceholder}>
-            <Text style={styles.placeholderText}>Gráficos Avanzados (Solo PYME)</Text>
-          </View>
-        )}
-      </ScrollView>
-    </MainLayout>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <DashboardHeader isHome={true} />
+      <InformalDashboard />
+    </SafeAreaView>
   );
 };
 

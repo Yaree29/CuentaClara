@@ -1,137 +1,89 @@
-import { API_URL } from '../../../config/env';
+import { supabase } from '../../../services/supabaseClient';
+
+const getUserContext = async (session) => {
+  const authUser = session?.user;
+  if (!authUser) return null;
+
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('id, business_id, name, email, role, phone, created_at')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error('El perfil de usuario no existe o no se pudo cargar. Supabase: ' + (profileError?.message || 'No encontrado'));
+  }
+
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id, name, plan, ui_mode, phone, address, created_at')
+    .eq('id', profile.business_id)
+    .single();
+
+  return {
+    id: profile.id,
+    email: profile.email || authUser.email,
+    name: profile.name,
+    role: profile.role,
+    phone: profile.phone,
+    business_id: profile.business_id,
+    created_at: profile.created_at,
+    business,
+    userType: business?.ui_mode === 'advanced' ? 'pyme' : 'informal',
+  };
+};
 
 const loginService = {
   async login(email, password) {
     try {
-      // Llamar directamente a FastAPI
-      const apiUrl = API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorDetail = 'Error al iniciar sesión';
-        let errorCode = 'generic_error';
-        const errorText = await response.text();
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorDetail = errorData.detail || errorData.message || errorDetail;
-          errorCode = errorData.code || errorCode;
-        } catch (e) {
-          errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-        }
-
-        // Crear error con información adicional
-        const error = new Error(errorDetail);
-        error.statusCode = response.status;
-        error.errorCode = errorCode;
-        throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+      
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const userData = await response.json();
+      const user = await getUserContext(data.session);
 
-      // Retornar datos del usuario y token
       return {
-        user: {
-          id: userData.user_id || userData.id,
-          email: userData.email,
-          role: userData.role || 'user',
-          business_id: userData.business_id,
-          api_token: userData.access_token || userData.token,
-        },
-        token: userData.access_token || userData.token,
-        business: userData.business || null,
+        user: user,
+        token: data.session.access_token,
+        business: user.business,
       };
     } catch (error) {
-      // Asegurar que siempre tengamos un mensaje de error legible
-      const errorMsg = error?.message || String(error) || 'Error desconocido en login';
-      console.error('Error en login:', errorMsg, 'Status:', error?.statusCode, 'Code:', error?.errorCode);
+      console.error('Error en login (direct Supabase):', error.message);
       throw error;
     }
   },
 
   async logout() {
     try {
-      const apiUrl = API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al cerrar sesión');
-      }
-
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || String(error) || 'Error al cerrar sesión';
-      console.error('Error al cerrar sesión:', errorMsg);
-      throw new Error(errorMsg);
+      console.error('Error al cerrar sesión:', error.message);
+      throw new Error(error.message);
     }
   },
 
   async resetPassword(email) {
     try {
-      const apiUrl = API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-        }),
-      });
-
-      if (!response.ok) {
-        let errorDetail = 'Error al enviar correo de recuperación';
-        const errorText = await response.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          errorDetail = errorData.detail || errorData.message || errorDetail;
-        } catch (e) {
-          errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-        }
-        throw new Error(errorDetail);
-      }
-
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+      if (error) throw error;
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || String(error) || 'Error al resetear contraseña';
-      console.error('Error al resetear contraseña:', errorMsg);
-      throw new Error(errorMsg);
+      console.error('Error al resetear contraseña:', error.message);
+      throw new Error(error.message);
     }
   },
 
   async getCurrentUser(token) {
     try {
-      const apiUrl = API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/auth/me`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const userData = await response.json();
-      return userData;
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data.user) return null;
+      return await getUserContext({ user: data.user });
     } catch (error) {
-      console.error('Error al obtener usuario actual:', error);
+      console.error('Error al obtener usuario actual:', error.message);
       return null;
     }
   },

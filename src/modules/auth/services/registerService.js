@@ -1,5 +1,4 @@
 import { supabase } from '../../../../src/services/supabaseClient';
-import { API_URL } from '../../../../src/config/env';
 import authService from './authService';
 
 const mapProfileTypeToUiMode = (profileType) => {
@@ -14,7 +13,6 @@ const registerService = {
   },
 
   async register(form) {  
-    // form: { name, lastName, email, password, phone, businessName, profileType, categoryId, nit, address, ... }
     const {
       name,
       lastName,
@@ -39,13 +37,9 @@ const registerService = {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
 
     if (signUpError) {
-      // Si el usuario ya existe por un intento fallido anterior, intentamos iniciar sesión para continuar el flujo
       if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          // Si la contraseña es incorrecta o hay otro error, lanzamos el error original
-          throw signUpError;
-        }
+        if (signInError) throw signUpError;
         user = signInData?.user;
         session = signInData?.session;
       } else {
@@ -55,12 +49,9 @@ const registerService = {
       user = signUpData?.user ?? null;
       session = signUpData?.session ?? null;
 
-      // Si signUp no devuelve sesión (ej. requiere confirmación), intentamos signIn
       if (!session) {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          throw signInError;
-        }
+        if (signInError) throw signInError;
         user = signInData?.user ?? user;
         session = signInData?.session ?? session;
       }
@@ -71,7 +62,7 @@ const registerService = {
     const userId = user.id;
 
     // 2) Encontrar industry_template_id por category si existe
-    let industryTemplateId = 1; // Default to 1 to prevent Render backend crash on null
+    let industryTemplateId = 1;
     if (categoryId) {
       const { data: cat } = await supabase.from('categories').select('id, name').eq('id', categoryId).single();
       if (cat) {
@@ -81,54 +72,71 @@ const registerService = {
     }
 
     const fullName = `${name}${lastName ? ' ' + lastName : ''}`;
+    const uiMode = mapProfileTypeToUiMode(profileType);
 
-    // 3) Llamar a la API del backend para registrar el negocio y perfil
-    const apiUrl = API_URL || 'http://localhost:8000';
-    
-    const response = await fetch(`${apiUrl}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        business_name: businessName,
+    // 3) Crear Negocio en Supabase
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .insert({
+        name: businessName,
+        plan: 'free',
+        ui_mode: uiMode,
+        industry_template_id: industryTemplateId,
+        category_id: categoryId || null,
+        address: address || null,
+      })
+      .select('id')
+      .single();
+
+    if (businessError) {
+        console.error("Error creando negocio:", businessError);
+        throw new Error('Error al registrar el negocio');
+    }
+
+    const businessId = business.id;
+
+    // 4) Crear Perfil de Usuario en Supabase
+    const { error: userError } = await supabase
+      .from('users')
+      .insert({
+        id: userId,
+        business_id: businessId,
         name: fullName,
         email: email,
-        password: password, // El backend lo necesita, aunque ya estés en auth
+        password_hash: 'supabase_auth',
+        role: 'owner',
         phone: phone || null,
-        industry_template_id: industryTemplateId,
-        auth_user_id: userId,
-      }),
+      });
+
+    if (userError) {
+        console.error("Error creando perfil:", userError);
+        throw new Error('Error al crear el perfil de usuario');
+    }
+
+    // 5) Configuración del negocio y features
+    await supabase.from('business_configs').insert({
+      business_id: businessId,
+      currency: 'USD',
+      weight_unit: 'kg',
+      tax_rate: 7.00,
+      language: 'es'
     });
 
-    if (!response.ok) {
-      let errorDetail = 'Error al registrar el negocio en el backend';
-      const errorText = await response.text();
-      try {
-        const errorData = JSON.parse(errorText);
-        errorDetail = errorData.detail || errorDetail;
-      } catch (e) {
-        // If the server didn't return JSON (e.g. a plain text 500 error)
-        errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-      }
-      throw new Error(errorDetail);
+    // Activar módulos base (simulación de lo que hacía el backend)
+    const baseModules = ['sales', 'credit', 'inventory'];
+    for (const module of baseModules) {
+        await supabase.from('features').insert({
+            business_id: businessId,
+            module: module,
+            is_active: true,
+        });
     }
 
-    const apiData = await response.json();
-
-    // 4) Refrescar la sesión o usar authService para obtener el contexto completo
-    try {
-      const currentSession = await authService.getCurrentSession();
-      if (currentSession) return currentSession;
-    } catch (e) {
-      // ignore
-    }
-
-    // Si falló getCurrentSession, retornar los datos básicos que devuelve el API
+    // 6) Retornar sesión
     return { 
-      user: { id: apiData.user_id, role: apiData.role, business_id: apiData.business_id }, 
-      business: { id: apiData.business_id }, 
-      token: session?.access_token || apiData.access_token 
+      user: { id: userId, role: 'owner', business_id: businessId }, 
+      business: { id: businessId }, 
+      token: session?.access_token 
     };
   },
 };

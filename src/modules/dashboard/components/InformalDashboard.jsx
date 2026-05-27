@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../theme/colors';
 import styles from './styles/InformalDashboard.styles';
-
 
 // Importación local para extraer los datos del usuario logueado
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
 import { useLowStock } from '../hooks/useLowStock';
+import inventoryService from '../../inventory/services/inventoryService';
 
 const InformalDashboard = () => {
   // Control de visibilidad para las ventanas de registro rápido
@@ -16,18 +16,99 @@ const InformalDashboard = () => {
   const [modalFiado, setModalFiado] = useState(false);
   const [modalProducto, setModalProducto] = useState(false);
 
+  // Estados para el formulario de Nuevo Producto
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductQty, setNewProductQty] = useState('');
+  const [newProductMinStock, setNewProductMinStock] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('');
+
   // Estado de inventario crítico desde Supabase
   const { lowStockProducts, okProducts, loading: stockLoading, error: stockError, refresh: refreshStock } = useLowStock();
+
+  // Estado del RefreshControl
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Categorías del usuario
+  const [userCategories, setUserCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  const user = useAuthStore((state) => state.user);
+  const businessData = useUserStore((state) => state.businessData);
+  const userName = user?.name || 'Comerciante';
+
+  const resolveBusinessId = useCallback(() =>
+    businessData?.id ||
+    businessData?.business_id ||
+    user?.business_id ||
+    user?.businessId ||
+    null,
+  [businessData, user]);
+
+  const loadCategories = useCallback(async () => {
+    const businessId = resolveBusinessId();
+    if (!businessId) {
+      setUserCategories([]);
+      return;
+    }
+    setCategoriesLoading(true);
+    try {
+      const data = await inventoryService.getCategories(businessId);
+      setUserCategories(data);
+      if (data.length > 0 && !newProductCategory) {
+        setNewProductCategory(data[0].name);
+      }
+    } catch (err) {
+      console.error('Error cargando categorías en dashboard:', err);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, [resolveBusinessId, newProductCategory]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshStock();
+    await loadCategories();
+    setRefreshing(false);
+  }, [refreshStock, loadCategories]);
 
   // Toggle para mostrar/ocultar la lista de productos OK
   const [showOkProducts, setShowOkProducts] = useState(false);
 
-// Extraemos los datos del usuario actual desde Zustand
-  const user = useAuthStore((state) => state.user);
-  const userName = user?.name || 'Comerciante';
+  const resetProductForm = () => {
+    setNewProductName('');
+    setNewProductQty('');
+    setNewProductMinStock('');
+    setNewProductPrice('');
+    if (userCategories.length > 0) {
+      setNewProductCategory(userCategories[0].name);
+    } else {
+      setNewProductCategory('');
+    }
+  };
+
+  const openProductModal = () => {
+    resetProductForm();
+    setModalProducto(true);
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+    >
       
       {/* SECCIÓN DE BIENVENIDA */}
       <View style={styles.welcomeContainer}>
@@ -97,7 +178,7 @@ const InformalDashboard = () => {
         {/* BOTÓN REGISTRAR PRODUCTO */}
         <TouchableOpacity 
           style={[styles.actionButton, { borderColor: colors.successDark }]}
-          onPress={() => setModalProducto(true)}
+          onPress={openProductModal}
         >
           <View style={[styles.actionIconContainer, { backgroundColor: colors.successBorder }]}>
             <Ionicons name="cube" size={22} color={colors.successDark} />
@@ -331,17 +412,95 @@ const InformalDashboard = () => {
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Nombre del producto</Text>
-              <TextInput style={styles.inputField} placeholder="Ej. Malta Vigor" placeholderTextColor={colors.placeholder} />
+              <TextInput 
+                style={styles.inputField} 
+                placeholder="Ej. Malta Vigor" 
+                placeholderTextColor={colors.placeholder} 
+                value={newProductName}
+                onChangeText={setNewProductName}
+              />
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Cantidad Inicial</Text>
-              <TextInput style={styles.inputField} keyboardType="numeric" placeholder="10" placeholderTextColor={colors.placeholder} />
+            
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Cantidad Inicial</Text>
+                <TextInput 
+                  style={styles.inputField} 
+                  keyboardType="numeric" 
+                  placeholder="10" 
+                  placeholderTextColor={colors.placeholder} 
+                  value={newProductQty}
+                  onChangeText={setNewProductQty}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.inputLabel}>Stock mínimo</Text>
+                <TextInput 
+                  style={styles.inputField} 
+                  keyboardType="numeric" 
+                  placeholder="Ej. 5" 
+                  placeholderTextColor={colors.placeholder} 
+                  value={newProductMinStock}
+                  onChangeText={setNewProductMinStock}
+                />
+              </View>
             </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Precio ($ USD)</Text>
-              <TextInput style={styles.inputField} keyboardType="numeric" placeholder="0.00" placeholderTextColor={colors.placeholder} />
+              <TextInput 
+                style={styles.inputField} 
+                keyboardType="numeric" 
+                placeholder="0.00" 
+                placeholderTextColor={colors.placeholder} 
+                value={newProductPrice}
+                onChangeText={setNewProductPrice}
+              />
             </View>
-            <TouchableOpacity style={[styles.submitButton, { backgroundColor: colors.success }]} onPress={() => setModalProducto(false)}>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Categoría</Text>
+              {categoriesLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'flex-start', marginTop: 8 }} />
+              ) : userCategories.length === 0 ? (
+                <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>
+                  No tienes categorías asociadas a tu cuenta.
+                </Text>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, gap: 8 }}>
+                  {userCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id || cat.name}
+                      style={[
+                        {
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 20,
+                          backgroundColor: newProductCategory === cat.name ? colors.primary : colors.background,
+                          borderWidth: 1,
+                          borderColor: newProductCategory === cat.name ? colors.primary : colors.border,
+                        }
+                      ]}
+                      onPress={() => setNewProductCategory(cat.name)}
+                    >
+                      <Text style={{
+                        fontSize: 13,
+                        color: newProductCategory === cat.name ? '#FFF' : colors.textSecondary,
+                        fontWeight: newProductCategory === cat.name ? 'bold' : 'normal'
+                      }}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity style={[styles.submitButton, { backgroundColor: colors.success }]} onPress={() => {
+              // Aquí iría la lógica para guardar el producto.
+              // Por ahora solo cerramos el modal.
+              setModalProducto(false);
+            }}>
               <Text style={styles.submitButtonText}>Registrar Artículo</Text>
             </TouchableOpacity>
           </View>

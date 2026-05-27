@@ -1,5 +1,5 @@
-import React, { useState }from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback }from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { BanknotesIcon, ChartBarIcon, ArrowUpIcon, ArrowDownIcon } from 'react-native-heroicons/solid';
 import styles from './styles/PymeDashboards.styles';
 import colors from '../../../theme/colors';
@@ -11,8 +11,29 @@ const PymeGeneralDashboard = () => {
   const user = useAuthStore((state) => state.user);
   const userName = user?.name || 'Comerciante';
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Simular un refresh o aquí iría tu función para recargar datos
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+    >
 
       {/* SECCIÓN DE BIENVENIDA */}
       <View style={styles.welcomeContainer}>

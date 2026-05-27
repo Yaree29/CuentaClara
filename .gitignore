@@ -3,6 +3,11 @@
 # dependencies
 node_modules/
 
+# IAS
+CLAUDE.md
+.claude/
+.claudeignore
+
 # Expo
 .expo/
 dist/

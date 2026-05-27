@@ -72,13 +72,13 @@ const InformalCredit = () => {
         </View>
       </View>
       <Text style={styles.itemsText} numberOfLines={2}>Fiado: {item.items}</Text>
-      
+
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.payBtn} onPress={() => openPaymentModal(item)}>
           <CurrencyDollarIcon size={18} color={colors.success} />
           <Text style={styles.payBtnText}>Abonar / Pagar</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.waBtn} onPress={() => sendWhatsAppReminder(item.clientName, item.phone, item.totalDebt)}>
           <FontAwesome name="whatsapp" size={20} color="#FFF" />
         </TouchableOpacity>
@@ -118,9 +118,9 @@ const InformalCredit = () => {
               <Text style={styles.modalTitle}>{editingCredit ? 'Editar Fiado' : 'Anotar Nuevo Fiado'}</Text>
               <TouchableOpacity onPress={() => setIsFormModalVisible(false)}><XMarkIcon size={24} color={colors.textSecondary}/></TouchableOpacity>
             </View>
-            
+
             <View style={styles.formGroup}><Text style={styles.formLabel}>Nombre del Cliente *</Text><TextInput style={styles.formInput} value={formClientName} onChangeText={setFormClientName} /></View>
-            
+
             <View style={{flexDirection: 'row', gap: 12}}>
               <View style={[styles.formGroup, {flex: 1}]}>
                 <Text style={styles.formLabel}>Monto ($) *</Text>
@@ -150,8 +150,8 @@ const InformalCredit = () => {
             </View>
 
             {editingCredit && (
-              <TouchableOpacity 
-                style={[styles.primaryBtn, { backgroundColor: colors.danger }]} 
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: colors.danger }]}
                 onPress={() => {
                   Alert.alert(
                     "Eliminar Fiado",

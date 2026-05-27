@@ -1,12 +1,32 @@
+// =============================================================================
+// MODIFICADO: 2026-05-20
+// Propósito: Pantalla de registro de 3 pasos — datos básicos, selección de
+//            perfil (informal / PYME) y configuración específica según el tipo.
+// Cambios:
+//   - Paso 3 PYME: se restauraron los campos NIT y Dirección que habían
+//     quedado fuera en una edición anterior.
+//   - Combobox de plantillas: se eliminó el ScrollView anidado y el maxHeight
+//     fijo (220px) que impedía ver todas las opciones en Android. Ahora las
+//     opciones se renderizan en línea y el ScrollView padre del formulario
+//     gestiona el desplazamiento de toda la pantalla.
+//   - Se eliminaron los botones "← Volver" duplicados dentro de cada paso;
+//     solo queda el botón global "Atrás" en la parte superior.
+// =============================================================================
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../hooks/useAuth';
-import { validateEmail, validatePassword, validateName, validateBusinessName, validatePhone,getPasswordStrength} from '../utils/validation';
-import { Dropdown } from 'react-native-element-dropdown';
+import { 
+  validateEmail, 
+  validatePassword, 
+  validateName, 
+  validateBusinessName, 
+  validatePhone,
+  getPasswordStrength
+} from '../utils/validation';
 
 const RegisterScreen = ({ navigation }) => {
   const setLogin = useAuthStore((state) => state.setLogin);
@@ -17,27 +37,23 @@ const RegisterScreen = ({ navigation }) => {
   const [biometricLoading, setBiometricLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: 'Prueba',
-    lastName: 'Usuario',
-    email: 'prueba2@gmail.com',
-    password: 'Prueba456*',
+    name: '',
+    lastName: '',
+    email: '',
+    password: '',
     phone: '',
-    businessName: 'Prueba Negocio',
-    profileType: '', 
-    category: '',
-    measureUnit: '',
-    wastePercentage: '',
-
+    businessName: '',
+    profileType: '',
+    industryTemplateId: null, // solo para PYME — determina las pestañas del negocio
     nit: '',
     address: '',
-
-    businessType: 'Pruebas',
-    avgPrice: '1',
+    businessType: '',
+    avgPrice: '',
     taxEnabled: false,
-    handlesTips: false,
   });
 
-  const [categories, setCategories] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     name: '',
@@ -116,113 +132,8 @@ const RegisterScreen = ({ navigation }) => {
   }
 };
 
-const renderCategoryFields = () => {
-  switch (formData.category) {
-    case 1:
-      return <AlimentosFields />;
-    case 2:
-      return <ServiciosFields />;
-    case 3:
-      return <ComercioFields />;
-    case 4:
-      return <RestauranteFields />;
-    case 5:
-      return <GeneralFields />;
-    default:
-      return null;
-  }
-};
 
-const handleCategoryChange = (value) => {
-  updateField('category', value);
-};
-
-const unitOptions = [
-  { label: 'Kilogramos (Kg)', value: 'kg' },
-  { label: 'Libras (Lb)', value: 'lb' },
-];
-
-const AlimentosFields = () => (
-  <>
-    <Dropdown
-      style={styles.dropdown}
-      placeholderStyle={styles.placeholderStyle}
-      selectedTextStyle={styles.selectedTextStyle}
-      data={unitOptions}
-      labelField="label"
-      valueField="value"
-      placeholder="Selecciona unidad de medida"
-      value={formData.measureUnit}
-      onChange={(item) => {
-        updateField('measureUnit', item.value);
-      }}
-    />
-    <TextInput
-      placeholder="Merma estimada (%)"
-      keyboardType="numeric"
-      style={styles.input}
-      value={formData.wastePercentage}
-      onChangeText={(text) => updateField('wastePercentage', text)}
-    />
-    <TouchableOpacity style={styles.button}  onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Usas balanza digital con etiquetas? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const ServiciosFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Cobra por comisión de empleado? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
-      <Text style={styles.buttonText}>
-        ¿Vendes productos físicos además del servicio? {formData.handlesTips ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const ComercioFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Tu negocio usa códigos de barras? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const RestauranteFields = () => (
-  <>
-    <TouchableOpacity style={styles.button} onPress={() => updateField('taxEnabled', !formData.taxEnabled)}>
-      <Text style={styles.buttonText}>
-        ¿Transformas materia prima? {formData.taxEnabled ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.button} onPress={() => updateField('handlesTips', !formData.handlesTips)}>
-      <Text style={styles.buttonText}>
-        ¿Manejas propinas? {formData.handlesTips ? 'Sí' : 'No'}
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
-const GeneralFields = () => (
-  <>
-    <Text style={styles.subtitle}>
-      Inventario simple + reportes básicos activados
-    </Text>
-  </>
-);
-
-const handleRegister = () => {
+  const handleRegister = () => {
     (async () => {
       try {
         setLoading(true);
@@ -260,7 +171,7 @@ const handleRegister = () => {
           name: formData.name.trim(),
           businessName: formData.businessName.trim(),
           phone: formData.phone ? formData.phone.replace(/[\s\-\(\)]/g, '') : null,
-          categoryId: formData.category || null,
+          industryTemplateId: formData.industryTemplateId || null,
         };
 
         const result = await registerService.register(payload);
@@ -325,26 +236,28 @@ const handleRegister = () => {
         setLoading(false);
       }
     })();
-};
+  };
 
-useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const cats = await registerService.getCategories();
-        if (mounted) setCategories(cats);
-        
-        // Verifica disponibilidad de biometría
-        const biometricEnabled = await isBiometricAvailable();
-        if (mounted) setBiometricAvailable(biometricEnabled);
+        const [tmplData, biometricEnabled] = await Promise.all([
+          registerService.getTemplates(),
+          isBiometricAvailable(),
+        ]);
+        if (mounted) {
+          setTemplates(tmplData);
+          setBiometricAvailable(biometricEnabled);
+        }
       } catch (e) {
-        console.error('No se pudieron cargar categorias:', e);
+        console.error('Error al cargar datos de registro:', e);
       }
     })();
     return () => (mounted = false);
-}, []);
+  }, []);
 
-return (
+  return (
     <AuthLayout>
       <ScrollView contentContainerStyle={styles.container}>
         {step > 1 && (
@@ -355,20 +268,9 @@ return (
             <Text style={styles.linkText}>Atrás</Text>
           </TouchableOpacity>
         )}
-
-        <View style={styles.headerContainer}>
-          <Image
-            source={require('../../../utils/images/icon.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-
-          <Text style={styles.appName}>CuentaClara</Text>
-        </View>
         
         {step === 1 && (
           <>
-
             <Text style={styles.title}>Crear Cuenta</Text>
             <Text style={styles.subtitle}>Información básica</Text>
 
@@ -453,54 +355,29 @@ return (
 
         {step === 2 && (
           <>
-            <View style={styles.cardsContainer}>
+            <Text style={styles.title}>Selecciona tu perfil</Text>
 
-              {/* Emprendedor */}
+            <View style={styles.form}>
               <TouchableOpacity
-                style={styles.profileCard}
+                style={styles.button}
                 onPress={() => {
                   updateField('profileType', 'emprendedor');
                   handleNext();
                 }}
               >
-                <View style={styles.iconBox}>
-                  <Text style={styles.icon}>⚡</Text>
-                </View>
-
-                <Text style={styles.cardTitle}>
-                  Emprendedor Informal
-                </Text>
-
-                <Text style={styles.cardDescription}>
-                  Ventas rápidas, fiados y gestión simple en el campo.
-                  Ideal para quienes necesitan agilidad inmediata.
-                </Text>
-
+                <Text style={styles.buttonText}>Emprendedor (Rápido)</Text>
               </TouchableOpacity>
 
-              {/* Empresa */}
               <TouchableOpacity
-                style={styles.profileCard}
+                style={styles.button}
                 onPress={() => {
                   updateField('profileType', 'empresa');
                   handleNext();
                 }}
               >
-                <View style={styles.iconBox}>
-                  <Text style={styles.icon}>🏢</Text>
-                </View>
-
-                <Text style={styles.cardTitle}>
-                  Empresa PYME
-                </Text>
-
-                <Text style={styles.cardDescription}>
-                  Facturación, inventario, reportes e impuestos para
-                  negocios en crecimiento.
-                </Text>
-              
+                <Text style={styles.buttonText}>Empresa PYME</Text>
               </TouchableOpacity>
-
+              
             </View>
           </>
         )}
@@ -524,31 +401,49 @@ return (
                 onChangeText={(val) => updateField('address', val)}
               />
 
-              <Text style={styles.subtitle}>Categoría del negocio</Text>
+              <Text style={styles.subtitle}>Tipo de negocio</Text>
 
-              {categories.length === 0 ? (
-                <Text>Cargando categorías...</Text>
-              ) : (
-                <>
-                  <Dropdown
-                    style={styles.dropdown}
-                    placeholderStyle={styles.placeholderStyle}
-                    selectedTextStyle={styles.selectedTextStyle}
-                    data={categories}
-                    labelField="name"
-                    valueField="id"
-                    placeholder="Selecciona una categoría"
-                    value={formData.category}
-                    onChange={(item) => {
-                      handleCategoryChange(item.id);
-                    }}
-                  />
+              {/* Combobox de plantillas */}
+              <TouchableOpacity
+                style={[styles.input, { justifyContent: 'center' }]}
+                onPress={() => setTemplatePickerOpen(!templatePickerOpen)}
+              >
+                <Text>
+                  {formData.industryTemplateId
+                    ? (() => {
+                        const t = templates.find((t) => t.id === formData.industryTemplateId);
+                        return t ? `${t.icon}  ${t.name}` : 'Selecciona el tipo de negocio';
+                      })()
+                    : 'Selecciona el tipo de negocio ▾'}
+                </Text>
+              </TouchableOpacity>
 
-                  {renderCategoryFields()}
-                </>
+              {templatePickerOpen && (
+                <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 8 }}>
+                  {templates.length === 0 ? (
+                    <ActivityIndicator style={{ padding: 16 }} />
+                  ) : (
+                    templates.map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        onPress={() => {
+                          updateField('industryTemplateId', t.id);
+                          setTemplatePickerOpen(false);
+                        }}
+                        style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      >
+                        <Text>{t.icon}  {t.name}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
               )}
 
-              <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+              <TouchableOpacity
+                style={[styles.button, !formData.industryTemplateId && { opacity: 0.5 }]}
+                onPress={handleRegister}
+                disabled={loading || !formData.industryTemplateId}
+              >
                 <Text style={styles.buttonText}>{loading ? 'Registrando...' : 'Finalizar'}</Text>
               </TouchableOpacity>
             </View>

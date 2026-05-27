@@ -1,8 +1,13 @@
+// =============================================================================
+// Navegador principal de pestañas (bottom tabs). Construye dinámicamente los
+// tabs visibles a partir de los módulos activos del negocio (useBlueprintStore),
+// usando los estilos visuales de Heroicons.
+// =============================================================================
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import colors from '../../theme/colors';
-import useUserStore from '../../store/useUserStore';
 import { View } from 'react-native';
+import colors from '../../theme/colors';
+import useBlueprintStore from '../../store/useBlueprintStore';
 
 // Importación de íconos
 import { 
@@ -12,7 +17,11 @@ import {
   ArchiveBoxIcon, 
   WrenchScrewdriverIcon, 
   DocumentTextIcon, 
-  ChartBarIcon 
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  ShoppingCartIcon,
+  UserGroupIcon,
+  UserIcon,
 } from 'react-native-heroicons/solid';
 
 // Importación de pantallas
@@ -23,30 +32,40 @@ import DebtScreen from '../../modules/credit/screens/DebtScreen';
 import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
 import ServicesScreen from '../../modules/services/screens/ServicesScreen';
 import ReportsScreen from '../../modules/reports/screens/ReportsScreen';
+import CashScreen from '../../modules/cash/screens/CashScreen';
+import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
+import StaffScreen from '../../modules/staff/screens/StaffScreen';
+import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
+// Cada entrada define la pantalla, etiqueta visible e ícono del tab.
+const TAB_CONFIG = {
+  dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
+  sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
+  credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
+  inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
+  billing:   { component: BillingScreen,   label: 'Facturas',    icon: DocumentTextIcon },
+  services:  { component: ServicesScreen,  label: 'Servicios',   icon: WrenchScrewdriverIcon },
+  reports:   { component: ReportsScreen,   label: 'Reportes',    icon: ChartBarIcon },
+  cash:      { component: CashScreen,      label: 'Caja',        icon: CurrencyDollarIcon },
+  purchases: { component: PurchasesScreen, label: 'Compras',     icon: ShoppingCartIcon },
+  staff:     { component: StaffScreen,     label: 'Personal',    icon: UserGroupIcon },
+  profile:   { component: ProfileScreen,   label: 'Perfil',      icon: UserIcon },
+};
+
+// Orden fijo de aparición — profile siempre al final
+const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory', 'billing', 'services', 'reports', 'cash', 'purchases', 'staff', 'profile'];
+
 const MainNavigator = () => {
+  const modules = useBlueprintStore((state) => state.modules);
 
-  // Variables de prueba visual
-  // 1. Informal: 'informal' / null
-  // 2. PYME (Inventario): 'pyme' / 'products'
-  // 3. PYME (Servicios): 'pyme' / 'service'
+  if (!modules || modules.length === 0) return null;
 
-  //const MOCK_USER_TYPE = 'pyme';
-  //const MOCK_CATEGORY = 'products';
-
-  //const isInformal = MOCK_USER_TYPE === 'informal';
-  //const isPyme = MOCK_USER_TYPE === 'pyme';
-  //const isServicePyme = isPyme && MOCK_CATEGORY === 'service';
-
-  //Para simular bifurcación - se leen los dato usando la libreria Zustand, que permite manejar el estado global de la app
-  const userType = useUserStore((state) => state.userType);
-  const businessData = useUserStore((state) => state.businessData);
-
-  const isInformal = userType === 'informal';
-  const isPyme = userType === 'pyme';
-  const isServicePyme = isPyme && businessData?.category === 'service';
+  const visibleTabs = TAB_ORDER.filter((mod) => {
+    if (mod === 'profile') return true; // perfil siempre visible
+    return modules.includes(mod) && TAB_CONFIG[mod];
+  });
 
   return (
     <Tab.Navigator 
@@ -69,17 +88,9 @@ const MainNavigator = () => {
           shadowRadius: 6,
           height: 65, 
         },
-        //Configuración de Heroicons en la barra
         tabBarIcon: ({ focused, color }) => {
-          let IconComponent;
-          
-          if (route.name === 'Dashboard') IconComponent = HomeIcon;
-          else if (route.name === 'Sales') IconComponent = BanknotesIcon;
-          else if (route.name === 'Credit') IconComponent = CreditCardIcon;
-          else if (route.name === 'Inventory') IconComponent = ArchiveBoxIcon;
-          else if (route.name === 'Services') IconComponent = WrenchScrewdriverIcon;
-          else if (route.name === 'Billing') IconComponent = DocumentTextIcon;
-          else if (route.name === 'Reports') IconComponent = ChartBarIcon;
+          const config = TAB_CONFIG[route.name];
+          const IconComponent = config?.icon;
 
           return (
             <View style={{
@@ -97,38 +108,19 @@ const MainNavigator = () => {
         },
       })}
     >
-      {/* Home de la aplicación, visible para todos los roles */}
-      <Tab.Screen name="Dashboard" component={HomeScreen} options={{ tabBarLabel: 'Inicio' }} />
-
-      {/* Navegación para Usuario Informal */}
-      {isInformal && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Credit" component={DebtScreen} options={{ tabBarLabel: 'Créditos' }} />
-          <Tab.Screen name="Inventory" component={InventoryScreen} options={{ tabBarLabel: 'Inventario' }} />
-        </Tab.Group>
-      )}
-
-      {/* Navegación para PYME regular (Basada en productos/inventario) */}
-      {isPyme && !isServicePyme && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Inventory" component={InventoryScreen} options={{ tabBarLabel: 'Inventario' }} />
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reportes' }} />
-          <Tab.Screen name="Billing" component={BillingScreen} options={{ tabBarLabel: 'Finanzas' }} />
-        </Tab.Group>
-      )}
-
-      {/* Navegación para PYME de Servicios (Sin inventario) */}
-      {isPyme && isServicePyme && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Services" component={ServicesScreen} options={{ tabBarLabel: 'Servicios' }} />
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reportes' }} />
-          <Tab.Screen name="Billing" component={BillingScreen} options={{ tabBarLabel: 'Finanzas' }} />
-        </Tab.Group>
-      )}
-
+      {visibleTabs.map((mod) => {
+        const { component, label } = TAB_CONFIG[mod];
+        return (
+          <Tab.Screen
+            key={mod}
+            name={mod}
+            component={component}
+            options={{
+              tabBarLabel: label,
+            }}
+          />
+        );
+      })}
     </Tab.Navigator>
   );
 };

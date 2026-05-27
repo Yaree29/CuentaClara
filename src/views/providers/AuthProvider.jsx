@@ -1,33 +1,32 @@
+// Sin suscripción a onAuthStateChange de Supabase — la sesión se gestiona
+// manualmente desde AsyncStorage a través de authService.
 import React, { createContext, useContext, useEffect } from 'react';
 import useAuthStore from '../../store/useAuthStore';
 import useUserStore from '../../store/useUserStore';
 import useBlueprintStore from '../../store/useBlueprintStore';
-import { getBlueprintByRole } from '../../data/sessionTemporal';
 import authService from '../../modules/auth/services/authService';
 
 const AuthContext = createContext({});
 
-const buildBlueprint = (user) => {
-  if (user?.enabled_modules?.length) {
-    return {
-      userType: user.userType || 'informal',
-      config: {
-        source: 'supabase',
-        business: user.business,
-      },
-      enabled_modules: user.enabled_modules,
-    };
-  }
-
-  return getBlueprintByRole(user?.role);
-};
+// El blueprint define qué tabs ve el usuario; se construye con datos que
+// vienen de /auth/context (userType, business, enabled_modules)
+const buildBlueprint = (user) => ({
+  userType: user?.userType || 'informal',
+  config: {
+    source: 'api',
+    business: user?.business || null,
+  },
+  enabled_modules: user?.enabled_modules || ['dashboard', 'profile'],
+});
 
 export const AuthProvider = ({ children }) => {
-  const { isAuthenticated, user, setLogin, setLogout, setInitializing } =
-    useAuthStore();
+  const { isAuthenticated, user, setLogin, setLogout, setInitializing } = useAuthStore();
   const { setUserType } = useUserStore();
   const { setBlueprint, resetBlueprint } = useBlueprintStore();
 
+  // Al arrancar la app intenta restaurar la sesión desde AsyncStorage.
+  // isInitializing se mantiene en true hasta que esto termine, para
+  // que el navigator no muestre nada antes de saber si hay sesión activa.
   useEffect(() => {
     let isMounted = true;
 
@@ -38,19 +37,13 @@ export const AuthProvider = ({ children }) => {
         if (!isMounted) return;
 
         if (currentSession?.user) {
-          setLogin(
-            currentSession.user,
-            currentSession.token,
-            currentSession.session
-          );
+          setLogin(currentSession.user, currentSession.token, null);
         } else {
           setLogout();
         }
-      } catch (error) {
+      } catch {
         await authService.clearLocalSession();
-        if (isMounted) {
-          setLogout();
-        }
+        if (isMounted) setLogout();
       } finally {
         if (isMounted) setInitializing(false);
       }
@@ -58,32 +51,13 @@ export const AuthProvider = ({ children }) => {
 
     loadSession();
 
-    const subscription = authService.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setLogout();
-        return;
-      }
-
-      if (event !== 'SIGNED_IN' && event !== 'TOKEN_REFRESHED') return;
-      if (!session?.user) return;
-
-      setTimeout(async () => {
-        try {
-          const sessionUser = await authService.getUserContext(session);
-          setLogin(sessionUser, session.access_token, session);
-        } catch (error) {
-          await authService.clearLocalSession();
-          setLogout();
-        }
-      }, 0);
-    });
-
     return () => {
       isMounted = false;
-      subscription?.unsubscribe();
     };
   }, [setInitializing, setLogin, setLogout]);
 
+  // Reconstruye el blueprint cada vez que cambia el usuario autenticado,
+  // lo que actualiza los tabs visibles en la navegación
   useEffect(() => {
     if (isAuthenticated && user) {
       const blueprint = buildBlueprint(user);

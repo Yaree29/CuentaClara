@@ -7,35 +7,36 @@ from app.database import supabase_admin
 router = APIRouter()
 security = HTTPBearer()
 
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # Validamos el JWT contra Supabase Auth en lugar de verificarlo localmente;
+    # así no necesitamos mantener el SECRET_KEY sincronizado con Supabase
     try:
-        token = credentials.credentials
-        auth_response = supabase_admin.auth.get_user(token)
+        auth_response = supabase_admin.auth.get_user(credentials.credentials)
         auth_user = auth_response.user
+        user_id = str(auth_user.id)
 
-        if not auth_user:
-            raise HTTPException(status_code=401, detail="Token inválido")
-
-        # Obtener datos adicionales de public.users
-        user_data = supabase_admin.table("users")\
+        # business_id no está en el JWT de Supabase; lo leemos de public.users
+        profile = supabase_admin.table("users")\
             .select("id, business_id, role, name, email")\
-            .eq("id", auth_user.id)\
+            .eq("id", user_id)\
+            .single()\
             .execute()
 
-        if not user_data.data:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        if not profile.data:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado en el sistema")
 
-        u = user_data.data[0]
+        # "sub" mantiene compatibilidad con los routers de sales e invoices
         return {
-            "sub": u["id"],
-            "business_id": u["business_id"],
-            "role": u["role"],
-            "name": u["name"],
-            "email": u["email"]
+            "sub": user_id,
+            "business_id": profile.data["business_id"],
+            "role": profile.data["role"],
+            "email": profile.data["email"],
+            "name": profile.data["name"],
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
 
@@ -45,6 +46,8 @@ def register(data: RegisterRequest):
         return auth_service.register_business(data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 
 @router.post("/login", response_model=TokenResponse, summary="Iniciar sesión")
@@ -55,7 +58,8 @@ def login(data: LoginRequest):
         raise HTTPException(status_code=401, detail=str(e))
 
 
-@router.get("/me", summary="Perfil del usuario autenticado")
+# Devuelve solo datos de perfil del usuario (nombre, email, rol, teléfono)
+@router.get("/me", summary="Datos del usuario autenticado")
 def get_me(current_user: dict = Depends(get_current_user)):
     user = supabase_admin.table("users")\
         .select("id, name, email, role, phone, created_at")\
@@ -64,29 +68,38 @@ def get_me(current_user: dict = Depends(get_current_user)):
     return user.data[0] if user.data else {}
 
 
-@router.get("/context", summary="Contexto del negocio y módulos activos")
+# Devuelve datos del negocio + features activos + módulos habilitados para la navegación.
+# Separado de /me porque el frontend los consume en momentos distintos.
+@router.get("/context", summary="Contexto de la aplicación para el usuario autenticado")
 def get_context(current_user: dict = Depends(get_current_user)):
     try:
         return auth_service.get_user_context(
             user_id=current_user["sub"],
             business_id=current_user["business_id"]
         )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/categories", summary="Lista de categorías de negocio (público)")
+# Endpoint público — no requiere token porque se usa en el formulario de registro
+@router.get("/categories", summary="Listado de categorías de negocio")
 def get_categories():
     result = supabase_admin.table("categories")\
         .select("id, name, icon, description")\
+        .order("id")\
         .execute()
     return result.data
 
 
-@router.get("/templates", summary="Plantillas de industria disponibles")
+# Plantillas de industria con sus módulos por defecto — usadas en el paso 3
+# del registro PYME para que el usuario elija el tipo de negocio
+@router.get("/templates", summary="Plantillas de industria para registro PYME")
 def get_templates():
     result = supabase_admin.table("industry_templates")\
-        .select("id, name, default_modules, default_units, icon")\
+        .select("id, name, icon, default_modules")\
+        .order("id")\
         .execute()
     return result.data
 
@@ -94,10 +107,7 @@ def get_templates():
 @router.post("/mfa/setup", summary="Configurar autenticación MFA")
 def setup_mfa(current_user: dict = Depends(get_current_user)):
     try:
-        return auth_service.generate_mfa_qr(
-            current_user["sub"],
-            current_user["email"]
-        )
+        return auth_service.generate_mfa_qr(current_user["sub"], current_user["email"])
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

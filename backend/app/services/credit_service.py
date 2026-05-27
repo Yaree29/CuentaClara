@@ -41,6 +41,35 @@ def create_customer(business_id: str, data) -> dict:
     return result.data[0]
 
 
+def update_customer(business_id: str, customer_id: int, data) -> dict:
+    existing = supabase_admin.table("customers")\
+        .select("id, business_id")\
+        .eq("id", customer_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not existing.data:
+        raise ValueError("Cliente no encontrado")
+
+    payload = {"updated_at": datetime.utcnow().isoformat()}
+    if data.name is not None:
+        if not data.name.strip():
+            raise ValueError("El nombre del cliente no puede estar vacío")
+        payload["name"] = data.name.strip()
+    if data.phone is not None:
+        payload["phone"] = data.phone.strip() if data.phone.strip() else None
+    if data.notes is not None:
+        payload["notes"] = data.notes.strip() if data.notes.strip() else None
+
+    result = supabase_admin.table("customers")\
+        .update(payload)\
+        .eq("id", customer_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not result.data:
+        raise ValueError("No se pudo actualizar el cliente")
+    return result.data[0]
+
+
 # ── Deudas ────────────────────────────────────────────────────────────────────
 
 def list_debts(business_id: str, status: str = None) -> list:
@@ -98,6 +127,90 @@ def create_debt(business_id: str, user_id: str, data) -> dict:
     row = result.data[0]
     row["customer_name"] = customer.data[0]["name"]
     return row
+
+
+def update_debt(business_id: str, debt_id: int, data) -> dict:
+    debt_result = supabase_admin.table("debts")\
+        .select("id, business_id, customer_id, original_amount, remaining_amount, status")\
+        .eq("id", debt_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not debt_result.data:
+        raise ValueError("Deuda no encontrada")
+
+    debt = debt_result.data[0]
+    if debt["status"] in ("paid", "cancelled"):
+        raise ValueError(f"No se puede editar una deuda en estado {debt['status']}")
+
+    payload = {"updated_at": datetime.utcnow().isoformat()}
+
+    if data.amount is not None:
+        new_amount = float(data.amount)
+        paid_so_far = float(debt["original_amount"]) - float(debt["remaining_amount"])
+        if new_amount < paid_so_far:
+            raise ValueError(
+                f"El nuevo monto (${new_amount:.2f}) no puede ser menor a lo ya abonado "
+                f"(${paid_so_far:.2f})"
+            )
+        new_remaining = new_amount - paid_so_far
+        payload["original_amount"] = new_amount
+        payload["remaining_amount"] = new_remaining
+        # Si el nuevo remaining es 0 → status paid; si tenía abonos → partial; si no → pending
+        if new_remaining == 0:
+            payload["status"] = "paid"
+            payload["paid_at"] = datetime.utcnow().isoformat()
+        elif paid_so_far > 0:
+            payload["status"] = "partial"
+        else:
+            payload["status"] = "pending"
+
+    if data.description is not None:
+        payload["description"] = data.description.strip() if data.description.strip() else None
+
+    if data.due_date is not None:
+        payload["due_date"] = data.due_date or None
+
+    result = supabase_admin.table("debts")\
+        .update(payload)\
+        .eq("id", debt_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not result.data:
+        raise ValueError("No se pudo actualizar la deuda")
+
+    # Re-fetch con customer name para mantener consistencia con list_debts
+    row = result.data[0]
+    customer = supabase_admin.table("customers")\
+        .select("name")\
+        .eq("id", row["customer_id"])\
+        .execute()
+    row["customer_name"] = customer.data[0]["name"] if customer.data else "Sin nombre"
+    return row
+
+
+def cancel_debt(business_id: str, debt_id: int) -> dict:
+    debt_result = supabase_admin.table("debts")\
+        .select("id, status")\
+        .eq("id", debt_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not debt_result.data:
+        raise ValueError("Deuda no encontrada")
+
+    if debt_result.data[0]["status"] == "cancelled":
+        raise ValueError("La deuda ya está cancelada")
+
+    result = supabase_admin.table("debts")\
+        .update({
+            "status": "cancelled",
+            "updated_at": datetime.utcnow().isoformat(),
+        })\
+        .eq("id", debt_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not result.data:
+        raise ValueError("No se pudo cancelar la deuda")
+    return result.data[0]
 
 
 # ── Abonos ────────────────────────────────────────────────────────────────────

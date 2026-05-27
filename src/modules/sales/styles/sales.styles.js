@@ -1,21 +1,10 @@
-// =============================================================================
-// MODIFICADO: 2026-05-26
-// Propósito: Estilos para la pantalla de Ventas (versión rica integrada
-//            desde la rama Fronted). Incluye tabs, display total acumulado,
-//            grid de productos seleccionados con +/-, dropdown de productos,
-//            métodos de pago, botones de acción y modal de notas.
-// Adaptación: las referencias a colors.textTertiary y colors.success no
-//             existen en el colors.js de loginDr — se usan literales en su
-//             lugar (#FFFFFF y #10b981).
-// =============================================================================
 import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
-const SUCCESS = '#10b981';
-const ON_PRIMARY = '#FFFFFF';
-
 export default StyleSheet.create({
-  /* HEADER */
+  /* =========================
+     HEADER
+  ========================== */
   header: {
     height: 100,
     flexDirection: 'row',
@@ -25,6 +14,7 @@ export default StyleSheet.create({
     borderBottomColor: '#F0F0F0',
     backgroundColor: '#FFFFFF',
   },
+
   headerTitle: {
     flex: 1,
     fontSize: 20,
@@ -33,17 +23,43 @@ export default StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* CONTAINER */
+ /* =========================
+     Foto de perfl
+  ========================== */
+  headerDocButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#10445c',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  docIcon: {
+    width: 14,
+    height: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+
+  /* =========================
+     CONTAINER
+  ========================== */
+
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+
   content: {
     padding: 16,
     paddingBottom: 40,
   },
 
-  /* TABS */
+  /* =========================
+     TABS / Navegacion entre secciones
+  ========================== */
+
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: '#E2E8F0',
@@ -53,87 +69,87 @@ export default StyleSheet.create({
     marginTop: 10,
     marginHorizontal: 16,
   },
+
   tab: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
   },
+
   tabActive: {
     backgroundColor: colors.primary,
   },
+
   tabText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
   },
+
   tabTextActive: {
-    color: ON_PRIMARY,
+    color: colors.textTertiary,
   },
 
-  /* TÍTULO clásico (compatibilidad con código previo) */
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
+  /* =========================
+     DISPLAY CARD
+  ========================== */
 
-  /* DISPLAY CARD: total acumulado */
-  display: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
-    padding: 18,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  },
   displayCard: {
     backgroundColor: colors.card,
+
     borderRadius: 18,
+
     paddingTop: 10,
     paddingBottom: 14,
     zIndex: 20,
+
+
     alignItems: 'center',
+
     borderWidth: 1,
     borderColor: colors.border,
+
     marginBottom: 10,
     marginHorizontal: 16,
+
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.08,
     shadowRadius: 6,
+
     elevation: 4,
   },
+
   displayLabel: {
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  displaySub: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
+
   totalRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     marginVertical: 8,
   },
+
   currency: {
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.primary,
     marginRight: 4,
   },
+
   displayValue: {
     fontSize: 46,
     fontWeight: 'bold',
     color: colors.primary,
   },
+
   badge: {
     backgroundColor: '#EFF6FF',
     paddingVertical: 6,
@@ -142,26 +158,50 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   badgeIcon: {
     fontSize: 14,
     marginRight: 6,
   },
+
   badgeText: {
     color: colors.textSecondary,
     fontWeight: '500',
     fontSize: 13,
   },
 
-  /* QUICK ACTIONS (botones de monto rápido) */
-  quickActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  /* =========================
+     QUICK GRID/ PRODUCTOS
+  ========================== */
+
+  quickGrid: {
+    maxHeight: 340,
+
+    backgroundColor: '#FFFFFF',
+
+    borderWidth: 1,
+    borderColor: colors.border,
+
+    borderRadius: 18,
+
+    padding: 12,
+
+    marginBottom: 10,
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+
+    elevation: 3,
   },
+
   amountBtn: {
     backgroundColor: colors.card,
-    width: '23%',
+    width: '31%',
     aspectRatio: 1.35,
     borderRadius: 14,
     justifyContent: 'center',
@@ -170,32 +210,19 @@ export default StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+
   amountBtnText: {
-    fontSize: 22,
+    fontSize: 34,
     fontWeight: 'bold',
     color: colors.primary,
   },
+
   amountSubtext: {
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
   },
 
-  /* GRID DE PRODUCTOS SELECCIONADOS */
-  quickGrid: {
-    maxHeight: 340,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   emptyProducts: {
     backgroundColor: colors.card,
     borderRadius: 14,
@@ -205,65 +232,86 @@ export default StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+
   emptyProductsText: {
     color: colors.textSecondary,
     fontSize: 14,
   },
+
   selectedProductCard: {
     backgroundColor: colors.card,
     width: '100%',
     borderRadius: 14,
+
     paddingHorizontal: 14,
     paddingVertical: 12,
+
     marginBottom: 10,
+
     borderWidth: 1,
     borderColor: colors.border,
+
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   selectedProductName: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
   },
+
   selectedProductPrice: {
     marginTop: 4,
     color: colors.textSecondary,
     fontSize: 13,
   },
+
   selectedProductRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   selectedProductQty: {
     marginRight: 14,
     fontSize: 16,
     fontWeight: '700',
     color: colors.primary,
   },
+
   removeBtn: {
     width: 34,
     height: 34,
+
     borderRadius: 17,
+
     backgroundColor: '#FEE2E2',
+
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   removeBtnText: {
     color: '#EF4444',
     fontSize: 20,
     fontWeight: 'bold',
   },
+
   addBtn: {
     width: 32,
     height: 32,
+
     borderRadius: 16,
-    backgroundColor: SUCCESS,
+
+    backgroundColor: colors.success,
+
     justifyContent: 'center',
     alignItems: 'center',
+
     marginLeft: 8,
   },
+
   addBtnText: {
     color: '#FFFFFF',
     fontSize: 22,
@@ -271,7 +319,10 @@ export default StyleSheet.create({
     lineHeight: 24,
   },
 
-  /* LABELS */
+  /* =========================
+     LABELS
+  ========================== */
+
   label: {
     fontSize: 14,
     fontWeight: '700',
@@ -279,12 +330,16 @@ export default StyleSheet.create({
     marginBottom: 10,
   },
 
-  /* MÉTODOS DE PAGO */
+  /* =========================
+     PAYMENT METHODS
+  ========================== */
+
   methodContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
   },
+
   methodBtn: {
     flex: 1,
     backgroundColor: colors.card,
@@ -295,25 +350,33 @@ export default StyleSheet.create({
     marginHorizontal: 4,
     alignItems: 'center',
   },
+
   methodBtnActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+
   methodBtnText: {
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '700',
   },
+
   methodBtnTextActive: {
     color: '#FFFFFF',
   },
 
-  /* ACCIONES SECUNDARIAS (notas, vincular fiado) */
+
+  /* =========================
+     EXTRA ACTIONS
+  ========================== */
+
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
   },
+
   secondaryBtnGray: {
     backgroundColor: '#EAEAEA',
     flex: 1,
@@ -324,11 +387,18 @@ export default StyleSheet.create({
     alignItems: 'center',
     marginRight: 8,
   },
+
+  secondaryBtnIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+
   secondaryBtnTextGray: {
     color: colors.primary,
     fontWeight: '700',
     fontSize: 15,
   },
+
   secondaryBtnBlue: {
     backgroundColor: '#93C5FD',
     flex: 1,
@@ -338,135 +408,171 @@ export default StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
-    opacity: 0.7,  // botón 'Vincular Fiado' aún no integrado, visualmente deshabilitado
   },
+
   secondaryBtnIconBlue: {
     fontSize: 16,
     marginRight: 6,
     color: '#1E3A8A',
   },
+
   secondaryBtnTextBlue: {
     color: '#1E3A8A',
     fontWeight: '700',
     fontSize: 15,
   },
 
-  /* BOTÓN CHECKOUT */
+  /* =========================
+     BUTTONS
+  ========================== */
+
   checkoutBtn: {
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     height: 58,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   checkoutBtnContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   checkMark: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: 'bold',
     marginRight: 8,
   },
+
   checkoutBtnText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
   },
+
   disabledBtn: {
     opacity: 0.5,
   },
-  clearBtn: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  clearBtnText: {
-    color: '#EF4444',
-    fontWeight: '700',
-    fontSize: 14,
-  },
 
-  /* MODAL DE NOTAS */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  noteModal: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-  },
-  noteModalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 16,
-  },
-  noteInput: {
-    minHeight: 140,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    padding: 14,
-    fontSize: 16,
-    color: '#1E293B',
-    textAlignVertical: 'top',
-    backgroundColor: '#F8FAFC',
-  },
-  noteActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 18,
-  },
-  deleteNoteBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#FEE2E2',
-  },
-  deleteNoteText: {
-    color: '#DC2626',
-    fontWeight: '700',
-  },
-  closeNoteBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: SUCCESS,
-  },
-  closeNoteText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  closeIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeIconText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#64748B',
-  },
+  /* =========================
+     Modal De Notas
+  ========================== */
 
-  /* ERRORS */
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.45)',
+
+  justifyContent: 'center',
+  alignItems: 'center',
+
+  padding: 24,
+},
+
+noteModal: {
+  width: '100%',
+
+  backgroundColor: '#FFFFFF',
+
+  borderRadius: 20,
+
+  padding: 20,
+},
+
+noteModalTitle: {
+  fontSize: 20,
+  fontWeight: '700',
+
+  color: '#0F2747',
+
+  marginBottom: 16,
+},
+
+noteInput: {
+  minHeight: 140,
+
+  borderWidth: 1,
+  borderColor: colors.border,
+
+  borderRadius: 14,
+
+  padding: 14,
+
+  fontSize: 16,
+  color: '#1E293B',
+
+  textAlignVertical: 'top',
+
+  backgroundColor: '#F8FAFC',
+},
+
+noteActions: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+
+  marginTop: 18,
+},
+
+deleteNoteBtn: {
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+
+  borderRadius: 12,
+
+  backgroundColor: '#FEE2E2',
+},
+
+deleteNoteText: {
+  color: '#DC2626',
+  fontWeight: '700',
+},
+
+closeNoteBtn: {
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+
+  borderRadius: 12,
+
+  backgroundColor: colors.success,
+},
+
+closeNoteText: {
+  color: '#FFFFFF',
+  fontWeight: '700',
+},
+
+noteHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+
+  marginBottom: 16,
+},
+
+closeIconBtn: {
+  width: 34,
+  height: 34,
+
+  borderRadius: 17,
+
+  backgroundColor: '#F1F5F9',
+
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+closeIconText: {
+  fontSize: 18,
+  fontWeight: '700',
+
+  color: '#64748B',
+},
+
+  /* =========================
+     ERRORS
+  ========================== */
+
   errorText: {
     color: colors.textError,
     fontSize: 14,
@@ -474,24 +580,13 @@ export default StyleSheet.create({
     marginBottom: 12,
   },
 
-  /* HISTORIA */
-  historyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  historyEmpty: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    paddingVertical: 40,
-  },
-
-  /* ACCIONES TOP (limpiar monto + dropdown productos) */
+  /* =========================
+      Acciones extras
+   ========================= */
   actionsTopRow: {
     marginBottom: 16,
   },
+
   clearAmountBtn: {
     backgroundColor: '#FEE2E2',
     borderRadius: 12,
@@ -499,65 +594,172 @@ export default StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+
   clearAmountText: {
     color: colors.textError,
     fontWeight: '700',
     fontSize: 14,
   },
 
-  /* DROPDOWN DE PRODUCTOS */
-  productDropdown: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  productDropdownText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  dropdownArrow: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  productsContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 18,
-    overflow: 'hidden',
-  },
-  productItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  productPrice: {
-    marginTop: 4,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  showMoreBtn: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  showMoreText: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  /* =========================
+   PRODUCT DROPDOWN
+========================== */
+
+productDropdown: {
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 18,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+
+productDropdownText: {
+  color: colors.textPrimary,
+  fontSize: 15,
+  fontWeight: '600',
+},
+
+dropdownArrow: {
+  color: colors.textSecondary,
+  fontSize: 14,
+},
+
+productsContainer: {
+  backgroundColor: colors.card,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: colors.border,
+  marginBottom: 18,
+  overflow: 'hidden',
+},
+
+productItem: {
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+},
+
+productName: {
+  fontSize: 15,
+  fontWeight: '600',
+  color: colors.textPrimary,
+},
+
+productPrice: {
+  marginTop: 4,
+  fontSize: 13,
+  color: colors.textSecondary,
+},
+
+showMoreBtn: {
+  paddingVertical: 14,
+  alignItems: 'center',
+},
+
+showMoreText: {
+  color: colors.primary,
+  fontWeight: '700',
+  fontSize: 14,
+},
+
+// =========================
+//     History
+// ==========================
+
+reportTitle: {
+  fontSize: 24,
+  fontWeight: '700',
+  color: colors.primary,
+  marginBottom: 20,
+  textAlign: 'center',
+},
+
+historySummary: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 20,
+  gap: 12,
+},
+
+summaryCardIncome: {
+  flex: 1,
+  backgroundColor: '#ECFDF5',
+  borderRadius: 16,
+  padding: 18,
+  borderWidth: 1,
+  borderColor: '#A7F3D0',
+},
+
+summaryCardExpense: {
+  flex: 1,
+  backgroundColor: '#FEF2F2',
+  borderRadius: 16,
+  padding: 18,
+  borderWidth: 1,
+  borderColor: '#FECACA',
+},
+
+summaryLabel: {
+  fontSize: 14,
+  color: colors.textSecondary,
+  marginBottom: 8,
+},
+
+summaryIncome: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#16A34A',
+},
+
+summaryExpense: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#DC2626',
+},
+
+historyContainer: {
+  gap: 12,
+  paddingBottom: 40,
+},
+
+historyCard: {
+  backgroundColor: colors.card,
+  borderRadius: 16,
+  padding: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+historyTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: colors.textPrimary,
+},
+
+historyDate: {
+  fontSize: 13,
+  color: colors.textSecondary,
+  marginTop: 4,
+},
+
+historyIncome: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#16A34A',
+},
+
+historyExpense: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#DC2626',
+},
 });

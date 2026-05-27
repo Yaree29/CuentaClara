@@ -17,6 +17,12 @@ class CustomerCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    phone: Optional[str] = Field(None, max_length=30)
+    notes: Optional[str] = None
+
+
 class CustomerResponse(BaseModel):
     id: int
     business_id: str
@@ -35,6 +41,13 @@ class DebtCreate(BaseModel):
     description: Optional[str] = None
     due_date: Optional[str] = None       # YYYY-MM-DD
     invoice_id: Optional[int] = None     # si viene de una venta a crédito
+
+
+class DebtUpdate(BaseModel):
+    # Solo permite editar monto/descripción/fecha — el cliente no se cambia
+    amount: Optional[Decimal] = Field(None, gt=0)
+    description: Optional[str] = None
+    due_date: Optional[str] = None
 
 
 class DebtResponse(BaseModel):

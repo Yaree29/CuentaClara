@@ -4,20 +4,29 @@
 #            Prefijo /credit. Requiere autenticación JWT en todos los endpoints.
 #
 # Endpoints:
-#   GET  /credit/customers           → listar clientes activos del negocio
-#   POST /credit/customers           → crear cliente
-#   GET  /credit/debts               → listar deudas (filtrables por status)
-#   POST /credit/debts               → crear deuda/fiado
-#   POST /credit/debts/{id}/payments → registrar abono
+#   GET    /credit/customers              → listar clientes activos del negocio
+#   POST   /credit/customers              → crear cliente
+#   PATCH  /credit/customers/{id}         → actualizar datos del cliente
+#   GET    /credit/debts                  → listar deudas (filtrables por status)
+#   POST   /credit/debts                  → crear deuda/fiado
+#   PATCH  /credit/debts/{id}             → editar monto/descripción/fecha
+#   POST   /credit/debts/{id}/cancel      → cancelar deuda (soft delete)
+#   POST   /credit/debts/{id}/payments    → registrar abono
 # =============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional
-from app.models.credit import CustomerCreate, DebtCreate, PaymentCreate
+from app.models.credit import (
+    CustomerCreate, CustomerUpdate,
+    DebtCreate, DebtUpdate,
+    PaymentCreate,
+)
 from app.services import credit_service
 from app.routers.auth import get_current_user
 
 router = APIRouter()
 
+
+# ── Clientes ──────────────────────────────────────────────────────────────────
 
 @router.get("/customers", summary="Listar clientes activos del negocio")
 def get_customers(current_user: dict = Depends(get_current_user)):
@@ -37,6 +46,22 @@ def create_customer(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.patch("/customers/{customer_id}", summary="Actualizar datos del cliente")
+def update_customer(
+    customer_id: int,
+    data: CustomerUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return credit_service.update_customer(
+            current_user["business_id"], customer_id, data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Deudas / Fiado ────────────────────────────────────────────────────────────
 
 @router.get("/debts", summary="Listar deudas del negocio")
 def get_debts(
@@ -63,6 +88,35 @@ def create_debt(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.patch("/debts/{debt_id}", summary="Actualizar monto/descripción/fecha de una deuda")
+def update_debt(
+    debt_id: int,
+    data: DebtUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return credit_service.update_debt(
+            current_user["business_id"], debt_id, data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/debts/{debt_id}/cancel", summary="Cancelar deuda (soft delete)")
+def cancel_debt(
+    debt_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return credit_service.cancel_debt(
+            current_user["business_id"], debt_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Abonos ────────────────────────────────────────────────────────────────────
 
 @router.post("/debts/{debt_id}/payments", summary="Registrar abono a una deuda")
 def register_payment(

@@ -63,6 +63,17 @@ const debtService = {
     });
   },
 
+  updateCustomer: async (customerId, { name, phone, notes }) => {
+    return apiRequest(`/credit/customers/${customerId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...(name !== undefined ? { name } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+      }),
+    });
+  },
+
   // --- Deudas / Fiado ---
   // Devuelve por defecto las deudas abiertas (pending, partial, overdue)
   getDebts: async (status = null) => {
@@ -80,6 +91,23 @@ const debtService = {
         due_date: due_date || null,
         invoice_id: invoice_id || null,
       }),
+    });
+  },
+
+  updateDebt: async (debtId, { amount, description, due_date }) => {
+    return apiRequest(`/credit/debts/${debtId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...(amount !== undefined ? { amount } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(due_date !== undefined ? { due_date } : {}),
+      }),
+    });
+  },
+
+  cancelDebt: async (debtId) => {
+    return apiRequest(`/credit/debts/${debtId}/cancel`, {
+      method: 'POST',
     });
   },
 

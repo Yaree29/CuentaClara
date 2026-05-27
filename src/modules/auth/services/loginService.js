@@ -1,5 +1,4 @@
 import { API_URL } from '../../../config/env';
-import users from '../../../data/users';
 
 const loginService = {
   async login(email, password) {
@@ -54,61 +53,8 @@ const loginService = {
     } catch (error) {
       // Asegurar que siempre tengamos un mensaje de error legible
       const errorMsg = error?.message || String(error) || 'Error desconocido en login';
-      console.warn('API login failed. Falling back to local mock user validation!', errorMsg);
-      
-      // Buscar el usuario en la base de datos mock local
-      let foundUser = users.find(
-        (u) =>
-          u.email.toLowerCase() === email.trim().toLowerCase() &&
-          u.password === password
-      );
-
-      if (!foundUser) {
-        // Para mejorar la experiencia de desarrollo local y evitar bloqueos,
-        // si no se encuentra en el archivo users.js, creamos un usuario simulado sobre la marcha.
-        const isInformal = password.endsWith('**') || email.includes('informal');
-        const userType = isInformal ? 'informal' : 'pyme';
-        const mockUserId = `mock-user-${Date.now()}`;
-        const mockBizId = `mock-biz-${Date.now()}`;
-
-        foundUser = {
-          id: mockUserId,
-          name: email.split('@')[0],
-          email: email.trim().toLowerCase(),
-          password: password,
-          role: 'owner',
-          phone: '6000-0000',
-          business_id: mockBizId,
-          created_at: new Date().toISOString(),
-          business: {
-            id: mockBizId,
-            name: 'CuentaClara Demo',
-            plan: 'premium',
-            ui_mode: isInformal ? 'simple' : 'advanced',
-            phone: '6000-0000',
-            address: 'Panamá',
-            created_at: new Date().toISOString(),
-            category: 'food'
-          },
-          features: [
-            { id: 1, module: 'inventory', is_active: true },
-            { id: 2, module: 'sales', is_active: true },
-            { id: 3, module: 'credit', is_active: true },
-            { id: 4, module: 'billing', is_active: true },
-          ],
-          enabled_modules: ['dashboard', 'profile', 'inventory', 'sales', 'credit', 'billing'],
-          userType: userType
-        };
-        
-        // Guardar en el array para que subsecuentes accesos lo recuerden en esta ejecución
-        users.push(foundUser);
-      }
-
-      return {
-        user: foundUser,
-        token: `mock-token-${Date.now()}`,
-        business: foundUser.business,
-      };
+      console.error('Error en login:', errorMsg, 'Status:', error?.statusCode, 'Code:', error?.errorCode);
+      throw error;
     }
   },
 

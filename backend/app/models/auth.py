@@ -11,6 +11,7 @@ class RegisterRequest(BaseModel):
     category_id: Optional[int] = None
     ui_mode: Optional[str] = "simple"
     address: Optional[str] = None
+    auth_user_id: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr

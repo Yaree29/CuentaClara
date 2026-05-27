@@ -17,16 +17,18 @@ def register_business(data):
     if existing.data:
         raise ValueError("El email ya está registrado")
 
-    # 2. Crear usuario en Supabase Auth
-    try:
-        auth_user = supabase_admin.auth.admin.create_user({
-            "email": data.email,
-            "password": data.password,
-            "email_confirm": True
-        })
-        auth_user_id = auth_user.user.id
-    except Exception as e:
-        raise ValueError(f"Error creando usuario en Auth: {str(e)}")
+    # 2. Obtener o crear usuario en Supabase Auth
+    auth_user_id = getattr(data, "auth_user_id", None)
+    if not auth_user_id:
+        try:
+            auth_user = supabase_admin.auth.admin.create_user({
+                "email": data.email,
+                "password": data.password,
+                "email_confirm": True
+            })
+            auth_user_id = auth_user.user.id
+        except Exception as e:
+            raise ValueError(f"Error creando usuario en Auth: {str(e)}")
 
     # 3. Crear el negocio
     try:
@@ -48,7 +50,11 @@ def register_business(data):
         business_id = business.data[0]["id"]
     except Exception as e:
         # Rollback: borrar usuario de Auth
-        supabase_admin.auth.admin.delete_user(auth_user_id)
+        if not getattr(data, "auth_user_id", None):
+            try:
+                supabase_admin.auth.admin.delete_user(auth_user_id)
+            except:
+                pass
         raise ValueError(f"Error creando negocio: {str(e)}")
 
     # 4. Crear usuario en public.users
@@ -65,8 +71,15 @@ def register_business(data):
         user_id = user.data[0]["id"]
     except Exception as e:
         # Rollback: borrar negocio y usuario de Auth
-        supabase_admin.table("businesses").delete().eq("id", business_id).execute()
-        supabase_admin.auth.admin.delete_user(auth_user_id)
+        try:
+            supabase_admin.table("businesses").delete().eq("id", business_id).execute()
+        except:
+            pass
+        if not getattr(data, "auth_user_id", None):
+            try:
+                supabase_admin.auth.admin.delete_user(auth_user_id)
+            except:
+                pass
         raise ValueError(f"Error creando usuario: {str(e)}")
 
     # 5. Crear configuración del negocio

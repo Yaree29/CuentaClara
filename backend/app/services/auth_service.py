@@ -1,71 +1,75 @@
 from app.database import supabase, supabase_admin
-from app.config import settings
-from passlib.context import CryptContext
-from jose import jwt
-from datetime import datetime, timedelta
+from datetime import datetime
 import pyotp
 import qrcode
 import io
 import base64
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def hash_password(password: str) -> str:
-    if len(password) > 72:
-        raise ValueError("La contraseña no puede tener más de 72 caracteres")
-    return pwd_context.hash(password)
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+DEFAULT_MODULES = ['sales', 'credit', 'inventory']
 
 def register_business(data):
-    """Registrar un nuevo negocio con usuario propietario
-    
-    Validaciones:
-    - Email único en la plataforma
-    - Contraseña cumple requisitos de seguridad
-    - Nombre del negocio no vacío
-    - Datos de usuario válidos
-    """
-    # Normalizar email
-    email = data.email.lower().strip()
-    
-    # 1. Verificar que el email no exista
+    # 1. Verificar email duplicado
     existing = supabase_admin.table("users")\
         .select("id")\
-        .eq("email", email)\
+        .eq("email", data.email)\
         .execute()
 
     if existing.data:
-        raise ValueError("El email ya está registrado en el sistema")
+        raise ValueError("El email ya está registrado")
 
-    # 2. Hash de contraseña con validación
+    # 2. Crear usuario en Supabase Auth
     try:
-        password_hash = hash_password(data.password)
-    except ValueError as e:
-        raise ValueError(f"Error en contraseña: {str(e)}")
+        auth_user = supabase_admin.auth.admin.create_user({
+            "email": data.email,
+            "password": data.password,
+            "email_confirm": True
+        })
+        auth_user_id = auth_user.user.id
+    except Exception as e:
+        raise ValueError(f"Error creando usuario en Auth: {str(e)}")
 
     # 3. Crear el negocio
     try:
-        business = supabase_admin.table("businesses").insert({
-            "name": data.business_name.strip(),
-            "industry_template_id": data.industry_template_id,
-            "plan": "free"
-        }).execute()
+        business_data = {
+            "name": data.business_name,
+            "plan": "free",
+            "ui_mode": data.ui_mode or "simple"
+        }
+        if data.industry_template_id:
+            business_data["industry_template_id"] = data.industry_template_id
+        if data.category_id:
+            business_data["category_id"] = data.category_id
+        if data.address:
+            business_data["address"] = data.address
+
+        business = supabase_admin.table("businesses")\
+            .insert(business_data)\
+            .execute()
+        business_id = business.data[0]["id"]
     except Exception as e:
-        raise ValueError(f"No se pudo crear el negocio: {str(e)}")
+        # Rollback: borrar usuario de Auth
+        supabase_admin.auth.admin.delete_user(auth_user_id)
+        raise ValueError(f"Error creando negocio: {str(e)}")
 
-    business_id = business.data[0]["id"]
+    # 4. Crear usuario en public.users
+    try:
+        user = supabase_admin.table("users").insert({
+            "id": auth_user_id,
+            "business_id": business_id,
+            "name": data.name,
+            "email": data.email,
+            "password_hash": "supabase_auth",
+            "role": "owner",
+            "phone": data.phone
+        }).execute()
+        user_id = user.data[0]["id"]
+    except Exception as e:
+        # Rollback: borrar negocio y usuario de Auth
+        supabase_admin.table("businesses").delete().eq("id", business_id).execute()
+        supabase_admin.auth.admin.delete_user(auth_user_id)
+        raise ValueError(f"Error creando usuario: {str(e)}")
 
-    # 4. Crear configuración por defecto del negocio
+    # 5. Crear configuración del negocio
     supabase_admin.table("business_configs").insert({
         "business_id": business_id,
         "currency": "USD",
@@ -74,45 +78,25 @@ def register_business(data):
         "language": "es"
     }).execute()
 
-    # 5. Activar features según el template
-    template = supabase_admin.table("industry_templates")\
-        .select("default_modules")\
-        .eq("id", data.industry_template_id)\
-        .execute()
+    # 6. Activar features
+    if data.industry_template_id:
+        template = supabase_admin.table("industry_templates")\
+            .select("default_modules")\
+            .eq("id", data.industry_template_id)\
+            .execute()
+        modules = template.data[0]["default_modules"] if template.data else DEFAULT_MODULES
+    else:
+        modules = DEFAULT_MODULES
 
-    if template.data:
-        modules = template.data[0]["default_modules"]
-        for module in modules:
-            supabase_admin.table("features").insert({
-                "business_id": business_id,
-                "module": module,
-                "is_active": True,
-                "activated_at": datetime.utcnow().isoformat()
-            }).execute()
+    for module in modules:
+        supabase_admin.table("features").insert({
+            "business_id": business_id,
+            "module": module,
+            "is_active": True,
+            "activated_at": datetime.utcnow().isoformat()
+        }).execute()
 
-    # 6. Crear el usuario dueño
-    user_data = {
-        "business_id": business_id,
-        "name": data.name.strip(),
-        "email": email,
-        "password_hash": password_hash,
-        "role": "owner",
-        "phone": data.phone if data.phone else None
-    }
-    
-    if data.auth_user_id:
-        user_data["id"] = data.auth_user_id
-
-    try:
-        user = supabase_admin.table("users").insert(user_data).execute()
-    except Exception as e:
-        # Rollback del negocio si falla la creación del usuario
-        supabase_admin.table("businesses").delete().eq("id", business_id).execute()
-        raise ValueError(f"No se pudo crear el usuario: {str(e)}")
-
-    user_id = user.data[0]["id"]
-
-    # 7. Crear suscripción gratuita
+    # 7. Suscripción gratuita
     supabase_admin.table("subscriptions").insert({
         "business_id": business_id,
         "plan": "free",
@@ -120,86 +104,121 @@ def register_business(data):
         "starts_at": datetime.utcnow().isoformat()
     }).execute()
 
-    # 8. Generar token de acceso
-    token = create_access_token({
-        "sub": user_id,
-        "business_id": business_id,
-        "role": "owner"
-    })
-
-    return {"access_token": token, "user_id": user_id, "business_id": business_id, "role": "owner"}
-
-def login_user(email: str, password: str):
-    """Autenticar usuario con email y contraseña
-    
-    Validaciones:
-    - Email existe en el sistema
-    - Contraseña correcta
-    - Registro de auditoría
-    """
-    # Normalizar email
-    email = email.lower().strip()
-    
-    # 1. Buscar usuario
-    result = supabase_admin.table("users")\
-        .select("id, business_id, role, password_hash, name")\
-        .eq("email", email)\
-        .execute()
-
-    if not result.data:
-        raise ValueError("Credenciales incorrectas")
-
-    user = result.data[0]
-
-    # 2. Verificar contraseña
-    if not verify_password(password, user["password_hash"]):
-        raise ValueError("Credenciales incorrectas")
-
-    # 3. Registrar en audit_log
-    supabase_admin.table("audit_logs").insert({
-        "business_id": user["business_id"],
-        "user_id": user["id"],
-        "action": "login",
-        "table_name": "sessions",
-        "record_id": user["id"],
-        "created_at": datetime.utcnow().isoformat()
-    }).execute()
-
-    # 4. Generar token
-    token = create_access_token({
-        "sub": user["id"],
-        "business_id": user["business_id"],
-        "role": user["role"]
+    # 8. Login para obtener JWT de Supabase
+    sign_in = supabase.auth.sign_in_with_password({
+        "email": data.email,
+        "password": data.password
     })
 
     return {
-        "access_token": token,
-        "user_id": user["id"],
-        "business_id": user["business_id"],
-        "role": user["role"]
+        "access_token": sign_in.session.access_token,
+        "token_type": "bearer",
+        "user_id": user_id,
+        "business_id": business_id,
+        "role": "owner"
     }
 
+
+def login_user(email: str, password: str):
+    try:
+        sign_in = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+    except Exception as e:
+        raise ValueError("Credenciales incorrectas")
+
+    auth_user_id = sign_in.user.id
+
+    # Obtener datos del usuario de public.users
+    user = supabase_admin.table("users")\
+        .select("id, business_id, role")\
+        .eq("id", auth_user_id)\
+        .execute()
+
+    if not user.data:
+        raise ValueError("Usuario no encontrado")
+
+    user_data = user.data[0]
+
+    # Audit log opcional
+    try:
+        supabase_admin.table("audit_logs").insert({
+            "business_id": user_data["business_id"],
+            "user_id": user_data["id"],
+            "action": "create",
+            "table_name": "sessions",
+            "record_id": user_data["id"]
+        }).execute()
+    except:
+        pass
+
+    return {
+        "access_token": sign_in.session.access_token,
+        "token_type": "bearer",
+        "user_id": user_data["id"],
+        "business_id": user_data["business_id"],
+        "role": user_data["role"]
+    }
+
+
+ALL_VALID_MODULES = ['sales', 'credit', 'inventory', 'purchases', 'cash', 'staff']
+
+def get_user_context(user_id: str, business_id: str):
+    # Perfil del usuario
+    user = supabase_admin.table("users")\
+        .select("id, name, email, role, phone")\
+        .eq("id", user_id)\
+        .execute()
+
+    # Datos del negocio
+    business = supabase_admin.table("businesses")\
+        .select("id, name, ui_mode, plan, category_id, industry_template_id")\
+        .eq("id", business_id)\
+        .execute()
+
+    # Features activos
+    features = supabase_admin.table("features")\
+        .select("module, is_active")\
+        .eq("business_id", business_id)\
+        .eq("is_active", True)\
+        .execute()
+
+    enabled_modules = [
+        f["module"] for f in features.data
+        if f["module"] in ALL_VALID_MODULES
+    ]
+
+    business_data = business.data[0] if business.data else {}
+    ui_mode = business_data.get("ui_mode", "simple")
+    user_type = "informal" if ui_mode == "simple" else "pyme"
+
+    return {
+        "user": user.data[0] if user.data else {},
+        "business": business_data,
+        "enabled_modules": enabled_modules,
+        "user_type": user_type
+    }
+
+
 def generate_mfa_qr(user_id: str, email: str):
-    # Genera un secreto único para el usuario
     secret = pyotp.random_base32()
 
-    # Guarda el secreto en la BD (agrega columna mfa_secret a users si no existe)
     supabase_admin.table("users")\
         .update({"mfa_secret": secret})\
         .eq("id", user_id)\
         .execute()
 
-    # Genera la URL para Google Authenticator
     totp = pyotp.TOTP(secret)
     uri = totp.provisioning_uri(email, issuer_name="CuentaClara")
 
-    # Genera el QR como imagen base64
     qr = qrcode.make(uri)
     buffer = io.BytesIO()
     qr.save(buffer, format="PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode()
 
     return {"qr_code": f"data:image/png;base64,{qr_base64}", "secret": secret}
+
 
 def verify_mfa(email: str, code: str) -> bool:
     result = supabase_admin.table("users")\

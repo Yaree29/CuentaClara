@@ -18,19 +18,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
 
 import debtService from '../services/debtService';
+import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
-
-// Lista para el selector rápido del modal "Nuevo fiado"
-// Pendiente: reemplazar por GET /inventory cuando ese módulo exista.
-export const MOCK_INVENTORY_QUICK_ADD = [
-  { id: '1', name: 'Recarga $5', price: 5.00 },
-  { id: '2', name: 'Recarga $3', price: 3.00 },
-  { id: '3', name: 'Chances', price: 0.25 },
-  { id: '4', name: 'Billetes', price: 1.00 },
-  { id: '5', name: 'Pollo Guisado', price: 4.50 },
-  { id: '6', name: 'Soda', price: 1.00 },
-];
 
 export const useInformalCredit = () => {
   const user = useAuthStore((state) => state.user);
@@ -40,6 +30,7 @@ export const useInformalCredit = () => {
   // Datos crudos de la API
   const [customers, setCustomers] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [inventoryProducts, setInventoryProducts] = useState([]);
 
   // UI
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,17 +43,19 @@ export const useInformalCredit = () => {
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
-  // Carga inicial: customers + debts en paralelo
+  // Carga inicial: customers + debts + inventario en paralelo
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [customersData, debtsData] = await Promise.all([
+      const [customersData, debtsData, inventoryData] = await Promise.all([
         debtService.getCustomers(),
         debtService.getDebts(),
+        inventoryService.getProducts().catch(() => []),
       ]);
       setCustomers(customersData || []);
       setDebts(debtsData || []);
+      setInventoryProducts(inventoryData || []);
     } catch (err) {
       console.error('Error al cargar fiados:', err);
       setError(err.message || 'Error al cargar fiados');
@@ -122,13 +115,15 @@ export const useInformalCredit = () => {
 
     try {
       if (editingCredit) {
-        // Editar: actualizar cliente (nombre + phone) y deuda (amount + description)
+        // Editar: actualizar cliente (nombre + phone) y solo la descripción de la deuda.
+        // NO se envía amount porque el monto original no cambia al editar; los abonos
+        // se registran por separado y el backend recalcula remaining_amount desde
+        // original_amount, por lo que enviar remaining_amount aquí lo reduciría de nuevo.
         await debtService.updateCustomer(editingCredit.customerId, {
           name: clientName,
           phone: cleanPhone || null,
         });
         await debtService.updateDebt(editingCredit.id, {
-          amount,
           description: items || null,
         });
       } else {
@@ -226,6 +221,7 @@ export const useInformalCredit = () => {
     // datos
     searchQuery, setSearchQuery, filteredCredits, senderName,
     loading, error, refresh: fetchAll,
+    inventoryProducts,
     // modales
     isFormModalVisible, setIsFormModalVisible, editingCredit,
     isPaymentModalVisible, setIsPaymentModalVisible, selectedClient,

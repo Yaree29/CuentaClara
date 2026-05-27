@@ -7,15 +7,13 @@ import colors from '../../../theme/colors';
 
 import { useSales } from '../hooks/useSales';
 import styles from '../styles/sales.styles';
-import products from '../../../data/products';
+import inventoryService from '../../inventory/services/inventoryService';
 import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon} from 'react-native-heroicons/solid';
 
 // Importación del HEADER
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 
 
-// Impotacion de datos de pruebas para el historial
-import historyData from '../../../data/history';
 
 const SalesScreen = () => {
   const [cartCount, setCartCount] = useState(0);
@@ -33,16 +31,52 @@ const SalesScreen = () => {
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [saleNote, setSaleNote] = useState('');
 
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+
+  const [movements, setMovements] = useState([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+
   const {
     processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();
 
   useEffect(() => {
     const today = new Date();
     const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
     setDateFrom(lastMonth.toISOString().split('T')[0]);
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setProductsLoading(true);
+      try {
+        const data = await inventoryService.getProducts();
+        setProducts(data || []);
+      } catch (err) {
+        console.error('Error al cargar productos para venta:', err);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'history') return;
+    const loadMovements = async () => {
+      setMovementsLoading(true);
+      try {
+        const data = await inventoryService.getMovements(50);
+        setMovements(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error al cargar movimientos:', err);
+      } finally {
+        setMovementsLoading(false);
+      }
+    };
+    loadMovements();
+  }, [activeTab]);
 
     {/* aumentar cantidad en el carrito */}
   const handleQuickAdd = (amount) => {
@@ -52,19 +86,28 @@ const SalesScreen = () => {
 
     {/* Revisar el carrito */}
   const handleCheckout = async () => {
-    if (cartCount === 0) {
+    if (selectedProducts.length === 0) {
       Alert.alert('Carrito vacío', 'Agrega productos antes de registrar una venta.');
       return;
     }
 
     try {
-      await processSale([], total, description, paymentMethod);
+      const items = selectedProducts.map((p) => ({
+        product_id: p.id,
+        quantity: p.quantity,
+        unit_price: p.price,
+      }));
+
+      await processSale(items, total, saleNote, paymentMethod);
 
       Alert.alert('Éxito', `Venta registrada correctamente por $${total.toFixed(2)}`);
 
       setCartCount(0);
       setTotal(0);
       setDescription('');
+      setSaleNote('');
+      setSelectedProducts([]);
+      setSelectedProduct(null);
     } catch (err) {
       Alert.alert('Error', error || 'No se pudo registrar la venta');
     }
@@ -271,10 +314,14 @@ const SalesScreen = () => {
                 {/* LISTA PRODUCTOS */}
                 {showProducts && (
                   <View style={styles.productsContainer}>
-                    {products.length === 0 ? (
+                    {productsLoading ? (
+                      <View style={{ padding: 20, alignItems: 'center' }}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      </View>
+                    ) : products.length === 0 ? (
                       <View style={{ padding: 20, alignItems: 'center' }}>
                         <Text style={styles.emptyProductsText}>
-                          Aún no tienes productos. Próximamente podrás agregarlos desde inventario.
+                          No tienes productos en tu catálogo. Agrégalos desde el módulo de inventario.
                         </Text>
                       </View>
                     ) : (
@@ -519,83 +566,71 @@ const SalesScreen = () => {
         )}
 
           {/* PANTALLA REPORTES / HISTORIAL */}
-        {activeTab === 'history' && (
-          <>
-            <Text style={styles.reportTitle}>
-              Historial Financiero
-            </Text>
+        {activeTab === 'history' && (() => {
+          const REASON_LABEL = {
+            sale: 'Venta',
+            purchase: 'Compra',
+            waste: 'Pérdida',
+            return: 'Devolución',
+            manual: 'Ajuste',
+          };
+          const formatDate = (iso) => {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
+          };
+          const entriesCount = movements.filter((m) => m.type === 'in').length;
+          const salidasCount = movements.filter((m) => m.type === 'out').length;
 
-            {/* RESUMEN */}
-            <View style={styles.historySummary}>
+          return (
+            <>
+              <Text style={styles.reportTitle}>
+                Historial de Movimientos
+              </Text>
 
-              <View style={styles.summaryCardIncome}>
-                <Text style={styles.summaryLabel}>
-                  Ganancias
-                </Text>
-
-                <Text style={styles.summaryIncome}>
-                  $
-                  {historyData
-                    .filter((item) => item.type === 'income')
-                    .reduce((acc, item) => acc + item.amount, 0)
-                    .toFixed(2)}
-                </Text>
+              {/* RESUMEN */}
+              <View style={styles.historySummary}>
+                <View style={styles.summaryCardIncome}>
+                  <Text style={styles.summaryLabel}>Entradas</Text>
+                  <Text style={styles.summaryIncome}>{entriesCount}</Text>
+                </View>
+                <View style={styles.summaryCardExpense}>
+                  <Text style={styles.summaryLabel}>Salidas</Text>
+                  <Text style={styles.summaryExpense}>{salidasCount}</Text>
+                </View>
               </View>
 
-              <View style={styles.summaryCardExpense}>
-                <Text style={styles.summaryLabel}>
-                  Pérdidas
-                </Text>
-
-                <Text style={styles.summaryExpense}>
-                  $
-                  {historyData
-                    .filter((item) => item.type === 'expense')
-                    .reduce((acc, item) => acc + item.amount, 0)
-                    .toFixed(2)}
-                </Text>
-              </View>
-
-            </View>
-
-            {/* HISTORIAL */}
-            <View style={styles.historyContainer}>
-              {historyData.length === 0 ? (
-                <Text style={{ textAlign: 'center', color: colors.textSecondary, paddingVertical: 40 }}>
-                  Aún no tienes movimientos. El historial se mostrará aquí cuando registres ventas.
-                </Text>
-              ) : (
-                historyData.map((item) => (
-                  <View
-                    key={item.id}
-                    style={styles.historyCard}
-                  >
-                    <View>
-                      <Text style={styles.historyTitle}>
-                        {item.title}
-                      </Text>
-
-                      <Text style={styles.historyDate}>
-                        {item.date}
+              {/* LISTA */}
+              <View style={styles.historyContainer}>
+                {movementsLoading ? (
+                  <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : movements.length === 0 ? (
+                  <Text style={{ textAlign: 'center', color: colors.textSecondary, paddingVertical: 40 }}>
+                    Aún no tienes movimientos. El historial se mostrará aquí cuando registres ventas.
+                  </Text>
+                ) : (
+                  movements.map((item) => (
+                    <View key={item.id} style={styles.historyCard}>
+                      <View>
+                        <Text style={styles.historyTitle}>
+                          {item.product_name}
+                        </Text>
+                        <Text style={styles.historyDate}>
+                          {REASON_LABEL[item.reason] || item.reason} · {formatDate(item.created_at)}
+                        </Text>
+                      </View>
+                      <Text style={item.type === 'in' ? styles.historyIncome : styles.historyExpense}>
+                        {item.type === 'in' ? '+' : '-'}{item.quantity % 1 === 0 ? item.quantity.toFixed(0) : item.quantity.toFixed(2)}
                       </Text>
                     </View>
-
-                    <Text
-                      style={
-                        item.type === 'income'
-                          ? styles.historyIncome
-                          : styles.historyExpense
-                      }
-                    >
-                      {item.type === 'income' ? '+' : '-'}$
-                      {item.amount.toFixed(2)}
-                    </Text>
-                  </View>
-                ))
-              )}
-            </View>
-          </>
-        )}
+                  ))
+                )}
+              </View>
+            </>
+          );
+        })()}
       </ScrollView>
     </SafeAreaView>
   );

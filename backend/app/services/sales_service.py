@@ -21,7 +21,7 @@ def create_quick_sale(business_id: str, user_id: str, data):
         subtotal = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
         total += subtotal
 
-        # Verificar stock disponible
+        # Verificar stock disponible (quantity=null significa servicio ilimitado)
         stock = supabase_admin.table("inventory")\
             .select("quantity, unit")\
             .eq("product_id", item.product_id)\
@@ -29,9 +29,14 @@ def create_quick_sale(business_id: str, user_id: str, data):
             .execute()
 
         if stock.data:
-            current_qty = Decimal(str(stock.data[0]["quantity"]))
-            if current_qty < Decimal(str(item.quantity)):
-                raise ValueError(f"Stock insuficiente para producto {item.product_id}")
+            qty_val = stock.data[0]["quantity"]
+            if qty_val is not None:
+                current_qty = Decimal(str(qty_val))
+                if current_qty < Decimal(str(item.quantity)):
+                    raise ValueError(
+                        f"Stock insuficiente para el producto {item.product_id}. "
+                        f"Disponible: {float(current_qty)}, solicitado: {float(item.quantity)}"
+                    )
 
         items_data.append({
             "product_id": item.product_id,
@@ -79,15 +84,17 @@ def create_quick_sale(business_id: str, user_id: str, data):
             .execute()
 
         if current.data:
-            new_qty = Decimal(str(current.data[0]["quantity"])) - Decimal(str(item.quantity))
-            supabase_admin.table("inventory")\
-                .update({
-                    "quantity": float(new_qty),
-                    "updated_at": datetime.utcnow().isoformat()
-                })\
-                .eq("product_id", item.product_id)\
-                .eq("business_id", business_id)\
-                .execute()
+            qty_val = current.data[0]["quantity"]
+            if qty_val is not None:  # null = servicio ilimitado, no se descuenta
+                new_qty = Decimal(str(qty_val)) - Decimal(str(item.quantity))
+                supabase_admin.table("inventory")\
+                    .update({
+                        "quantity": float(new_qty),
+                        "updated_at": datetime.utcnow().isoformat()
+                    })\
+                    .eq("product_id", item.product_id)\
+                    .eq("business_id", business_id)\
+                    .execute()
 
         # Registrar movimiento
         supabase_admin.table("inventory_movements").insert({

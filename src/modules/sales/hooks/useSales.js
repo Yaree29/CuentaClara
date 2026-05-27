@@ -7,22 +7,19 @@ export const useSales = () => {
     const [error, setError] = useState(null);
     const [profitsData, setProfitsData] = useState(null);
 
-    const processSale = async (items = [], total = 0, description = '', paymentMethod = 'cash') => {
+    const processSale = async (items = [], total = 0, notes = '', paymentMethod = 'cash') => {
         setLoading(true);
         setError(null);
         try {
-            // Si no hay items, crear un item simple con el total
-            const saleItems = items.length > 0 
-                ? items 
-                : total > 0 
-                    ? [{ product_id: 0, quantity: 1, unit_price: total }]
-                    : [];
+            if (items.length === 0) {
+                throw new Error('Debes seleccionar al menos un producto.');
+            }
 
             const result = await salesService.createSale(
-                saleItems,
+                items,
                 paymentMethod,
-                1, // invoice_type_id por defecto
-                description
+                1,
+                notes
             );
             setLastSale(result);
             return result;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView, Alert } from 'react-native';
 import { MagnifyingGlassIcon, PlusIcon, CurrencyDollarIcon, XMarkIcon, PencilIcon } from 'react-native-heroicons/solid';
 import { FontAwesome } from '@expo/vector-icons';
-import { useInformalCredit, MOCK_INVENTORY_QUICK_ADD } from '../hooks/useInformalCredit';
+import { useInformalCredit } from '../hooks/useInformalCredit';
 import styles from '../styles/informalCredit.styles';
 import colors from '../../../theme/colors';
 
@@ -12,7 +12,8 @@ const InformalCredit = () => {
     isFormModalVisible, setIsFormModalVisible, editingCredit,
     isPaymentModalVisible, setIsPaymentModalVisible,
     selectedClient, openPaymentModal, openAddModal, openEditModal,
-    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit
+    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
+    inventoryProducts,
   } = useInformalCredit();
 
   // Estados del Formulario
@@ -137,16 +138,30 @@ const InformalCredit = () => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>¿Qué llevó? (Selecciona de la lista)</Text>
-              {/* SELECTOR ESTRICTO (Tocar suma automático) */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddScroll}>
-                {MOCK_INVENTORY_QUICK_ADD.map(prod => (
-                  <TouchableOpacity key={prod.id} style={styles.quickAddPill} onPress={() => handleQuickAddProduct(prod)}>
-                    <Text style={styles.quickAddPillText}>+ {prod.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TextInput style={[styles.formInput, { backgroundColor: '#f0f0f0', color: '#888' }]} value={formItems} editable={false} placeholder="Seleccione productos arriba..." />
+              <Text style={styles.formLabel}>¿Qué llevó?</Text>
+              {!editingCredit && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddScroll}>
+                  {inventoryProducts.length === 0 ? (
+                    <Text style={{ color: '#94A3B8', paddingVertical: 8, fontSize: 13 }}>
+                      Sin productos en inventario
+                    </Text>
+                  ) : (
+                    inventoryProducts.map(prod => (
+                      <TouchableOpacity key={prod.id} style={styles.quickAddPill} onPress={() => handleQuickAddProduct(prod)}>
+                        <Text style={styles.quickAddPillText}>+ {prod.name}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+              )}
+              <TextInput
+                style={editingCredit ? styles.formInput : [styles.formInput, { backgroundColor: '#f0f0f0', color: '#888' }]}
+                value={formItems}
+                onChangeText={editingCredit ? setFormItems : undefined}
+                editable={!!editingCredit}
+                placeholder={editingCredit ? 'Qué se llevó...' : 'Seleccione productos arriba...'}
+                multiline
+              />
             </View>
 
             {editingCredit && (

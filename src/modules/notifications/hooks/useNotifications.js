@@ -62,11 +62,12 @@ export const useNotifications = ({
     if (!subscribe || !user?.id) return;
 
     let channel;
-    const setupSubscription = async () => {
-      try {
-        channel = supabase.channel(`notifications:${user.id}`);
-        
-        channel.on(
+    
+    try {
+      channel = supabase.channel(`notifications:${user.id}`);
+      
+      channel
+        .on(
           'postgres_changes',
           {
             event: 'INSERT',
@@ -82,19 +83,15 @@ export const useNotifications = ({
               onNewNotification(notification);
             }
           }
-        );
-
-        await channel.subscribe((status) => {
+        )
+        .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log('[useNotifications] Realtime subscription active');
           }
         });
-      } catch (err) {
-        console.error('[useNotifications] Error setting up realtime:', err);
-      }
-    };
-
-    setupSubscription();
+    } catch (err) {
+      console.error('[useNotifications] Error setting up realtime:', err);
+    }
 
     return () => {
       if (channel) {

@@ -1,0 +1,1 @@
+//Vista visual para confirmar la deducción de insumos

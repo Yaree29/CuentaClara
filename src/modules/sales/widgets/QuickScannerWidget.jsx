@@ -1,0 +1,1 @@
+//Botón/Atajo para escanear y registrar salida

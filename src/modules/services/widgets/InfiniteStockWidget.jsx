@@ -1,0 +1,1 @@
+//Modo SERVICE para ítems no consumibles

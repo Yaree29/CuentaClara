@@ -1,0 +1,1 @@
+//Lector para códigos y etiquetas de balanza

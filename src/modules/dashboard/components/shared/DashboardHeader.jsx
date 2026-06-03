@@ -39,9 +39,6 @@ const DashboardHeader = ({ title, isHome = false }) => {
       )}
       
       {/*boton de notificaciones alado izquierdo del boton de configuracion*/}
-      <View style={styles.notificationsContainer}>
-        <Ionicons name="notifications" size={22} color={colors.primary} />
-      </View>
 
       {/*boton de configuracion a la derecha*/}
       <View style={styles.settingsContainer}>

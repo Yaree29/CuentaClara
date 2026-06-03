@@ -67,17 +67,6 @@ const InformalDashboard = () => {
       {/* ACCIONES RÁPIDAS REESTRUCTURADAS */}
       <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
       <View style={styles.actionsContainer}>
-        
-        {/* BOTÓN GASTOS */}
-        <TouchableOpacity 
-          style={[styles.actionButton, { borderColor: colors.successDark }]}
-          onPress={() => setModalGasto(true)}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: colors.successBorder }]}>
-            <Ionicons name="calculator" size={22} color={colors.successDark} />
-          </View>
-          <Text style={styles.actionText}>Registrar Gasto</Text>
-        </TouchableOpacity>
 
         {/* BOTÓN ANOTAR FIADO */}
         <TouchableOpacity 
@@ -172,33 +161,8 @@ const InformalDashboard = () => {
         </View>
       )}
 
-      {/* VENTANA EMERGENTE: REGISTRAR GASTO */}
-      <Modal visible={modalGasto} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Registrar Gasto Directo</Text>
-              <TouchableOpacity onPress={() => setModalGasto(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Descripción del gasto</Text>
-              <TextInput style={styles.inputField} placeholder="Ej. Bolsas plásticas, Hielo..." placeholderTextColor={colors.placeholder} />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Monto ($ USD)</Text>
-              <TextInput style={styles.inputField} keyboardType="numeric" placeholder="0.00" placeholderTextColor={colors.placeholder} />
-            </View>
-            <TouchableOpacity style={[styles.submitButton, { backgroundColor: colors.success }]} onPress={() => setModalGasto(false)}>
-              <Text style={styles.submitButtonText}>Guardar Gasto</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* VENTANA EMERGENTE: ANOTAR FIADO */}
-      <Modal visible={modalFiado} animationType="slide" transparent={true}>
+      <Modal visible={modalFiado} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -223,7 +187,7 @@ const InformalDashboard = () => {
       </Modal>
 
       {/* VENTANA EMERGENTE: NUEVO PRODUCTO */}
-      <Modal visible={modalProducto} animationType="slide" transparent={true}>
+      <Modal visible={modalProducto} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>

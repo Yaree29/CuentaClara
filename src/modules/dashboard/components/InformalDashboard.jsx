@@ -135,15 +135,6 @@ const InformalDashboard = () => {
       {/* ACCIONES RÁPIDAS — navegan a los tabs correspondientes */}
       <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, { borderColor: colors.successDark }]}
-          onPress={() => goToTab('sales')}
-        >
-          <View style={[styles.actionIconContainer, { backgroundColor: colors.successBorder }]}>
-            <Ionicons name="cash" size={22} color={colors.successDark} />
-          </View>
-          <Text style={styles.actionText}>Registrar Venta</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButton, { borderColor: colors.successDark }]}

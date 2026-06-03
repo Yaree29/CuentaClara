@@ -170,7 +170,8 @@ export default StyleSheet.create({
   /* --- ACCIONES RÁPIDAS --- */
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 30, 
     marginBottom: 24,
   },
   actionButton: {

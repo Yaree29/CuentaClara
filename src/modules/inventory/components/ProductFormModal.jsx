@@ -160,7 +160,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal visible={visible} animationType="fade" transparent={true}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

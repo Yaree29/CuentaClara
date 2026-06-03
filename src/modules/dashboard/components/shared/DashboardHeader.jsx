@@ -41,11 +41,6 @@ const DashboardHeader = ({ title, isHome = false }) => {
         </View>
       )}
 
-      {/* Notificaciones */}
-      <View style={styles.notificationsContainer}>
-        <Ionicons name="notifications" size={22} color={colors.primary} />
-      </View>
-
       {/* Configuración */}
       <View style={styles.settingsContainer}>
         <Ionicons name="settings" size={22} color={colors.primary} />

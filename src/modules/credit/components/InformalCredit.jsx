@@ -112,7 +112,7 @@ const InformalCredit = () => {
       </View>
 
       {/* MODAL: Crear / Editar Fiado */}
-      <Modal visible={isFormModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isFormModalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16}}>
@@ -190,7 +190,7 @@ const InformalCredit = () => {
       </Modal>
 
       {/* MODAL: Registrar Pago*/}
-      <Modal visible={isPaymentModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isPaymentModalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16}}>

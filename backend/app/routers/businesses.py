@@ -1,0 +1,94 @@
+# =============================================================================
+# businesses.py (router)
+# ----------------------
+# Endpoints REST para la gestión del Negocio (tenant) actual.
+#
+# Prefijo registrado en main.py: /businesses
+# Autenticación: Bearer JWT validado por get_current_user.
+#
+# Rutas:
+#   GET    /businesses/me         — datos del negocio del usuario autenticado
+#   PUT    /businesses/me         — actualizar datos del negocio
+#   GET    /businesses/me/config  — configuración del negocio
+#   PUT    /businesses/me/config  — actualizar configuración del negocio
+#
+# Nota: Usa /me en lugar de /{business_id} para que el business_id se extraiga
+#       del JWT, evitando que el frontend pase IDs manualmente y previniendo
+#       accesos cross-tenant.
+# =============================================================================
+from fastapi import APIRouter, HTTPException, Depends
+from app.routers.auth import get_current_user
+from app.services import business_service
+from app.models.business import BusinessUpdate, BusinessConfigUpdate
+
+router = APIRouter()
+
+
+@router.get("/me", summary="Obtener datos del negocio actual")
+def get_business(current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve la información del negocio al que pertenece el usuario autenticado.
+    El business_id se extrae del JWT — no se pasa como parámetro.
+    """
+    try:
+        return business_service.get_business(
+            business_id=current_user["business_id"]
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/me", summary="Actualizar datos del negocio")
+def update_business(
+    data: BusinessUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza parcialmente la información del negocio.
+    Solo se modifican los campos incluidos en el body (patch semántico vía PUT).
+    """
+    try:
+        return business_service.update_business(
+            business_id=current_user["business_id"],
+            data=data,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/me/config", summary="Obtener configuración del negocio")
+def get_business_config(current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve la configuración del negocio (moneda, idioma, impuesto, etc.).
+    Si no existe fila de configuración, retorna valores por defecto.
+    """
+    try:
+        return business_service.get_business_config(
+            business_id=current_user["business_id"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/me/config", summary="Actualizar configuración del negocio")
+def update_business_config(
+    data: BusinessConfigUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza la configuración del negocio. Si no existe fila de configuración,
+    la crea automáticamente (upsert).
+    """
+    try:
+        return business_service.update_business_config(
+            business_id=current_user["business_id"],
+            data=data,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -3,6 +3,7 @@ import billingService from '../services/billingService';
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../../inventory/services/inventoryService';
+import salesService from '../../sales/services/salesService';
 
 export const useBilling = () => {
   const [loading, setLoading] = useState(false);
@@ -46,17 +47,25 @@ export const useBilling = () => {
     fetchInventory();
   }, [businessData, user]);
 
+  // =========================================================================
+  // createInvoice — ahora delega al backend vía POST /sales/quick
+  // =========================================================================
+  // La creación de facturas SIEMPRE pasa por salesService.createSale() que
+  // ejecuta en el backend: validar stock → crear factura + items → registrar
+  // pago → descontar inventario → crear movimiento.  Esto garantiza atomicidad
+  // y evita facturas huérfanas.
+  // =========================================================================
   const createInvoice = async (customer, items, taxRate = 0.07) => {
     setLoading(true);
     try {
       const businessId = resolveBusinessId();
-      const userId = user?.id ?? null;
 
       if (!businessId) {
         throw new Error('No se encontró el negocio activo para registrar la factura.');
       }
 
-      const normalizedItems = items.map((item) => {
+      // Mapear items al formato que espera POST /sales/quick
+      const saleItems = items.map((item) => {
         const unitPrice = Number(item.price);
         const quantity = Number(item.quantity ?? 1);
 
@@ -69,28 +78,30 @@ export const useBilling = () => {
         }
 
         return {
-          description: item.desc?.trim() ?? '',
-          unitPrice,
+          product_id: item.productId ?? null,
           quantity,
-          subtotal: unitPrice * quantity,
-          productId: item.productId ?? null,
+          unit_price: unitPrice,
         };
       });
 
-      const subtotal = normalizedItems.reduce((acc, item) => acc + item.subtotal, 0);
-      const tax = subtotal * taxRate;
-      const total = subtotal + tax;
+      // Crear la venta (y factura) a través de la API
+      const result = await salesService.createSale(saleItems, 'cash');
 
-      const result = await billingService.generateInvoice({
-        customer,
-        items: normalizedItems,
-        businessId,
-        userId,
+      // Normalizar respuesta para mantener compatibilidad con BillingScreen
+      const subtotal = saleItems.reduce(
+        (acc, it) => acc + it.quantity * it.unit_price,
+        0
+      );
+
+      return {
+        success: true,
+        invoiceId: result.invoice_id,
+        invoiceNumber: `FAC-${result.invoice_id}`,
+        date: result.created_at,
         subtotal,
-        tax,
-        total
-      });
-      return result;
+        tax: result.tax ?? subtotal * taxRate,
+        total: result.total,
+      };
     } catch (error) {
       console.error("Error al generar factura:", error);
       throw error;
@@ -109,3 +120,4 @@ export const useBilling = () => {
     refreshInventory: fetchInventory,
   };
 };
+

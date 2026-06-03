@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, sales, invoices, credit, inventory, notifications
+from app.routers import auth, sales, invoices, credit, inventory, notifications, businesses
 
 app = FastAPI(
     title="CuentaClara API",
@@ -24,6 +24,7 @@ app.include_router(invoices.router, prefix="/invoices", tags=["Facturación"])
 app.include_router(credit.router,   prefix="/credit",   tags=["Crédito / Fiado"])
 app.include_router(inventory.router, prefix="/inventory", tags=["Inventario"])
 app.include_router(notifications.router, prefix="/notifications", tags=["Notificaciones"])
+app.include_router(businesses.router,    prefix="/businesses",    tags=["Negocio"])
 
 @app.get("/")
 def root():

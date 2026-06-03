@@ -1,156 +1,53 @@
-import { API_URL } from '../../../config/env';
-import useAuthStore from '../../../store/useAuthStore';
+// =============================================================================
+// MODIFICADO: 2026-06-03
+// Propósito: Reemplazo de la implementación original que llamaba a endpoints
+//            /businesses/${businessId} y /businesses/${businessId}/config que
+//            NO EXISTÍAN en el backend (404 permanente).
+//
+// Cambios:
+//   - Ahora usa /businesses/me y /businesses/me/config — endpoints creados en
+//     backend/app/routers/businesses.py. El business_id se extrae del JWT en
+//     el servidor, evitando que el frontend maneje IDs sensibles.
+//   - Se reemplazó el apiRequest inline repetido por el apiClient centralizado.
+// =============================================================================
+import { apiRequest } from '../../../services/apiClient';
 
 const businessService = {
-    /**
-     * Obtener información del negocio actual
-     */
-    getBusinessInfo: async () => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-        const businessId = useAuthStore.getState().user?.business_id;
+  /**
+   * Obtener información del negocio actual
+   */
+  getBusinessInfo: async () => {
+    return apiRequest('/businesses/me');
+  },
 
-        if (!authToken || !businessId) {
-            throw new Error('No hay sesión activa o no hay negocio asociado.');
-        }
+  /**
+   * Actualizar información del negocio
+   * @param {Object} data - Datos a actualizar: {name, phone, address}
+   */
+  updateBusinessInfo: async (data) => {
+    return apiRequest('/businesses/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
 
-        const apiUrl = API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/businesses/${businessId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
-        });
+  /**
+   * Obtener configuración del negocio
+   */
+  getBusinessConfig: async () => {
+    return apiRequest('/businesses/me/config');
+  },
 
-        if (!response.ok) {
-            let errorDetail = 'Error al obtener información del negocio';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
-    },
-
-    /**
-     * Actualizar información del negocio
-     * @param {Object} data - Datos a actualizar: {name, phone, address, tax_rate, etc}
-     */
-    updateBusinessInfo: async (data) => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-        const businessId = useAuthStore.getState().user?.business_id;
-
-        if (!authToken || !businessId) {
-            throw new Error('No hay sesión activa o no hay negocio asociado.');
-        }
-
-        const apiUrl = API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/businesses/${businessId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            let errorDetail = 'Error al actualizar el negocio';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
-    },
-
-    /**
-     * Obtener configuración del negocio
-     */
-    getBusinessConfig: async () => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-        const businessId = useAuthStore.getState().user?.business_id;
-
-        if (!authToken || !businessId) {
-            throw new Error('No hay sesión activa o no hay negocio asociado.');
-        }
-
-        const apiUrl = API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/businesses/${businessId}/config`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
-        });
-
-        if (!response.ok) {
-            let errorDetail = 'Error al obtener configuración del negocio';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
-    },
-
-    /**
-     * Actualizar configuración del negocio
-     * @param {Object} config - Configuración a actualizar
-     */
-    updateBusinessConfig: async (config) => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-        const businessId = useAuthStore.getState().user?.business_id;
-
-        if (!authToken || !businessId) {
-            throw new Error('No hay sesión activa o no hay negocio asociado.');
-        }
-
-        const apiUrl = API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/businesses/${businessId}/config`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(config),
-        });
-
-        if (!response.ok) {
-            let errorDetail = 'Error al actualizar configuración';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
-    },
+  /**
+   * Actualizar configuración del negocio
+   * @param {Object} config - Configuración: {currency, weight_unit, tax_rate, ...}
+   */
+  updateBusinessConfig: async (config) => {
+    return apiRequest('/businesses/me/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  },
 };
 
 export default businessService;

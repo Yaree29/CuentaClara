@@ -1,73 +1,105 @@
-// =============================================================================
-// MODIFICADO: 2026-05-20
-// Propósito: Navegador principal de pestañas (bottom tabs). Construye
-//            dinámicamente los tabs visibles a partir de los módulos activos
-//            del negocio (useBlueprintStore), permitiendo bifurcar la
-//            experiencia entre usuarios informales y PYME.
-// Cambios:
-//   - Se agregaron tres nuevas entradas al TAB_CONFIG: cash (Caja), purchases
-//     (Compras) y staff (Personal), con sus respectivas pantallas placeholder.
-//   - Se actualizó TAB_ORDER para incluir cash, purchases y staff en el orden
-//     de aparición antes de profile.
-//   - Se agregaron los imports de CashScreen, PurchasesScreen y StaffScreen.
-// =============================================================================
 import React from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import useBlueprintStore from '../../store/useBlueprintStore';
+import colors from '../../theme/colors';
+import { View, Text } from 'react-native';
+
+// Iconos Heroicons Solid
+import { 
+  HomeIcon, 
+  BanknotesIcon, 
+  CreditCardIcon, 
+  ArchiveBoxIcon 
+} from 'react-native-heroicons/solid';
+
+// Pantallas
 import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
-import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
-import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
-import CashScreen from '../../modules/cash/screens/CashScreen';
-import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
-import StaffScreen from '../../modules/staff/screens/StaffScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Cada entrada define la pantalla, etiqueta visible e ícono del tab.
-// El orden aquí es el orden en que aparecen las pestañas.
-// 'profile' se fuerza al final desde TAB_ORDER.
 const TAB_CONFIG = {
-  dashboard: { component: HomeScreen,      label: 'Inicio',      icon: '🏠' },
-  sales:     { component: SalesScreen,     label: 'Ventas',      icon: '💰' },
-  credit:    { component: DebtScreen,      label: 'Fiado',       icon: '📋' },
-  inventory: { component: InventoryScreen, label: 'Inventario',  icon: '📦' },
-  billing:   { component: BillingScreen,   label: 'Facturas',    icon: '🧾' },
-  cash:      { component: CashScreen,      label: 'Caja',        icon: '💵' },
-  purchases: { component: PurchasesScreen, label: 'Compras',     icon: '🛒' },
-  staff:     { component: StaffScreen,     label: 'Personal',    icon: '👥' },
-  profile:   { component: ProfileScreen,   label: 'Perfil',      icon: '👤' },
+  dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
+  sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
+  credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
+  inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
 };
 
-// Orden fijo de aparición — profile siempre al final
-const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory', 'billing', 'cash', 'purchases', 'staff', 'profile'];
+const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
 
 const MainNavigator = () => {
-  const modules = useBlueprintStore((state) => state.modules);
-
-  if (!modules || modules.length === 0) return null;
-
-  const visibleTabs = TAB_ORDER.filter((mod) => {
-    if (mod === 'profile') return true; // perfil siempre visible
-    return modules.includes(mod) && TAB_CONFIG[mod];
-  });
-
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      {visibleTabs.map((mod) => {
-        const { component, label, icon } = TAB_CONFIG[mod];
+    <Tab.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+
+        tabBarActiveTintColor: colors.tabIconActive,
+        tabBarInactiveTintColor: colors.tabIcon,
+
+        tabBarShowLabel: true,
+
+        tabBarStyle: {
+          backgroundColor: colors.tabBackground,
+          borderTopWidth: 0,
+
+          height: 72,
+          paddingTop: 6,
+          paddingBottom: 8,
+
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -3,
+          },
+          shadowOpacity: 0.05,
+          shadowRadius: 6,
+          elevation: 12,
+        },
+      }}
+    >
+      {TAB_ORDER.map((mod) => {
+        const { component, label, icon: IconComponent } = TAB_CONFIG[mod];
         return (
           <Tab.Screen
             key={mod}
             name={mod}
             component={component}
             options={{
-              tabBarLabel: label,
-              tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 20 }}>{icon}</Text>
+              tabBarLabel: ({ focused, color }) => (
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: focused ? '700' : '500',
+                    color,
+                    marginBottom: 4,
+                    marginTop: 4,
+              }}
+             >
+              {label}
+            </Text>
+          ),
+
+              tabBarIcon: ({ focused, color, size }) => (
+                <View
+                  style={{
+                    backgroundColor: focused
+                      ? 'rgba(20, 52, 93, 0.12)'
+                      : 'transparent',
+
+                    paddingHorizontal: 18,
+                    paddingVertical: 2,
+                    borderRadius: 25,
+
+                    shadowColor: focused ? colors.tabIconActive : 'transparent',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: focused ? 0.15 : 0,
+                    shadowRadius: 6,
+                    elevation: focused ? 4 : 0,
+                }}
+              >
+                <IconComponent size={size || 24} color={color} />
+              </View>
               ),
             }}
           />

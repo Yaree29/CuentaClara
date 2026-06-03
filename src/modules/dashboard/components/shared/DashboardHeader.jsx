@@ -7,8 +7,9 @@
 // Adaptación: usa Ionicons de @expo/vector-icons que ya fue instalado.
 // =============================================================================
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
 
@@ -17,6 +18,7 @@ import useAuthStore from '../../../../store/useAuthStore';
 import useUserStore from '../../../../store/useUserStore';
 
 const DashboardHeader = ({ title, isHome = false }) => {
+  const navigation = useNavigation();
   const user = useAuthStore((state) => state.user);
   const businessData = useUserStore((state) => state.businessData);
 
@@ -27,7 +29,7 @@ const DashboardHeader = ({ title, isHome = false }) => {
       {/* Círculo de perfil lateral izquierdo (solo en Home) */}
       {isHome && (
         <View style={styles.avatarContainer}>
-          <Ionicons name="person-circle" size={20} color={colors.primary} />
+          <Ionicons name="person-circle" size={24} color={colors.textWhite} />
         </View>
       )}
 
@@ -42,9 +44,13 @@ const DashboardHeader = ({ title, isHome = false }) => {
       )}
 
       {/* Configuración */}
-      <View style={styles.settingsContainer}>
+      <TouchableOpacity 
+        style={styles.settingsContainer}
+        onPress={() => navigation.navigate('profile')}
+        activeOpacity={0.7}
+      >
         <Ionicons name="settings" size={22} color={colors.primary} />
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };

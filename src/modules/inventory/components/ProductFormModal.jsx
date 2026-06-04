@@ -38,7 +38,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete }) =
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal visible={visible} animationType="fade" transparent={true}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

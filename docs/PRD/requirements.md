@@ -250,5 +250,32 @@
 - [ ] Datos se persisten localmente durante desconexión
 
 ---
+## 🏢 Reglas de Negocio (RN)
+Las siguientes reglas gobiernan de manera estricta todas las operaciones, flujos de datos e interfaces del sistema y deben ser aplicadas de forma determinista por el código:
 
-*Última actualización: 2026-06-03*
+### RN-01: Perfilamiento Fiscal
+- Un negocio configurado con perfil informal (ui_mode = "simple") no requiere registrar RUC/NIT. El sistema debe aplicar lógicas de ocultamiento dinámico de campos tributarios. 
+
+### RN-02: Obligatoriedad Fiscal PYME
+- Un negocio configurado con perfil PYME (ui_mode = "advanced") tiene carácter mandatorio de registrar información fiscal (RUC/NIT, Dirección Física Legal y Tipo de Sociedad).
+
+### RN-03: Lógica SERVICE
+- Los productos parametrizados con el tipo SERVICE (Servicios) tienen stock infinito. El backend debe almacenar su inventario como un valor NULL y ninguna operación de venta o checkout debe decrementar existencias de este artículo.
+
+### RN-04: Lógica RETAIL
+- Los productos parametrizados con el tipo RETAIL (Minorista) decrementan el stock de forma lineal e inmediata ante cada evento de checkout exitoso (stock_nuevo = stock_anterior - cantidad_vendida).
+
+### RN-05: Lógica MANUFACTURE
+- Los productos tipo MANUFACTURED (Manufactura/Recetas) no decrementan stock propio de forma directa al venderse; en su lugar, el backend debe analizar de forma recursiva su mapa relacional en formato JSONB (Lista de Materiales / BOM) y decrementar el stock físico de sus insumos y materias primas individuales.
+
+### RN-06: Flexibilidad en Fiados
+- Los créditos de confianza o "Fiados" pueden registrarse y asociarse en la base de datos de manera obligatoria únicamente mediante el Nombre o Apodo del cliente deudor, permitiendo operar sin requerir identificaciones formales, cédulas o correos electrónicos en el perfil informal.
+
+### RN-07: Dashboard Adaptativo
+- La interfaz gráfica y la renderización de métricas del Dashboard principal del usuario deben conmutar automáticamente basándose en el perfil de negocio guardado (ui_mode). El modo informal presentará totales consolidados globales de alta velocidad y el modo PYME renderizará gráficos de barras/pastel avanzados segregados por categorías.
+
+### RN-08: Cierre de Balance Diario
+- El planificador de tareas (APScheduler) del backend debe congelar de forma inmutable los estados de caja de manera diaria a las 11:59 PM, calculando la ganancia neta (ingresos - gastos) y migrando las deudas activas cuya fecha límite sea menor o igual al día en curso a estado overdue.
+
+---
+*Última actualización: 2026-06-07*

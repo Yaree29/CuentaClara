@@ -1,6 +1,6 @@
-# Criterios de Aceptación - CuentaClara
+# Criterios de Aceptación - CuentaClara (v2.0)
 
-Este documento define las condiciones de éxito y los criterios de aceptación (AC) detallados para cada uno de los módulos y épicas del sistema. Se estructuran según las épicas principales de desarrollo.
+Este documento define las condiciones de éxito y los criterios de aceptación (AC) detallados para cada uno de los módulos y épicas del sistema, optimizado con el contexto completo para las IA desarrolladoras. Se estructuran según las épicas principales de desarrollo.
 
 ---
 
@@ -24,59 +24,66 @@ Este documento define las condiciones de éxito y los criterios de aceptación (
 
 ## 👥 ÉPICA 2: Onboarding Adaptativo y Registro Personalizado
 
-### CC-11 / CC-12: Registro y Bifurcación
+### CC-11 / CC-12: Registro y Bifurcación Dinámica
 * **AC-02-01:** El formulario de registro debe recolectar los campos obligatorios: Nombre, Apellido, Teléfono, Nombre del Negocio, Email y Contraseña.
-* **AC-02-02:** Después del registro, la aplicación debe presentar una pantalla de selección visual clara con dos opciones:
-  1. **"Gestión rápida y sencilla"** (Bifurcación Informal)
+* **AC-02-02:** Después del registro, la aplicación debe presentar una pantalla de selección visual clara con dos opciones estratégicas para habilitar la interfaz adaptativa:
+  1. **"Gestión rápida y sencilla"** (Bifurcación Informal / Emprendedor)
   2. **"Control avanzado"** (Bifurcación PYME)
-* **AC-02-03:** El sistema debe registrar la elección guardando el valor de `ui_mode` (`simple` o `advanced`) en la tabla `businesses`.
+* **AC-02-03:** El sistema debe registrar la elección guardando el valor de `ui_mode` (`simple` o `advanced`) en la tabla `businesses`, adaptando automáticamente los módulos visibles de forma condicional.
 
-### CC-13 / CC-14: Configuración de Perfil y Plantillas de Industria
-* **AC-02-04:** El usuario PYME debe poder configurar campos fiscales como RUC/NIT y subir un logo en formato de imagen (.png, .jpg) menor a 5MB.
-* **AC-02-05:** Para usuarios informales, el sistema debe autoconfigurar valores por defecto (*Smart Defaults*): moneda "USD", tasa ITBMS en 7% e insumos deshabilitados.
+### CC-13 / CC-14: Configuración de Perfil y Plantillas de Industria (*Smart Defaults*)
+* **AC-02-04:** El usuario PYME debe poder configurar campos fiscales como RUC/NIT, tipo de sociedad e incorporar la carga de un logo corporativo en formato (.png, .jpg) menor a 5MB, el cual se inyectará dinámicamente en la cabecera de las facturas estructuradas.
+* **AC-02-05:** Para usuarios informales, el sistema debe autoconfigurar valores por defecto (*Smart Defaults*) de manera completamente automatizada: moneda predeterminada en "USD", tasa ITBMS base en 7% e insumos/recetas deshabilitados por defecto para simplificar la experiencia inicial.
+* **AC-02-06:** El sistema debe ofrecer plantillas basadas en la vertical de industria seleccionada (Alimentos, Servicios, Comercio Retail), activando campos de metadatos especializados en la base de datos sin requerir configuraciones técnicas por parte del usuario.
 
 ---
 
-## 📦 ÉPICA 3: Gestión Híbrida de Inventario
+## 📦 ÉPICA 3: Gestión Híbrida de Inventario y Alertas Predictivas
 
 ### CC-15: Lógica de Inventario por Tipo (Retail, Service, Manufacture)
-* **AC-03-01:** **SERVICE (Servicios):** Al realizar una venta, el inventario del producto no debe disminuir. Su stock en base de datos debe ser `NULL` (infinito).
-* **AC-03-02:** **RETAIL (Minorista):** Cada unidad vendida debe decrementar el stock del producto de forma lineal (`stock_nuevo = stock_anterior - cantidad_vendida`).
-* **AC-03-03:** **MANUFACTURE (Manufactura/Recetas):** Al venderse el producto terminado, el backend debe descontar automáticamente el stock de sus insumos individuales basándose en la receta en formato JSONB. Si un insumo no tiene suficiente stock, la transacción debe completarse pero arrojar una alerta en el dashboard.
+* **AC-03-01:** **SERVICE (Servicios):** Al realizar una venta, el inventario del producto no debe disminuir. Su stock en la base de datos debe permanecer como `NULL` (equivalente a stock infinito).
+* **AC-03-02:** **RETAIL (Minorista):** Cada unidad vendida debe decrementar el stock físico del producto de forma lineal e inmediata (`stock_nuevo = stock_anterior - cantidad_vendida`).
+* **AC-03-03:** **MANUFACTURE (Manufactura/Recetas):** Al venderse un producto preparado o manufacturado, el backend debe descontar automáticamente el stock de sus insumos base a partir de un mapa relacional en formato JSONB. Si un insumo rompe el inventario mínimo, la transacción debe completarse y registrarse pero disparando de inmediato un flag de advertencia en el Dashboard.
 
-### CC-16: Escáner y Etiquetas de Peso
-* **AC-03-04:** Al activar el escáner de la cámara, este debe leer códigos de barras (EAN-13, QR) e identificar el producto de forma automática en menos de 1 segundo.
-* **AC-03-05:** El backend debe interpretar etiquetas de balanzas de peso variable (comúnmente codificadas con prefijos específicos que incluyen el ID del producto y el peso/precio).
+### CC-16: Escáner y Etiquetas de Peso Variable
+* **AC-03-04:** Al activar el módulo de escáner de cámara nativo mediante Expo, el sistema debe procesar códigos de barras (EAN-13) y códigos QR para identificar y añadir productos al carrito en menos de 1 segundo con un manejo preciso de permisos de hardware.
+* **AC-03-05:** El backend en FastAPI debe interpretar cadenas de metadatos provenientes de etiquetas de balanzas de peso variable (identificando el prefijo de balanza, extrayendo el ID del producto y calculando proporcionalmente el peso neto y el precio final de venta).
 
-### CC-17 / CC-18: Alertas Inteligentes e Insumos
-* **AC-03-06:** El algoritmo de monitoreo debe disparar una alerta cuando el stock de un producto o insumo caiga por debajo de su `min_stock` establecido.
-* **AC-03-07:** Para perfiles informales, la alerta de stock bajo debe incluir un botón directo que abra un chat de WhatsApp con el proveedor, pre-redactando el mensaje con la cantidad sugerida de pedido.
+### CC-17 / CC-18: Sistema de Alertas Predictivas de Stock
+* **AC-03-06:** El algoritmo de monitoreo de inventario debe realizar una comparativa continua entre el `stock_actual` y el `min_stock` establecido para activar estados de alerta proactivos.
+* **AC-03-07:** **Alertas Predictivas (Algoritmo de Agotamiento):** El sistema debe analizar la velocidad de venta histórica (promedio de salida por día) para estimar la fecha en que el producto quedará en desabastecimiento total (*Out of Stock*). Si el modelo predice desabastecimiento en un periodo menor o igual a 5 días, generará una alerta predictiva visual en el dashboard de la PYME.
+* **AC-03-08:** Para usuarios informales, las alertas predictivas y de quiebre de stock deben incorporar un botón de acción rápida que abra WhatsApp con el número telefónico del proveedor guardado en la DB, auto-rellenando una plantilla pre-redactada de orden de suministro con el nombre del artículo y la cantidad recomendada para reponer.
 
 ---
 
-## 💰 ÉPICA 4: Módulo de Ventas y Finanzas
+## 💰 ÉPICA 4: Módulo de Ventas, Finanzas y Sistema de Fiados
 
 ### CC-20: Registro Rápido (Modo Simple)
-* **AC-04-01:** La interfaz de venta rápida debe permitir registrar transacciones con solo seleccionar un monto o un producto rápido y presionar "Completar Venta".
-* **AC-04-02:** El cajero debe tener un botón binario para clasificar la venta como "Al Contado" o "Fiado".
+* **AC-04-01:** La interfaz de venta en Modo Simple (informal) debe permitir registrar transacciones financieras ágiles en pocos clics (introducción directa de monto total o selección de productos rápidos de alta rotación) y presionar "Completar Venta".
+* **AC-04-02:** La interfaz de facturación debe proveer un interruptor binario claro y visible en el flujo del checkout para clasificar la venta de manera inmediata como "Al Contado" o "Fiado".
 
-### CC-21: Agenda de Registro de Fiado
-* **AC-04-03:** Al marcar una venta como "Fiado", el sistema debe exigir asociar un Cliente (nombre/apodo) y registrar el saldo de la deuda.
-* **AC-04-04:** Al registrar un Abono, el saldo de la deuda debe decrementarse. Si llega a `0.00`, el estado de la deuda debe actualizarse automáticamente a `paid`.
-* **AC-04-05:** Debe haber un botón para enviar un recordatorio pre-redactado por WhatsApp con el saldo pendiente y la fecha de vencimiento.
+### CC-21: Agenda y Registro Avanzado de Fiados
+* **AC-04-03:** Al marcar una transacción como "Fiado", el sistema debe validar obligatoriamente la asociación de un Cliente mediante su nombre o apodo, abriendo o actualizando una cuenta corriente de deuda en la base de datos.
+* **AC-04-04:** El módulo debe permitir registrar amortizaciones y abonos individuales a la deuda pendiente. Cada vez que se procese un Abono, el saldo total acumulado de la deuda debe decrementarse linealmente. Si el saldo llega a `0.00`, el estado del registro de fiado debe actualizarse automáticamente a `paid`.
+* **AC-04-05:** **Cobro Proactivo por WhatsApp:** La lista de cuentas por cobrar debe integrar un botón nativo para disparar un recordatorio pre-redactado mediante deep linking de WhatsApp, el cual formateará automáticamente un texto amigable que incluya el nombre del cliente, el saldo pendiente consolidado y la fecha límite de pago.
 
-### CC-22: Facturación e Impuestos (ITBMS)
-* **AC-04-06:** Los comprobantes/facturas generadas en Panamá deben calcular automáticamente el ITBMS (7% sobre el subtotal imponible, excepto productos exentos).
-* **AC-04-07:** El comprobante debe poder compartirse en formato de texto estructurado o PDF mediante el menú de compartir nativo de la app (especialmente a WhatsApp).
+### CC-22: Facturación e Impuestos Localizados (ITBMS Panamá)
+* **AC-04-06:** El motor de facturación simplificado debe calcular automáticamente el ITBMS (7% sobre el subtotal imponible de los artículos, discriminando de forma transparente aquellos productos o servicios parametrizados como exentos según la ley de Panamá).
+* **AC-04-07:** El comprobante de venta o factura electrónica generada debe ser procesada asíncronamente en backend mediante `BackgroundTasks` para compilar un documento PDF estructurado de manera interna. El usuario debe poder compartir el comprobante en formato de texto enriquecido o archivo PDF mediante el menú nativo del dispositivo (optimizando la entrega directa hacia chats de WhatsApp de los clientes).
 
 ---
 
-## 📊 ÉPICA 5: Inteligencia de Negocio y Growth
+## 📊 ÉPICA 5: Inteligencia de Negocio, Growth y Marketing WhatsApp
 
-### CC-24: Generación de Catálogos para WhatsApp
-* **AC-05-01:** El usuario debe poder seleccionar múltiples artículos, generar una plantilla de texto e imagen con precios y compartirla directamente en sus estados o chats.
+### CC-24: Marketing por WhatsApp y Catálogos Digitales
+* **AC-05-01:** El usuario debe contar con un selector de productos del inventario con capacidades de selección múltiple y filtrado rápido para la creación instantánea de catálogos y anuncios publicitarios estéticos.
+* **AC-05-02:** El motor de mercadeo debe generar plantillas dinámicas de texto enriquecido (strings con inyección de variables como precios, promociones y nombres) combinadas con enlaces de imágenes de productos listas para ser distribuidas directamente en los estados de WhatsApp o chats grupales del comerciante informal o PYME.
 
-### CC-25 / CC-26 / CC-27: Reportes, Insights y APScheduler
-* **AC-05-02:** El Dashboard en Modo Avanzado (PYME) debe mostrar gráficos de barra/pastel del ranking de productos más vendidos.
-* **AC-05-03:** El motor de balance financiero debe calcular el total de ganancias netas restando los gastos registrados de forma diaria.
-* **AC-05-04:** El planificador asíncrono (APScheduler) debe correr diariamente a las 11:59 PM para realizar el cierre financiero diario, actualizar estados vencidos de fiados a `overdue`, y limpiar sesiones de caja inactivas.
+### CC-25 / CC-26 / CC-27: Reportes, Detección de Cliente Frecuente y Automatización con APScheduler
+* **AC-05-03:** El Dashboard Ejecutivo Avanzado (modo PYME) debe renderizar gráficos estadísticos nativos (barras y pastel) que organicen visualmente el ranking de productos más vendidos y el flujo operativo del mes en curso.
+* **AC-05-04:** El motor de balance financiero consolidado debe calcular el total de ganancias netas restando dinámicamente los gastos operativos registrados del subtotal de ingresos por ventas diarias.
+* **AC-05-05:** **Sistema de Detección de Cliente Frecuente:** El backend debe ejecutar algoritmos de agrupación heurística basados en la recurrencia de nombres, apodos o números telefónicos recolectados en el historial de ventas presenciales e informales. El sistema compilará un módulo del "Top Clientes Más Frecuentes", visualizando su frecuencia de compra mensual, volumen total de gasto e identificando los productos de su preferencia para permitir campañas dirigidas de fidelización.
+* **AC-05-06:** El planificador asíncrono implementado en el backend con la librería `APScheduler` debe correr de forma ininterrumpida en segundo plano diariamente a las 11:59 PM para realizar las siguientes tareas automáticas:
+  1. Ejecutar y consolidar el cierre de balance financiero diario.
+  2. Analizar las fechas de vencimiento de la agenda de fiados y transicionar automáticamente el estado de las deudas impagadas de `active` a `overdue`.
+  3. Realizar mantenimiento preventivo limpiando e invalidando las sesiones de caja que hayan quedado inactivas o abiertas por error.

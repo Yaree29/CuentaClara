@@ -278,4 +278,17 @@ Las siguientes reglas gobiernan de manera estricta todas las operaciones, flujos
 - El planificador de tareas (APScheduler) del backend debe congelar de forma inmutable los estados de caja de manera diaria a las 11:59 PM, calculando la ganancia neta (ingresos - gastos) y migrando las deudas activas cuya fecha límite sea menor o igual al día en curso a estado overdue.
 
 ---
+## Matriz de Capacidades
+| Funcionalidad | Informal | Comercio | Alimentos | Alimentos Preparados | Servicios |
+|---------------|-----------|-----------|------------|----------------------|------------|
+| Venta rápida | SI | NO | NO | NO | NO |
+| Fiados | SI | NO | NO | NO | NO |
+| Inventario | SI | SI | SI | SI | Opcional |
+| Escáner | NO | SI | SI | SI | Opcional |
+| Recetas | NO | NO | NO | SI | NO |
+| Comisiones | NO | NO | NO | NO | SI |
+| Merma | NO | NO | SI | SI | NO |
+
+
+---
 *Última actualización: 2026-06-07*

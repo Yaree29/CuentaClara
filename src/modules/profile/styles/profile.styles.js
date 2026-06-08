@@ -2,102 +2,189 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
 export default StyleSheet.create({
-    center: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    textAlign: 'center',
-    padding: 30,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 20,
-  },
-  infoCard: {
-    backgroundColor: colors.infocard,
-    padding: 24,
-    borderRadius: 16,
+  // topBar estilizado
+  topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.infoBorder,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  avatarPlaceholder: {
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+
+  //Tarjeta de Perfil Profesional
+  profileCardWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  profileCard: {
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  profileCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.avatarBackground,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
   avatarText: {
-    color: colors.avatarText,
     fontSize: 32,
     fontWeight: 'bold',
+    color: colors.primary,
   },
-  userName: {
+  profileMainInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  profileName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    marginBottom: 4,
   },
-  userEmail: {
+  profileEmail: {
     fontSize: 14,
     color: colors.textSecondary,
   },
-  section: {
-    backgroundColor: colors.sectionBackground,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.sectionBorder,
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 20,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.sectionTitle,
-    marginBottom: 12,
+  infoList: {
+    gap: 14,
   },
-  row: {
+  infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  infoText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+
+  // Menú y Secciones
+  bodyContainer: {
+    paddingTop: 24,
+  },
+  menuSection: {
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  menuSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  menuSectionContent: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.rowButton,
   },
-  label: {
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  iconContainerDanger: {
+    backgroundColor: colors.logoutBackground,
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.rowLabel,
   },
-  value: {
-    color: colors.rowValue,
-    fontWeight: '500',
+  menuLabelDanger: {
+    color: colors.danger,
+  },
+  menuSubLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   logoutButton: {
-    marginTop: 'auto',
+    marginHorizontal: 16,
+    marginTop: 10,
     backgroundColor: colors.logoutBackground,
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  logoutText: {
+  logoutIcon: {
+    marginRight: 8,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.logoutText,
-    fontWeight: 'bold',
-    fontSize: 16,
   },
-    succesButton: {
-    marginTop: 'auto',
-    backgroundColor: colors.buttonOutlineBorder,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-   succesText: {
-    color: colors.addText,
-    fontWeight: 'bold',
-    fontSize: 16,
+  joinedDateText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 20,
   },
 });

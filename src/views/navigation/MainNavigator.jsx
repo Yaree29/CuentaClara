@@ -1,134 +1,147 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import colors from '../../theme/colors';
-import useUserStore from '../../store/useUserStore';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 
-// Importación de íconos
-import { 
-  HomeIcon, 
-  BanknotesIcon, 
-  CreditCardIcon, 
-  ArchiveBoxIcon, 
-  WrenchScrewdriverIcon, 
-  DocumentTextIcon, 
-  ChartBarIcon 
+import colors from '../../theme/colors';
+
+// Heroicons
+import {
+  HomeIcon,
+  BanknotesIcon,
+  CreditCardIcon,
+  ArchiveBoxIcon,
 } from 'react-native-heroicons/solid';
 
-// Importación de pantallas
+// Screens
 import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
-import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
-import ServicesScreen from '../../modules/services/screens/ServicesScreen';
-import ReportsScreen from '../../modules/reports/screens/ReportsScreen';
 
 const Tab = createBottomTabNavigator();
 
+const TAB_CONFIG = {
+  dashboard: {
+    component: HomeScreen,
+    label: 'Inicio',
+    icon: HomeIcon,
+  },
+  sales: {
+    component: SalesScreen,
+    label: 'Ventas',
+    icon: BanknotesIcon,
+  },
+  credit: {
+    component: DebtScreen,
+    label: 'Fiado',
+    icon: CreditCardIcon,
+  },
+  inventory: {
+    component: InventoryScreen,
+    label: 'Inventario',
+    icon: ArchiveBoxIcon,
+  },
+};
+
+const TAB_ORDER = [
+  'dashboard',
+  'sales',
+  'credit',
+  'inventory',
+];
+
 const MainNavigator = () => {
-
-  // Variables de prueba visual
-  // 1. Informal: 'informal' / null
-  // 2. PYME (Inventario): 'pyme' / 'products'
-  // 3. PYME (Servicios): 'pyme' / 'service'
-
-  //const MOCK_USER_TYPE = 'pyme';
-  //const MOCK_CATEGORY = 'products';
-
-  //const isInformal = MOCK_USER_TYPE === 'informal';
-  //const isPyme = MOCK_USER_TYPE === 'pyme';
-  //const isServicePyme = isPyme && MOCK_CATEGORY === 'service';
-
-  //Para simular bifurcación - se leen los dato usando la libreria Zustand, que permite manejar el estado global de la app
-  const userType = useUserStore((state) => state.userType);
-  const businessData = useUserStore((state) => state.businessData);
-
-  const isInformal = userType === 'informal';
-  const isPyme = userType === 'pyme';
-  const isServicePyme = isPyme && businessData?.category === 'service';
-
   return (
-    <Tab.Navigator 
-      screenOptions={({ route }) => ({
+    <Tab.Navigator
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary, 
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-          paddingBottom: 6,
-        },
+
+        tabBarActiveTintColor: colors.tabIconActive,
+        tabBarInactiveTintColor: colors.tabIcon,
+
+        tabBarShowLabel: true,
+
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopWidth: 0, 
-          elevation: 12, 
-          shadowColor: '#000', 
-          shadowOffset: { width: 0, height: -3 },
+          backgroundColor: colors.tabBackground,
+          borderTopWidth: 0,
+
+          height: 72,
+          paddingTop: 6,
+          paddingBottom: 8,
+
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -3,
+          },
           shadowOpacity: 0.05,
           shadowRadius: 6,
-          height: 65, 
+          elevation: 12,
         },
-        //Configuración de Heroicons en la barra
-        tabBarIcon: ({ focused, color }) => {
-          let IconComponent;
-          
-          if (route.name === 'Dashboard') IconComponent = HomeIcon;
-          else if (route.name === 'Sales') IconComponent = BanknotesIcon;
-          else if (route.name === 'Credit') IconComponent = CreditCardIcon;
-          else if (route.name === 'Inventory') IconComponent = ArchiveBoxIcon;
-          else if (route.name === 'Services') IconComponent = WrenchScrewdriverIcon;
-          else if (route.name === 'Billing') IconComponent = DocumentTextIcon;
-          else if (route.name === 'Reports') IconComponent = ChartBarIcon;
-
-          return (
-            <View style={{
-              backgroundColor: focused ? `${colors.primary}15` : 'transparent',
-              paddingHorizontal: 16,
-              paddingVertical: 4,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: 4, 
-            }}>
-              {IconComponent && <IconComponent size={22} color={color} />}
-            </View>
-          );
-        },
-      })}
+      }}
     >
-      {/* Home de la aplicación, visible para todos los roles */}
-      <Tab.Screen name="Dashboard" component={HomeScreen} options={{ tabBarLabel: 'Inicio' }} />
+      {TAB_ORDER.map((mod) => {
+        const {
+          component,
+          label,
+          icon: IconComponent,
+        } = TAB_CONFIG[mod];
 
-      {/* Navegación para Usuario Informal */}
-      {isInformal && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Credit" component={DebtScreen} options={{ tabBarLabel: 'Créditos' }} />
-          <Tab.Screen name="Inventory" component={InventoryScreen} options={{ tabBarLabel: 'Inventario' }} />
-        </Tab.Group>
-      )}
+        return (
+          <Tab.Screen
+            key={mod}
+            name={mod}
+            component={component}
+            options={{
+              tabBarLabel: ({ focused, color }) => (
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: focused ? '700' : '500',
+                    color,
+                    marginBottom: 4,
+                    marginTop: 4,
+                  }}
+                >
+                  {label}
+                </Text>
+              ),
 
-      {/* Navegación para PYME regular (Basada en productos/inventario) */}
-      {isPyme && !isServicePyme && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Inventory" component={InventoryScreen} options={{ tabBarLabel: 'Inventario' }} />
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reportes' }} />
-          <Tab.Screen name="Billing" component={BillingScreen} options={{ tabBarLabel: 'Finanzas' }} />
-        </Tab.Group>
-      )}
+              tabBarIcon: ({ focused, color, size }) => (
+                <View
+                  style={{
+                    backgroundColor: focused
+                      ? 'rgba(20, 52, 93, 0.12)'
+                      : 'transparent',
 
-      {/* Navegación para PYME de Servicios (Sin inventario) */}
-      {isPyme && isServicePyme && (
-        <Tab.Group>
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Ventas' }} />
-          <Tab.Screen name="Services" component={ServicesScreen} options={{ tabBarLabel: 'Servicios' }} />
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reportes' }} />
-          <Tab.Screen name="Billing" component={BillingScreen} options={{ tabBarLabel: 'Finanzas' }} />
-        </Tab.Group>
-      )}
+                    paddingHorizontal: 18,
+                    paddingVertical: 2,
+                    borderRadius: 25,
 
+                    shadowColor: focused
+                      ? colors.tabIconActive
+                      : 'transparent',
+
+                    shadowOffset: {
+                      width: 0,
+                      height: 2,
+                    },
+
+                    shadowOpacity: focused ? 0.15 : 0,
+                    shadowRadius: 6,
+                    elevation: focused ? 4 : 0,
+                  }}
+                >
+                  <IconComponent
+                    size={size || 24}
+                    color={color}
+                  />
+                </View>
+              ),
+            }}
+          />
+        );
+      })}
     </Tab.Navigator>
   );
 };

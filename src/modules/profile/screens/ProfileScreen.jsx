@@ -162,6 +162,7 @@ const ProfileScreen = () => {
               />
             </MenuSection>
 
+            {/* Botón de Cerrar Sesión */}
             <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.8}>
               <Ionicons name="log-out-outline" size={20} color={colors.logoutText} style={styles.logoutIcon} />
               <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>

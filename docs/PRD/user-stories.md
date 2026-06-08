@@ -39,8 +39,8 @@ So that access is faster and more secure
 Acceptance Criteria:
 - [ ] Soporte para Face ID y Touch ID
 - [ ] Fallback a PIN si falla biometría
-- [ ] Opción para deshabilitar biometría
-- [ ] Requiere confirmación cada 7 días
+- [ ] Opción en la pantalla de configuración para deshabilitar o reestablecer la biometría por dispositivo.
+- [ ] Las credenciales y claves de biometría se persisten cifradas localmente en expo-secure-store.
 ```
 
 ### US-003: Recuperación de contraseña
@@ -81,10 +81,10 @@ I want to see all my products with their current stock
 So that I know what to restock
 
 Acceptance Criteria:
-- [ ] Lista muestra nombre, SKU, stock, precio
-- [ ] Filtro por categoría
-- [ ] Búsqueda por nombre/SKU
-- [ ] Ordenar por stock (ascendente) para identificar bajos
+- [ ] Lista paginada que muestra el nombre, SKU, stock disponible, precio y tipo de producto.
+- [ ] Filtro y segmentación rápida en pantalla por categorías del negocio.
+- [ ] Barra de búsqueda en caliente indexada por coincidencia de nombre o SKU.
+- [ ] Ordenamiento dinámico ascendente y descendente por stock, precio y fecha de creación.
 - [ ] Indicador visual de stock bajo (< 10 unidades)
 ```
 

@@ -15,16 +15,20 @@
 // =============================================================================
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import useUserStore from '../../../store/useUserStore';
 import colors from '../../../theme/colors';
 
 import DashboardHeader from '../components/shared/DashboardHeader';
 import InformalDashboard from '../components/InformalDashboard';
+import PymeGeneralDashboard from '../../../../pyme/dashboard/components/PymeGeneralDashboard';
 
 const HomeScreen = () => {
+  const userType = useUserStore((state) => state.userType);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <DashboardHeader isHome={true} />
-      <InformalDashboard />
+      {userType === 'pyme' ? <PymeGeneralDashboard /> : <InformalDashboard />}
     </SafeAreaView>
   );
 };

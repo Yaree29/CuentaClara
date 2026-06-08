@@ -8,12 +8,14 @@ import {
   HomeIcon, 
   BanknotesIcon, 
   CreditCardIcon, 
-  ArchiveBoxIcon 
+  ArchiveBoxIcon,
+  UserGroupIcon 
 } from 'react-native-heroicons/solid';
 
 // Pantallas
 import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
+import ServicesScreen from '../../modules/services/screens/ServicesScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
 
@@ -22,11 +24,12 @@ const Tab = createBottomTabNavigator();
 const TAB_CONFIG = {
   dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
   sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
+  services:  { component: ServicesScreen,  label: 'Servicios',   icon: UserGroupIcon },
   credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
   inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
 };
 
-const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
+const TAB_ORDER = ['dashboard', 'sales', 'services', 'credit', 'inventory'];
 
 const MainNavigator = () => {
   return (

@@ -8,10 +8,7 @@ import DashboardHeader from '../components/shared/DashboardHeader';
 
 //Importacion de componentes específicos para cada tipo de usuario
 import InformalDashboard from '../components/InformalDashboard';
-import PymeFoodDashboard from '../components/PymeFoodDashboard';
 import PymeServiceDashboard from '../components/PymeServiceDashboard';
-import PymePrepFoodDashboard from '../components/PymePrepFoodDashboard';
-import PymeRetailDashboard from '../components/PymeRetailDashboard';
 import PymeGeneralDashboard from '../components/PymeGeneralDashboard';
 
 const HomeScreen = () => {
@@ -20,12 +17,12 @@ const HomeScreen = () => {
   const businessData = useUserStore((state) => state.businessData);
 
   const pymeDashboards = {
-    food: <PymeFoodDashboard />,
-    service: <PymeServiceDashboard />,
-    prepared_food: <PymePrepFoodDashboard />,
-    retail: <PymeRetailDashboard />,
-    general: <PymeGeneralDashboard />
-  };
+  food: <PymeGeneralDashboard />,
+  service: <PymeServiceDashboard />,
+  prepared_food: <PymeGeneralDashboard />,
+  retail: <PymeGeneralDashboard />,
+  general: <PymeGeneralDashboard />
+};
 
   const renderDashboardContent = () => {
     if (userType === 'informal') {

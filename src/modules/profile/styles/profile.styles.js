@@ -187,4 +187,22 @@ export default StyleSheet.create({
     color: colors.textMuted,
     marginTop: 20,
   },
+  modalGoogleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: colors.backgroundSecondary,
+    marginBottom: 16,
+    width: '100%',
+  },
+  modalGoogleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginLeft: 10,
+  },
 });

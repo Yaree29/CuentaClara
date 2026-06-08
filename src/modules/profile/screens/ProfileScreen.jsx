@@ -119,7 +119,7 @@ const ProfileScreen = () => {
                 icon="shield-checkmark-outline"
                 label="Seguridad"
                 subLabel="Verificación en dos pasos / Biometría"
-                onPress={() => navigation.navigate('Token2FA', { actionType: 'generic' })}
+                onPress={() => navigation.navigate('SecuritySettings')}
               />
               <MenuItem
                 icon="people-outline"

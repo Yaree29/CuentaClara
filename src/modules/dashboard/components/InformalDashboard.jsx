@@ -132,28 +132,36 @@ const InformalDashboard = () => {
         </View>
       </View>
 
-      {/* ACCIONES RÁPIDAS — navegan a los tabs correspondientes */}
+      {/* ACCIONES RÁPIDAS */}
       <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
-      <View style={styles.actionsContainer}>
+      <View style={styles.quickActionsContainer}>
 
         <TouchableOpacity
-          style={[styles.actionButton, { borderColor: colors.successDark }]}
+          style={styles.quickActionButton}
           onPress={() => goToTab('credit')}
         >
-          <View style={[styles.actionIconContainer, { backgroundColor: colors.successBorder }]}>
-            <Ionicons name="bookmark" size={22} color={colors.successDark} />
+          <View style={styles.quickActionIconContainer}>
+            <Ionicons name="bookmark" size={24} color={colors.successDark} />
           </View>
-          <Text style={styles.actionText}>Anotar Fiado</Text>
+          <View style={styles.quickActionTextContainer}>
+            <Text style={styles.quickActionTitle}>Anotar Fiado</Text>
+            <Text style={styles.quickActionSubtitle}>Registrar nueva deuda o cliente</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.successDark} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, { borderColor: colors.successDark }]}
+          style={styles.quickActionButton}
           onPress={() => goToTab('inventory')}
         >
-          <View style={[styles.actionIconContainer, { backgroundColor: colors.successBorder }]}>
-            <Ionicons name="cube" size={22} color={colors.successDark} />
+          <View style={styles.quickActionIconContainer}>
+            <Ionicons name="cube" size={24} color={colors.successDark} />
           </View>
-          <Text style={styles.actionText}>Nuevo Producto</Text>
+          <View style={styles.quickActionTextContainer}>
+            <Text style={styles.quickActionTitle}>Nuevo Producto</Text>
+            <Text style={styles.quickActionSubtitle}>Añadir al inventario</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.successDark} />
         </TouchableOpacity>
       </View>
 

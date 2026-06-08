@@ -168,33 +168,38 @@ export default StyleSheet.create({
   },
 
   /* --- ACCIONES RÁPIDAS --- */
-  actionsContainer: {
+  quickActionsContainer: {
+    flexDirection: 'column',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickActionButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 30, 
-    marginBottom: 24,
-  },
-  actionButton: {
-    width: (width - 48) / 3,
-    backgroundColor: colors.card,
+    alignItems: 'center',
+    padding: 16,
     borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
     borderWidth: 1,
+    borderColor: colors.successDark,
+    backgroundColor: colors.backgroundSecondary,
   },
-  actionIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+  quickActionIconContainer: {
+    backgroundColor: colors.successBorder,
+    padding: 12,
+    borderRadius: 10,
+    marginRight: 16,
   },
-  actionText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+  quickActionTextContainer: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.successDark,
+  },
+  quickActionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 
   /* --- ACTIVIDADES RECIENTES --- */

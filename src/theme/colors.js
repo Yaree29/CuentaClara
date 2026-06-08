@@ -178,13 +178,13 @@ const colors = {
   tabBackground: '#FFFFFF',
   tabBorder: '#F0F0F0',
 
-  tabActiveBackground: '#E8F5E9',
+  tabActiveBackground: '#EEF3F8',
 
-  tabIcon: '#64748B',
-  tabIconActive: '#45C46B',
+  tabIcon: '#0F2747',
+  tabIconActive: '#0F2747',
 
-  tabText: '#64748B',
-  tabTextActive: '#45C46B',
+  tabText: '#0F2747',
+  tabTextActive: '#0F2747',
 };
 
 export default colors;

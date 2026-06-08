@@ -169,7 +169,7 @@ const colors = {
   ========================== */
 
   logoutBackground: '#FEE2E2',
-  logoutText: '#EF4444',
+  logoutText: '#0F2747',
 
   /* =========================
      NAVBAR / TABS

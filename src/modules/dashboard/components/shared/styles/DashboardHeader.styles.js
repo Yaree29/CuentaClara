@@ -1,3 +1,7 @@
+// =============================================================================
+// CREADO: 2026-05-26
+// Propósito: Estilos del DashboardHeader. Integrado desde la rama Fronted.
+// =============================================================================
 import { StyleSheet, Platform } from 'react-native';
 import colors from '../../../../../theme/colors';
 
@@ -10,7 +14,7 @@ export default StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 0,
-    elevation: 4, 
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -21,7 +25,6 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  // Estilos para la variante de la pantalla de Inicio (Home)
   welcomeText: {
     color: colors.textSecondary,
     fontSize: 13,
@@ -35,7 +38,6 @@ export default StyleSheet.create({
     letterSpacing: -0.3,
     marginLeft: 10,
   },
-  // Estilo para las variantes de las demás pestañas (Ventas, Inventario, etc.)
   screenTitle: {
     color: colors.greeting,
     fontSize: 22,
@@ -47,7 +49,7 @@ export default StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.avatarBackground || '#E2E8F0',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 0,
@@ -56,6 +58,6 @@ export default StyleSheet.create({
     marginRight: 25,
   },
   settingsContainer: {
-      marginRight: -1,
-      },
-  });
+    marginRight: -1,
+  },
+});

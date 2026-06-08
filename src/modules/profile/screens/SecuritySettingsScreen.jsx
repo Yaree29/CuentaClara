@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { useBiometrics } from '../../auth/hooks/useBiometrics';
 import biometricService from '../../auth/services/biometricService';
 import colors from '../../../theme/colors';
 import styles from '../styles/profile.styles';
+import securityStyles from '../styles/security.styles';
 
 const MenuSection = ({ title, children }) => (
   <View style={styles.menuSection}>
@@ -95,13 +96,17 @@ const SecuritySettingsScreen = () => {
         <View style={styles.headerPlaceholder} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 24 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={securityStyles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={securityStyles.descriptionText}>
+          Configura las capas adicionales de seguridad para proteger tu cuenta y tus datos financieros.
+        </Text>
+
         {/* Sección: Acceso */}
         <MenuSection title="Acceso">
-          <View style={styles.switchItem}>
-            <View style={styles.switchTextContainer}>
-              <Text style={styles.switchLabel}>Huella biométrica</Text>
-              <Text style={styles.switchSubLabel}>Usa TouchID para entrar rápido</Text>
+          <View style={securityStyles.switchItem}>
+            <View style={securityStyles.switchTextContainer}>
+              <Text style={securityStyles.switchLabel}>Huella biométrica</Text>
+              <Text style={securityStyles.switchSubLabel}>Usa TouchID para entrar rápido</Text>
             </View>
             <Switch
               value={isBiometricEnabled}
@@ -114,10 +119,10 @@ const SecuritySettingsScreen = () => {
 
         {/* Sección: 2FA */}
         <MenuSection title="Verificación en dos pasos (2FA)">
-          <View style={styles.switchItem}>
-            <View style={styles.switchTextContainer}>
-              <Text style={styles.switchLabel}>Activar 2FA</Text>
-              <Text style={styles.switchSubLabel}>Manten tu cuenta segura con verificación adicional</Text>
+          <View style={securityStyles.switchItem}>
+            <View style={securityStyles.switchTextContainer}>
+              <Text style={securityStyles.switchLabel}>Activar 2FA</Text>
+              <Text style={securityStyles.switchSubLabel}>Manten tu cuenta segura con verificación adicional</Text>
             </View>
             <Switch
               value={is2FAEnabled}
@@ -143,7 +148,7 @@ const SecuritySettingsScreen = () => {
       </ScrollView>
 
       {isAuthenticating && (
-        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={securityStyles.loadingOverlay}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}

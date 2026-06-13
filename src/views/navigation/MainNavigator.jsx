@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 
 // Iconos Heroicons Solid
 import { 
@@ -27,6 +27,83 @@ const TAB_CONFIG = {
 };
 
 const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
+
+// Componente animado personalizado para los iconos del Tab Bar
+const AnimatedTabBarIcon = ({ focused, children }) => {
+  const bounceAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (focused) {
+      // Animación de salto con resorte
+      Animated.spring(bounceAnim, {
+        toValue: -4,
+        friction: 8,
+        tension: 90,
+        useNativeDriver: true,
+      }).start();
+
+      // Animación de escala y opacidad de la sombra circular (ripple)
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1.1,
+          duration: 212,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reestablecer animaciones
+      Animated.spring(bounceAnim, {
+        toValue: 0,
+        friction: 6,
+        tension: 50,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [focused]);
+
+  return (
+    <View style={styles.iconWrapper}>
+      <Animated.View
+        style={[
+          styles.rippleBg,
+          {
+            opacity: opacityAnim,
+            transform: [
+              { translateY: -4 },
+              { scale: scaleAnim }],
+          },
+        ]}
+      />
+      <Animated.View
+        style={{
+          transform: [{ translateY: bounceAnim }],
+        }}
+      >
+        {children}
+      </Animated.View>
+    </View>
+  );
+};
 
 const MainNavigator = () => {
   return (
@@ -68,38 +145,22 @@ const MainNavigator = () => {
             options={{
               tabBarLabel: ({ focused, color }) => (
                 <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: focused ? '700' : '500',
-                    color,
-                    marginBottom: 4,
-                    marginTop: 4,
-              }}
-             >
-              {label}
-            </Text>
-          ),
+                  style={[
+                    styles.tabLabel,
+                    {
+                      fontWeight: focused ? '700' : '500',
+                      color,
+                    }
+                  ]}
+                >
+                  {label}
+                </Text>
+              ),
 
               tabBarIcon: ({ focused, color, size }) => (
-                <View
-                  style={{
-                    backgroundColor: focused
-                      ? 'rgba(20, 52, 93, 0.12)'
-                      : 'transparent',
-
-                    paddingHorizontal: 18,
-                    paddingVertical: 2,
-                    borderRadius: 25,
-
-                    shadowColor: focused ? colors.tabIconActive : 'transparent',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: focused ? 0.15 : 0,
-                    shadowRadius: 6,
-                    elevation: focused ? 4 : 0,
-                }}
-              >
-                <IconComponent size={size || 24} color={color} />
-              </View>
+                <AnimatedTabBarIcon focused={focused}>
+                  <IconComponent size={size || 24} color={color} />
+                </AnimatedTabBarIcon>
               ),
             }}
           />
@@ -108,5 +169,27 @@ const MainNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  iconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 45,
+    height: 45,
+  },
+  rippleBg: {
+    position: 'absolute',
+    width: 40,
+    height: 30,
+    borderRadius: 22.5,
+    backgroundColor: colors.primary + '26', // Sombra circular con opacidad del ~15%
+  },
+
+  tabLabel: {
+    fontSize: 15,
+    marginBottom: 4,
+    marginTop: 4,
+  },
+});
 
 export default MainNavigator;

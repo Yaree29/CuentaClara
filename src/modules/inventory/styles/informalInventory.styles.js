@@ -235,6 +235,37 @@ export default StyleSheet.create({
     color: colors.primary,
     fontWeight: '700' },
 
+  /* --- Estilos del Selector de Compra --- */
+  purchaseTypeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4 },
+
+  purchaseTypePill: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center' },
+
+  purchaseTypePillActive: {
+    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary },
+
+  purchaseTypeText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center' },
+
+  purchaseTypeTextActive: {
+    color: colors.primary,
+    fontWeight: '700' },
+
   /* --- Estilos de Validación --- */
   inputError: {
     borderColor: colors.danger,

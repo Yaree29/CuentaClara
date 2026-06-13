@@ -122,6 +122,7 @@ const inventoryService = {
           : null,
       unit: productData.unit || null,
       min_stock: Number(productData.minStock || 0),
+      purchase_type: productData.purchaseType || 'register_only',
     };
 
     const data = await apiRequest('/inventory/products', {

@@ -12,9 +12,7 @@ const securityStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rowButton,
+    paddingVertical: 10,
   },
   switchTextContainer: {
     flex: 1,

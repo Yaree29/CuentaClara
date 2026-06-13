@@ -135,7 +135,7 @@ const SecuritySettingsScreen = () => {
 
         {/* Sección: Cuenta */}
         <MenuSection title="Cuenta">
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Info', 'Funcionalidad de cambiar contraseña en desarrollo.')}>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={() => Alert.alert('Info', 'Funcionalidad de cambiar contraseña en desarrollo.')}>
             <View style={styles.iconContainer}>
               <Ionicons name="lock-closed-outline" size={22} color={colors.primary} />
             </View>

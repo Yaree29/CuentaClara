@@ -37,51 +37,77 @@ export default StyleSheet.create({
     width: 40,
   },
 
-  //Tarjeta de Perfil Profesional
+  // Tarjeta de Perfil
   profileCardWrapper: {
-    paddingHorizontal: 20,
-    marginTop: 24,
+    paddingHorizontal: 16,
+    marginTop: 20,
     marginBottom: 16,
   },
   profileCard: {
     backgroundColor: colors.card,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  profileCardHeader: {
-    flexDirection: 'row',
+  profileHeaderBlock: {
+    backgroundColor: colors.cardSecondary,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   avatarContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    backgroundColor: colors.background,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 3,
+    borderColor: colors.border,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: colors.primary,
-  },
-  profileMainInfo: {
-    flex: 1,
-    marginLeft: 16,
+    color: colors.textTertiary,
   },
   profileName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  badgeContainer: {
+    backgroundColor: colors.salesBadgeBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginTop: 8,
     marginBottom: 4,
   },
-  profileEmail: {
+  badgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  profileBusinessName: {
     fontSize: 14,
     color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 6,
+    textAlign: 'center',
   },
   separator: {
     height: 1,
@@ -89,14 +115,18 @@ export default StyleSheet.create({
     marginVertical: 20,
   },
   infoList: {
-    gap: 14,
+    gap: 12,
+    paddingHorizontal: 6,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 4,
+  },
+  infoIcon: {
+    marginRight: 12,
   },
   infoText: {
-    marginLeft: 12,
     fontSize: 14,
     color: colors.textPrimary,
     fontWeight: '500',
@@ -104,10 +134,10 @@ export default StyleSheet.create({
 
   // Menú y Secciones
   bodyContainer: {
-    paddingTop: 24,
+    paddingTop: 8,
   },
   menuSection: {
-    marginBottom: 24,
+    marginBottom: 20,
     paddingHorizontal: 16,
   },
   menuSectionTitle: {
@@ -116,40 +146,60 @@ export default StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: 8,
     marginLeft: 4,
   },
   menuSectionContent: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: colors.card,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    padding: 14,
+    marginBottom: 16,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.rowButton,
+    borderBottomColor: colors.borderLight,
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.background,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
+  },
+  iconContainerBusiness: {
+    backgroundColor: colors.primary + '15',
+  },
+  iconContainerNotifications: {
+    backgroundColor: colors.warning + '15',
+  },
+  iconContainerApp: {
+    backgroundColor: colors.success + '15',
+  },
+  iconContainerSecurity: {
+    backgroundColor: colors.info + '15',
+  },
+  iconContainerHelp: {
+    backgroundColor: colors.primaryLight + '15',
   },
   iconContainerDanger: {
-    backgroundColor: colors.logoutBackground,
+    backgroundColor: colors.danger + '15',
   },
   menuTextContainer: {
     flex: 1,
   },
   menuLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.rowLabel,
   },
@@ -157,7 +207,7 @@ export default StyleSheet.create({
     color: colors.danger,
   },
   menuSubLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
   },

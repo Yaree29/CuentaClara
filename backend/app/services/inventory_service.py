@@ -251,15 +251,27 @@ def create_product(business_id: str, user_id: str, data) -> dict:
 
     # 3. Registrar movimiento de entrada inicial (solo si hay stock)
     if data.initial_stock is not None and data.initial_stock > 0:
+        reason = "purchase" if getattr(data, "purchase_type", None) == "use_gains" else "manual"
         supabase_admin.table("inventory_movements").insert({
             "business_id": business_id,
             "product_id": product_id,
             "type": "in",
             "quantity": float(data.initial_stock),
-            "reason": "manual",
+            "reason": reason,
             "user_id": user_id,
             "created_at": _now_iso(),
         }).execute()
+
+        # Si se compró con dinero de las ganancias, registrar gasto en caja
+        if getattr(data, "purchase_type", None) == "use_gains":
+            expense_amount = float(data.initial_stock) * float(data.price)
+            supabase_admin.table("expenses").insert({
+                "business_id": business_id,
+                "amount": expense_amount,
+                "description": f"Compra inicial stock: {data.name}",
+                "user_id": user_id,
+                "created_at": _now_iso(),
+            }).execute()
 
     stock = inv.get("quantity")
     min_stock = Decimal(str(inv.get("min_stock") or 0))

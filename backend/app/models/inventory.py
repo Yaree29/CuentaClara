@@ -41,6 +41,7 @@ class ProductCreateRequest(BaseModel):
     initial_stock: Optional[Decimal] = None   # null = servicio / stock ilimitado
     unit: Optional[str] = None
     min_stock: Decimal = Decimal("0")
+    purchase_type: Optional[str] = "register_only"
 
     @field_validator("name")
     @classmethod

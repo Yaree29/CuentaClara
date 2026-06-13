@@ -54,6 +54,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   const [category, setCategory] = useState('');
   const [stock, setStock]       = useState('');
   const [minStock, setMinStock] = useState('');
+  const [purchaseType, setPurchaseType] = useState('register_only');
 
   // Errores por campo
   const [nameError, setNameError]       = useState(null);
@@ -77,12 +78,14 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setCategory(initialData.category ?? (categories[0] || ''));
       setStock(initialData.stock !== null && initialData.stock !== undefined ? initialData.stock.toString() : '');
       setMinStock(initialData.minStock !== null && initialData.minStock !== undefined ? initialData.minStock.toString() : '');
+      setPurchaseType('register_only');
     } else {
       setName('');
       setPrice('');
       setCategory(categories[0] || '');
       setStock('');
       setMinStock('');
+      setPurchaseType('register_only');
     }
   }, [initialData, visible, categories]);
 
@@ -152,6 +155,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       category: category || null,
       stock: stock !== '' ? parseInt(stock, 10) : null,
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
+      purchaseType: purchaseType,
     });
   };
 
@@ -231,6 +235,47 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                   {minStockError ? <Text style={styles.errorText}>{minStockError}</Text> : null}
                 </View>
               </View>
+
+              {/* ── ¿Cómo adquiriste este producto? ── */}
+              {!initialData && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>¿Cómo adquiriste este producto?</Text>
+                  <View style={styles.purchaseTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.purchaseTypePill,
+                        purchaseType === 'register_only' && styles.purchaseTypePillActive,
+                      ]}
+                      onPress={() => setPurchaseType('register_only')}
+                    >
+                      <Text
+                        style={[
+                          styles.purchaseTypeText,
+                          purchaseType === 'register_only' && styles.purchaseTypeTextActive,
+                        ]}
+                      >
+                        Solo registrar stock
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.purchaseTypePill,
+                        purchaseType === 'use_gains' && styles.purchaseTypePillActive,
+                      ]}
+                      onPress={() => setPurchaseType('use_gains')}
+                    >
+                      <Text
+                        style={[
+                          styles.purchaseTypeText,
+                          purchaseType === 'use_gains' && styles.purchaseTypeTextActive,
+                        ]}
+                      >
+                        Compré con dinero de mis ganancias
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               {/* ── Categoría ── */}
               <View style={styles.formGroup}>

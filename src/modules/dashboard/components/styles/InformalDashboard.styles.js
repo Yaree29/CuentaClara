@@ -125,38 +125,43 @@ export default StyleSheet.create({
     fontSize: 13,
   },
 
-  /* --- GRID DE CONTADORES (Fiado, Clientes) --- */
-  gridContainer: {
+  /* --- TARJETA DE FIADOS --- */
+  debtUnifiedCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  gridCard: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 24,
   },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
+  debtUnifiedLeft: {
+    flexDirection: 'column',
   },
-  gridCardLabel: {
+  debtUnifiedLabel: {
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '500',
     marginBottom: 4,
   },
-  gridCardValue: {
-    color: colors.textPrimary,
-    fontSize: 18,
+  debtUnifiedAmount: {
+    color: colors.danger,
+    fontSize: 22,
     fontWeight: 'bold',
+  },
+  debtUnifiedRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  debtUnifiedIcon: {
+    marginRight: 6,
+  },
+  debtUnifiedText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
   },
 
   /* --- SECCIONES --- */
@@ -169,37 +174,77 @@ export default StyleSheet.create({
 
   /* --- ACCIONES RÁPIDAS --- */
   quickActionsContainer: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 20,
   },
-  quickActionButton: {
-    flexDirection: 'row',
+  quickActionButtonLeft: {
+    flexDirection: 'column',
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 14,
     padding: 16,
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.successDark,
-    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  quickActionIconContainer: {
-    backgroundColor: colors.successBorder,
+  quickActionButtonRight: {
+    flexDirection: 'column',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionIconContainerLeft: {
+    backgroundColor: colors.salesBadgeBackground, // soft blue from palette (#EFF6FF)
     padding: 12,
     borderRadius: 10,
-    marginRight: 16,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  quickActionTextContainer: {
-    flex: 1,
+  quickActionIconContainerRight: {
+    backgroundColor: colors.successLight, // soft green from palette (#E8F5E9)
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  quickActionTitle: {
-    fontSize: 16,
+  quickActionTitleLeft: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: colors.successDark,
+    color: colors.info, // blue from palette (#3B82F6)
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  quickActionTitleRight: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.successDark, // green from palette (#328339)
+    textAlign: 'center',
+    marginBottom: 4,
   },
   quickActionSubtitle: {
-    fontSize: 13,
+    fontSize: 11,
     color: colors.textSecondary,
-    marginTop: 2,
+    textAlign: 'center',
+    lineHeight: 14,
   },
 
   /* --- ACTIVIDADES RECIENTES --- */
@@ -222,13 +267,50 @@ export default StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  activityIcon: {
+  activityIconSale: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    backgroundColor: colors.successLight,
+  },
+  activityAmountSale: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+    color: colors.textSuccess,
+  },
+  activityIconStock: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.borderLight,
+  },
+  activityAmountStock: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+    color: colors.textSecondary,
+  },
+  activityIconPurchase: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: colors.logoutBackground,
+  },
+  activityAmountPurchase: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+    color: colors.textError,
   },
   activityInfo: {
     flex: 1,
@@ -242,11 +324,6 @@ export default StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
-  },
-  activityAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'right',
   },
   divider: {
     height: 1,

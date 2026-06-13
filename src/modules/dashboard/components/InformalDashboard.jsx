@@ -11,10 +11,6 @@
 //   · 3 botones de acceso rápido a tabs    — useNavigation (Ventas/Fiado/Inventario)
 //   · Últimas 3 actividades de inventario  — inventoryService.getMovements
 //   · Alerta con productos con stock bajo  — inventoryService.lowStockAlerts
-//
-// Diferencia clave con main:
-//   · main usaba useLowStock con consultas Supabase directas. Aquí se usa el
-//     endpoint /inventory/stock/low (ya implementado en el backend).
 // =============================================================================
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
@@ -69,7 +65,6 @@ const InformalDashboard = () => {
     try {
       navigation.navigate(tabName);
     } catch (e) {
-      // si el tab no está habilitado en el blueprint actual, no rompemos
       console.warn(`[Dashboard] tab "${tabName}" no disponible:`, e?.message);
     }
   };
@@ -113,77 +108,92 @@ const InformalDashboard = () => {
         <Text style={styles.mainCardSubtext}>Dinero total recibido en caja hoy</Text>
       </View>
 
-      {/* GRID: POR COBRAR + CLIENTES FIADOS */}
-      <View style={styles.gridContainer}>
-        <View style={[styles.gridCard, { marginRight: 8 }]}>
-          <View style={[styles.iconBadge, { backgroundColor: '#FEE2E2' }]}>
-            <Ionicons name="card" size={20} color={colors.danger} />
-          </View>
-          <Text style={styles.gridCardLabel}>Por Cobrar (Fiado)</Text>
-          <Text style={[styles.gridCardValue, { color: colors.danger }]}>{formatMoney(totalDebt)}</Text>
+      {/* TARJETA UNIFICADA DE FIADOS */}
+      <View style={styles.debtUnifiedCard}>
+        <View style={styles.debtUnifiedLeft}>
+          <Text style={styles.debtUnifiedLabel}>Por Cobrar (Fiado)</Text>
+          <Text style={styles.debtUnifiedAmount}>{formatMoney(totalDebt)}</Text>
         </View>
-
-        <View style={[styles.gridCard, { marginLeft: 8 }]}>
-          <View style={[styles.iconBadge, { backgroundColor: '#EFF6FF' }]}>
-            <Ionicons name="people" size={20} color={colors.info} />
-          </View>
-          <Text style={styles.gridCardLabel}>Clientes Fiados</Text>
-          <Text style={styles.gridCardValue}>{debtorsCount} {debtorsCount === 1 ? 'persona' : 'personas'}</Text>
+        <View style={styles.debtUnifiedRight}>
+          <Ionicons name="people" size={20} color={colors.info} style={styles.debtUnifiedIcon} />
+          <Text style={styles.debtUnifiedText}>
+            Clientes fiados: {debtorsCount} {debtorsCount === 1 ? 'persona' : 'personas'}
+          </Text>
         </View>
       </View>
 
       {/* ACCIONES RÁPIDAS */}
       <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
       <View style={styles.quickActionsContainer}>
-
         <TouchableOpacity
-          style={styles.quickActionButton}
+          style={styles.quickActionButtonLeft}
           onPress={() => goToTab('credit')}
         >
-          <View style={styles.quickActionIconContainer}>
-            <Ionicons name="bookmark" size={24} color={colors.successDark} />
+          <View style={styles.quickActionIconContainerLeft}>
+            <Ionicons name="people-outline" size={24} color={colors.info} />
           </View>
-          <View style={styles.quickActionTextContainer}>
-            <Text style={styles.quickActionTitle}>Anotar Fiado</Text>
-            <Text style={styles.quickActionSubtitle}>Registrar nueva deuda o cliente</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.successDark} />
+          <Text style={styles.quickActionTitleLeft}>Anotar Fiado</Text>
+          <Text style={styles.quickActionSubtitle}>Anota a quién le fiaste</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.quickActionButton}
+          style={styles.quickActionButtonRight}
           onPress={() => goToTab('inventory')}
         >
-          <View style={styles.quickActionIconContainer}>
-            <Ionicons name="cube" size={24} color={colors.successDark} />
+          <View style={styles.quickActionIconContainerRight}>
+            <Ionicons name="cube-outline" size={24} color={colors.success} />
           </View>
-          <View style={styles.quickActionTextContainer}>
-            <Text style={styles.quickActionTitle}>Nuevo Producto</Text>
-            <Text style={styles.quickActionSubtitle}>Añadir al inventario</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.successDark} />
+          <Text style={styles.quickActionTitleRight}>Nuevo Producto</Text>
+          <Text style={styles.quickActionSubtitle}>Registra y pon precios</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ACTIVIDADES RECIENTES — últimos movimientos de inventario */}
+      {/* ACTIVIDADES RECIENTES*/}
       <Text style={styles.sectionTitle}>Actividades Recientes</Text>
       <View style={styles.activityCard}>
         {recentMovements.length === 0 ? (
           <Text style={styles.emptyMessage}>Aún no hay movimientos registrados.</Text>
         ) : (
           recentMovements.map((mov, idx) => {
-            const isIn = mov.type === 'in';
-            const iconBg = isIn ? colors.successLight : '#FEE2E2';
-            const iconColor = isIn ? colors.success : colors.danger;
-            const iconName = isIn ? 'arrow-down-circle' : 'arrow-up-circle';
-            const amountColor = isIn ? colors.textSuccess : colors.textError;
+            const isSale = mov.type === 'sale' || mov.reason === 'sale';
+            const isPurchase = mov.type === 'purchase' || mov.reason === 'purchase';
+
+            let iconName = 'cube';
+            let iconColor = colors.info;
+            let iconContainerStyle = styles.activityIconStock;
+            let amountStyle = styles.activityAmountStock;
+            let amountStr = '';
+
             const qty = Number(mov.quantity) || 0;
-            const sign = isIn ? '+' : '-';
+            const price = Number(mov.product_price) || 0;
+
+            if (isSale) {
+              iconName = 'trending-up';
+              iconColor = colors.success;
+              iconContainerStyle = styles.activityIconSale;
+              amountStyle = styles.activityAmountSale;
+              amountStr = `+${formatMoney(qty * price)}`;
+            } else if (isPurchase) {
+              iconName = 'arrow-down-circle';
+              iconColor = colors.danger;
+              iconContainerStyle = styles.activityIconPurchase;
+              amountStyle = styles.activityAmountPurchase;
+              amountStr = `-${formatMoney(qty * price)}`;
+            } else {
+              // Ajuste de Inventario Puro
+              iconName = 'cube';
+              iconColor = colors.info;
+              iconContainerStyle = styles.activityIconStock;
+              amountStyle = styles.activityAmountStock;
+              const isNegative = mov.type === 'out' || mov.type === 'loss' || mov.reason === 'waste';
+              amountStr = `${isNegative ? '-' : '+'}${qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2)} un`;
+            }
+
             return (
               <React.Fragment key={`mov-${idx}`}>
                 <View style={styles.activityRow}>
                   <View style={styles.activityLeft}>
-                    <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
+                    <View style={iconContainerStyle}>
                       <Ionicons name={iconName} size={18} color={iconColor} />
                     </View>
                     <View style={styles.activityInfo}>
@@ -195,8 +205,8 @@ const InformalDashboard = () => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.activityAmount, { color: amountColor }]}>
-                    {sign}{qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2)}
+                  <Text style={amountStyle}>
+                    {amountStr}
                   </Text>
                 </View>
                 {idx < recentMovements.length - 1 && <View style={styles.divider} />}

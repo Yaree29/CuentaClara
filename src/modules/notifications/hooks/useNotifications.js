@@ -21,15 +21,12 @@ export const useNotifications = ({
   const fetchNotifications = useCallback(
     async (options = {}) => {
       if (!user?.id) {
-        console.log('[useNotifications] Skipping fetch - no user id');
         return;
       }
       setLoading(true);
       setError(null);
       try {
-        console.log('[useNotifications] Fetching notifications for user:', user.id);
         const data = await notificationsService.listNotifications(options);
-        console.log('[useNotifications] Got notifications:', data?.length || 0);
         setNotifications(data || []);
       } catch (err) {
         console.error('[useNotifications] Error loading notifications:', err);
@@ -85,9 +82,7 @@ export const useNotifications = ({
           }
         )
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('[useNotifications] Realtime subscription active');
-          }
+          // subscription status
         });
     } catch (err) {
       console.error('[useNotifications] Error setting up realtime:', err);

@@ -105,7 +105,6 @@ const inventoryService = {
       console.warn('[inventoryService] /inventory/products no devolvió array:', data);
       return [];
     }
-    console.log('[inventoryService] productos recibidos del API:', data.length, data);
     return data.filter((item) => item != null && item.id != null).map(mapProduct);
   },
 

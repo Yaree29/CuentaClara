@@ -51,7 +51,10 @@ export const useInformalCredit = () => {
       const [customersData, debtsData, inventoryData] = await Promise.all([
         debtService.getCustomers(),
         debtService.getDebts(),
-        inventoryService.getProducts().catch(() => []),
+        inventoryService.getProducts().catch((e) => {
+          console.error('[InformalCredit] Error al cargar inventario:', e);
+          return [];
+        }),
       ]);
       setCustomers(customersData || []);
       setDebts(debtsData || []);

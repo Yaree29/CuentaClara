@@ -64,6 +64,9 @@ const registerService = {
       categoryId,
       industryTemplateId,
       address,
+      nit,
+      logoUrl,
+      settings,
     } = form;
 
     if (!email || !password || !businessName || !name) {
@@ -87,6 +90,9 @@ const registerService = {
         industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
         ui_mode: uiMode,
         address: address && address.trim() ? address.trim() : null,
+        tax_id: nit || form.taxId || null,
+        logo_url: logoUrl || null,
+        settings: settings || {},
       }),
     });
 

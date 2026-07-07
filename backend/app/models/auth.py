@@ -25,6 +25,9 @@ class RegisterRequest(BaseModel):
     ui_mode: Optional[str] = Field(None, max_length=20)  # "simple" | "advanced"
     # Dirección del negocio — opcional, solo PYME la captura en el paso 3
     address: Optional[str] = Field(None, max_length=255)
+    tax_id: Optional[str] = Field(None, max_length=50)
+    logo_url: Optional[str] = Field(None, max_length=255)
+    settings: Optional[dict] = None
     # auth_user_id ya no es necesario — Supabase Auth genera el UUID internamente
     auth_user_id: Optional[str] = None
 

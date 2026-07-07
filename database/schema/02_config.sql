@@ -7,7 +7,8 @@ CREATE TABLE business_configs (
   tax_rate      DECIMAL(5,2) DEFAULT 0,
   logo_url      VARCHAR(255),
   primary_color VARCHAR(20),
-  language      VARCHAR(5) DEFAULT 'es'
+  language      VARCHAR(5) DEFAULT 'es',
+  settings      JSONB DEFAULT '{}'::jsonb
 );
 
 -- Feature flags por negocio

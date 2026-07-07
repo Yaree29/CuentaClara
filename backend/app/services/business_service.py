@@ -10,7 +10,7 @@ from app.database import supabase_admin
 def get_business(business_id: str):
     """Obtiene la información del negocio incluyendo su categoría."""
     result = supabase_admin.table("businesses")\
-        .select("id, name, category_id, industry_template_id, ui_mode, plan, phone, address, created_at, categories(name)")\
+        .select("id, name, category_id, industry_template_id, ui_mode, plan, phone, address, tax_id, created_at, categories(name)")\
         .eq("id", business_id)\
         .execute()
 
@@ -28,6 +28,7 @@ def get_business(business_id: str):
         "plan": row.get("plan", "free"),
         "phone": row.get("phone"),
         "address": row.get("address"),
+        "tax_id": row.get("tax_id"),
         "created_at": row.get("created_at"),
     }
 
@@ -41,6 +42,8 @@ def update_business(business_id: str, data):
         update_fields["phone"] = data.phone.strip() or None
     if data.address is not None:
         update_fields["address"] = data.address.strip() or None
+    if getattr(data, 'tax_id', None) is not None:
+        update_fields["tax_id"] = data.tax_id.strip() or None
 
     if not update_fields:
         raise ValueError("No se proporcionaron campos para actualizar")
@@ -73,6 +76,7 @@ def get_business_config(business_id: str):
             "logo_url": None,
             "primary_color": None,
             "language": "es",
+            "settings": {},
         }
 
     row = result.data[0]
@@ -84,6 +88,7 @@ def get_business_config(business_id: str):
         "logo_url": row.get("logo_url"),
         "primary_color": row.get("primary_color"),
         "language": row.get("language", "es"),
+        "settings": row.get("settings", {}) or {},
     }
 
 
@@ -102,6 +107,8 @@ def update_business_config(business_id: str, data):
         update_fields["primary_color"] = data.primary_color
     if data.language is not None:
         update_fields["language"] = data.language
+    if getattr(data, 'settings', None) is not None:
+        update_fields["settings"] = data.settings
 
     if not update_fields:
         raise ValueError("No se proporcionaron campos para actualizar")

@@ -22,6 +22,7 @@ CREATE TABLE public.business_configs (
   logo_url character varying,
   primary_color character varying,
   language character varying DEFAULT 'es'::character varying,
+  settings jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT business_configs_pkey PRIMARY KEY (id),
   CONSTRAINT business_configs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id)
 );
@@ -34,6 +35,8 @@ CREATE TABLE public.businesses (
   plan character varying DEFAULT 'free'::character varying CHECK (plan::text = ANY (ARRAY['free'::character varying, 'basic'::character varying, 'pro'::character varying]::text[])),
   phone character varying,
   address text,
+  tax_id character varying,
+  owner_id uuid,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT businesses_pkey PRIMARY KEY (id),
   CONSTRAINT businesses_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id),

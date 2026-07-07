@@ -12,6 +12,7 @@ class BusinessUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    tax_id: Optional[str] = None
 
 
 class BusinessConfigUpdate(BaseModel):
@@ -22,3 +23,4 @@ class BusinessConfigUpdate(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     language: Optional[str] = None
+    settings: Optional[dict] = None

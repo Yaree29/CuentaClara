@@ -24,7 +24,7 @@ DEFAULT_INFORMAL_MODULES = ['sales', 'credit', 'inventory']
 BASE_MODULES = ['dashboard', 'profile']
 # Lista blanca para evitar que features con nombres inválidos lleguen al frontend
 ALL_VALID_MODULES = {
-    'inventory', 'sales', 'credit', 'billing', 'cash', 'staff', 'purchases'
+    'inventory', 'sales', 'credit', 'billing', 'cash', 'staff', 'purchases', 'recipes'
 }
 
 
@@ -74,6 +74,10 @@ def register_business(data):
         # address solo se incluye si el frontend lo envió (lo captura el paso 3 de PYME)
         if data.address and data.address.strip():
             business_payload["address"] = data.address.strip()
+        # tax_id (RUC/NIT)
+        if getattr(data, "tax_id", None) and data.tax_id.strip():
+            business_payload["tax_id"] = data.tax_id.strip()
+            
         business = supabase_admin.table("businesses").insert(business_payload).execute()
     except Exception as e:
         supabase_admin.auth.admin.delete_user(auth_user_id)
@@ -82,24 +86,62 @@ def register_business(data):
     business_id = business.data[0]["id"]
 
     # 5. Crear configuración por defecto del negocio
-    supabase_admin.table("business_configs").insert({
+    config_payload = {
         "business_id": business_id,
         "currency": "USD",
         "weight_unit": "kg",
         "tax_rate": 7.00,
-        "language": "es"
-    }).execute()
+        "language": "es",
+        "settings": getattr(data, "settings", {}) or {}
+    }
+    if getattr(data, "logo_url", None) and data.logo_url.strip():
+        config_payload["logo_url"] = data.logo_url.strip()
+        
+    supabase_admin.table("business_configs").insert(config_payload).execute()
 
-    # 6. Activar features según el template de industria o módulos por defecto
+    # 6. Activar features según la categoría, plantilla de industria o módulos por defecto (onboarding adaptativo)
     #    Los features son la fuente de verdad para qué tabs ve el usuario en la app
     modules_to_activate = DEFAULT_INFORMAL_MODULES
-    if industry_template_id:
-        template = supabase_admin.table("industry_templates")\
-            .select("default_modules")\
-            .eq("id", industry_template_id)\
-            .execute()
-        if template.data:
-            modules_to_activate = template.data[0]["default_modules"]
+    if (data.ui_mode or "simple") == "advanced":
+        # Es PYME - determinar módulos basados en la categoría seleccionada y respuestas operativas
+        category_id = data.category_id
+        settings_dict = getattr(data, "settings", {}) or {}
+        
+        # Mapear de forma flexible (por ID o por template)
+        # 1 o 9 = Alimentos (Carnes, Mariscos, Verduras)
+        # 2 o 3 = Servicios (Estilista, Barbería, Técnicos)
+        # 4, 5, 6, 7, 11 = Comercio (MiniSuper, Tiendas, Ferreterías)
+        # 8 o 10 = Alimentos Preparados (Cafeterías, Fondas, Repostería)
+        if category_id in [1, 9] or industry_template_id in [1, 9]:
+            modules_to_activate = ['inventory', 'sales', 'purchases', 'cash', 'staff', 'credit']
+        elif category_id in [2, 3] or industry_template_id in [2, 3]:
+            modules_to_activate = ['sales', 'cash', 'staff', 'credit']
+            # Vende productos físicos -> activar inventario y compras
+            if settings_dict.get('sell_physical_products') in [True, 'Sí', 'si', 'SÍ', 'SI']:
+                modules_to_activate.append('inventory')
+                modules_to_activate.append('purchases')
+        elif category_id in [4, 5, 6, 7, 11] or industry_template_id in [4, 5, 6, 7, 11]:
+            modules_to_activate = ['inventory', 'sales', 'purchases', 'cash', 'credit']
+        elif category_id in [8, 10] or industry_template_id in [8, 10]:
+            modules_to_activate = ['inventory', 'sales', 'cash', 'staff', 'credit']
+            # Transforma materia prima -> activar recetas
+            if settings_dict.get('transforms_raw_material') in [True, 'Sí', 'si', 'SÍ', 'SI']:
+                modules_to_activate.append('recipes')
+        else:
+            modules_to_activate = ['inventory', 'sales', 'credit', 'cash']
+        
+        # Habilitar facturación/billing de forma general para PYME
+        if 'billing' not in modules_to_activate:
+            modules_to_activate.append('billing')
+    else:
+        # Modo simple/informal
+        if industry_template_id:
+            template = supabase_admin.table("industry_templates")\
+                .select("default_modules")\
+                .eq("id", industry_template_id)\
+                .execute()
+            if template.data:
+                modules_to_activate = template.data[0]["default_modules"]
 
     for module in modules_to_activate:
         supabase_admin.table("features").insert({
@@ -211,7 +253,7 @@ def get_user_context(user_id: str) -> dict:
     business_id = profile.data["business_id"]
 
     business = supabase_admin.table("businesses")\
-        .select("id, name, plan, ui_mode, category_id, phone, address, created_at")\
+        .select("id, name, plan, ui_mode, category_id, phone, address, tax_id, created_at")\
         .eq("id", business_id)\
         .single()\
         .execute()
@@ -226,8 +268,21 @@ def get_user_context(user_id: str) -> dict:
     features_data = features.data or []
     business_data = business.data or {}
 
+    # Obtener configuración del negocio (logo y configuraciones dinámicas de RUC/NIT)
+    config = supabase_admin.table("business_configs")\
+        .select("logo_url, settings")\
+        .eq("business_id", business_id)\
+        .execute()
+    
+    config_data = config.data[0] if config.data else {}
+    merged_business = {
+        **business_data,
+        "logo_url": config_data.get("logo_url"),
+        "settings": config_data.get("settings", {}) or {}
+    }
+
     return {
-        "business": business_data,
+        "business": merged_business,
         "features": features_data,
         "enabled_modules": normalize_modules(features_data),
         # ui_mode "advanced" = pyme (pantallas completas), "simple" = informal (flujo rápido)

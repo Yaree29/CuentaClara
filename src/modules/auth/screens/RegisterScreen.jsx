@@ -1,17 +1,3 @@
-// =============================================================================
-// MODIFICADO: 2026-05-20
-// Propósito: Pantalla de registro de 3 pasos — datos básicos, selección de
-//            perfil (informal / PYME) y configuración específica según el tipo.
-// Cambios:
-//   - Paso 3 PYME: se restauraron los campos NIT y Dirección que habían
-//     quedado fuera en una edición anterior.
-//   - Combobox de plantillas: se eliminó el ScrollView anidado y el maxHeight
-//     fijo (220px) que impedía ver todas las opciones en Android. Ahora las
-//     opciones se renderizan en línea y el ScrollView padre del formulario
-//     gestiona el desplazamiento de toda la pantalla.
-//   - Se eliminaron los botones "← Volver" duplicados dentro de cada paso;
-//     solo queda el botón global "Atrás" en la parte superior.
-// =============================================================================
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
@@ -44,9 +30,34 @@ const RegisterScreen = ({ navigation }) => {
     phone: '',
     businessName: '',
     profileType: '',
-    industryTemplateId: null, // solo para PYME — determina las pestañas del negocio
+    industryTemplateId: null, // Sincronizado con IDs reales (1-5)
+    categoryId: null,
     nit: '',
     address: '',
+    logoUrl: '',
+    settings: {
+      // Alimentos (ID: 1)
+      unitOfMeasure: 'Kg', 
+      wasteMargin: '0',
+      useDigitalScale: 'No',
+      
+      // Servicios (ID: 2)
+      employeeCommission: 'No',
+      sellPhysicalProducts: 'No',
+      
+      // Comercio (ID: 3)
+      useBarcodes: 'No',
+      
+      // Restaurante / Alimentos Preparados (ID: 4)
+      transformsRawMaterial: 'No',
+      manageTips: 'No',
+      
+      // General (ID: 5 o Default)
+      salesFormat: 'Mostrador', 
+      taxRate: '7.00',
+      simplifiedInventory: 'Sí',
+      basicReports: 'Sí',
+    },
     businessType: '',
     avgPrice: '',
     taxEnabled: false,
@@ -65,7 +76,7 @@ const RegisterScreen = ({ navigation }) => {
   const [passwordStrength, setPasswordStrength] = useState({ level: 'débil', percentage: 0 });
 
   const updateField = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
     }
@@ -74,42 +85,36 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
 
+  const updateSettingField = (key, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [key]: value,
+      },
+    }));
+  };
 
   const handleNext = () => {
     const newErrors = {};
 
     if (step === 1) {
-      // Validar nombre
       const nameValidation = validateName(formData.name);
-      if (!nameValidation.valid) {
-        newErrors.name = nameValidation.error;
-      }
+      if (!nameValidation.valid) newErrors.name = nameValidation.error;
 
-      // Validar email
       const emailValidation = validateEmail(formData.email);
-      if (!emailValidation.valid) {
-        newErrors.email = emailValidation.error;
-      }
+      if (!emailValidation.valid) newErrors.email = emailValidation.error;
 
-      // Validar contraseña
       const passwordValidation = validatePassword(formData.password);
-      if (!passwordValidation.valid) {
-        newErrors.password = passwordValidation.error;
-      }
+      if (!passwordValidation.valid) newErrors.password = passwordValidation.error;
 
-      // Validar teléfono (opcional)
       if (formData.phone) {
         const phoneValidation = validatePhone(formData.phone);
-        if (!phoneValidation.valid) {
-          newErrors.phone = phoneValidation.error;
-        }
+        if (!phoneValidation.valid) newErrors.phone = phoneValidation.error;
       }
 
-      // Validar nombre del negocio
       const businessValidation = validateBusinessName(formData.businessName);
-      if (!businessValidation.valid) {
-        newErrors.businessName = businessValidation.error;
-      }
+      if (!businessValidation.valid) newErrors.businessName = businessValidation.error;
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
@@ -125,13 +130,12 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   const handleBack = () => {
-  if (step > 1) {
-    setStep(step - 1);
-  } else {
-    navigation.goBack();
-  }
-};
-
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const handleRegister = () => {
     (async () => {
@@ -162,7 +166,21 @@ const RegisterScreen = ({ navigation }) => {
           setErrors(newErrors);
           const firstError = Object.values(newErrors)[0];
           Alert.alert('Datos inválidos', firstError);
+          setLoading(false);
           return;
+        }
+
+        if (formData.profileType === 'empresa') {
+          if (!formData.nit || !formData.nit.trim()) {
+            Alert.alert('Datos inválidos', 'El RUC/NIT/Identificación Tributaria es obligatorio.');
+            setLoading(false);
+            return;
+          }
+          if (!formData.industryTemplateId) {
+            Alert.alert('Datos inválidos', 'Debes seleccionar la Categoría de tu Negocio.');
+            setLoading(false);
+            return;
+          }
         }
 
         const payload = {
@@ -212,7 +230,6 @@ const RegisterScreen = ({ navigation }) => {
             ]
           );
         } else {
-          // Si no está disponible, login automático directamente
           setLogin(result.user, result.token);
           Alert.alert('Registro', 'Registro completado correctamente');
         }
@@ -262,7 +279,7 @@ const RegisterScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.container}>
         {step > 1 && (
           <TouchableOpacity
-            onPress={() => setStep(step - 1)}
+            onPress={handleBack}
             style={{ alignSelf: 'flex-start', marginBottom: 12 }}
           >
             <Text style={styles.linkText}>Atrás</Text>
@@ -377,7 +394,6 @@ const RegisterScreen = ({ navigation }) => {
               >
                 <Text style={styles.buttonText}>Empresa PYME</Text>
               </TouchableOpacity>
-              
             </View>
           </>
         )}
@@ -387,21 +403,30 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.title}>Configuración Empresa</Text>
 
             <View style={styles.form}>
+              <Text style={styles.sectionTitle}>Sección General</Text>
+              
               <TextInput
                 style={styles.input}
-                placeholder="NIT / Identificación"
+                placeholder="RUC / NIT / Identificación Tributaria *"
                 value={formData.nit}
                 onChangeText={(val) => updateField('nit', val)}
               />
 
               <TextInput
                 style={styles.input}
-                placeholder="Dirección"
+                placeholder="Dirección Física"
                 value={formData.address}
                 onChangeText={(val) => updateField('address', val)}
               />
 
-              <Text style={styles.subtitle}>Tipo de negocio</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="URL del Logo (opcional)"
+                value={formData.logoUrl}
+                onChangeText={(val) => updateField('logoUrl', val)}
+              />
+
+              <Text style={styles.sectionTitle}>Categoría de Negocio</Text>
 
               {/* Combobox de plantillas */}
               <TouchableOpacity
@@ -412,9 +437,9 @@ const RegisterScreen = ({ navigation }) => {
                   {formData.industryTemplateId
                     ? (() => {
                         const t = templates.find((t) => t.id === formData.industryTemplateId);
-                        return t ? `${t.icon}  ${t.name}` : 'Selecciona el tipo de negocio';
+                        return t ? `${t.icon}  ${t.name}` : 'Selecciona la categoría';
                       })()
-                    : 'Selecciona el tipo de negocio ▾'}
+                    : 'Selecciona la categoría del negocio ▾'}
                 </Text>
               </TouchableOpacity>
 
@@ -428,6 +453,7 @@ const RegisterScreen = ({ navigation }) => {
                         key={t.id}
                         onPress={() => {
                           updateField('industryTemplateId', t.id);
+                          updateField('categoryId', t.id); 
                           setTemplatePickerOpen(false);
                         }}
                         style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
@@ -437,6 +463,230 @@ const RegisterScreen = ({ navigation }) => {
                     ))
                   )}
                 </View>
+              )}
+
+              {/* CONFIGURACIÓN OPERATIVA DINÁMICA CORREGIDA */}
+              {formData.industryTemplateId && (
+                <>
+                  <Text style={styles.sectionTitle}>Configuración Operativa</Text>
+                  <View style={styles.sectionCard}>
+                    
+                    {/* ID 1: Alimentos (Carnes, Mariscos, Verduras, etc.) */}
+                    {formData.industryTemplateId === 1 && (
+                      <>
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Unidad de Medida</Text>
+                          <View style={styles.inputRow}>
+                            {['Kg', 'Lb', 'Ambos'].map((unit) => (
+                              <TouchableOpacity
+                                key={unit}
+                                style={[styles.smallBtn, formData.settings.unitOfMeasure === unit && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('unitOfMeasure', unit)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.unitOfMeasure === unit && styles.smallBtnTextActive]}>
+                                  {unit}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                        
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Merma Estimada (%)</Text>
+                          <TextInput
+                            style={[styles.input, { padding: 8, width: 80, textAlign: 'center' }]}
+                            keyboardType="numeric"
+                            value={formData.settings.wasteMargin}
+                            onChangeText={(val) => updateSettingField('wasteMargin', val)}
+                            placeholder="0"
+                          />
+                        </View>
+
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>¿Usa balanza digital?</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.useDigitalScale === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('useDigitalScale', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.useDigitalScale === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                    {/* ID 2: Servicios (Estilista, Barbería, Técnicos, etc.) */}
+                    {formData.industryTemplateId === 2 && (
+                      <>
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Cobra por comisión</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.employeeCommission === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('employeeCommission', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.employeeCommission === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Vende productos físicos</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.sellPhysicalProducts === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('sellPhysicalProducts', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.sellPhysicalProducts === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                    {/* ID 3: Comercio (MiniSuper, Tienda de ropa, Ferreterías, etc.) */}
+                    {formData.industryTemplateId === 3 && (
+                      <>
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Usa códigos de barras</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.useBarcodes === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('useBarcodes', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.useBarcodes === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </>
+                    )}
+
+                    {/* ID 4: Restaurante / Alimentos Preparados (Panadería, Cafeterías, etc.) */}
+                    {formData.industryTemplateId === 4 && (
+                      <>
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Transforma materia prima</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.transformsRawMaterial === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('transformsRawMaterial', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.transformsRawMaterial === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+
+                        <View style={styles.rowContainer}>
+                          <Text style={styles.label}>Maneja propinas</Text>
+                          <View style={styles.inputRow}>
+                            {['Sí', 'No'].map((opt) => (
+                              <TouchableOpacity
+                                key={opt}
+                                style={[styles.smallBtn, formData.settings.manageTips === opt && styles.smallBtnActive]}
+                                onPress={() => updateSettingField('manageTips', opt)}
+                              >
+                                <Text style={[styles.smallBtnText, formData.settings.manageTips === opt && styles.smallBtnTextActive]}>
+                                  {opt}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  <Text style={styles.sectionTitle}>Configuración General</Text>
+                  <View style={styles.sectionCard}>
+                    <View style={styles.rowContainer}>
+                      <Text style={styles.label}>Forma de venta</Text>
+                      <View style={styles.inputRow}>
+                        {['Mostrador', 'Delivery', 'Ambos'].map((mode) => (
+                          <TouchableOpacity
+                            key={mode}
+                            style={[styles.smallBtn, formData.settings.salesFormat === mode && styles.smallBtnActive]}
+                            onPress={() => updateSettingField('salesFormat', mode)}
+                          >
+                            <Text style={[styles.smallBtnText, formData.settings.salesFormat === mode && styles.smallBtnTextActive]}>
+                              {mode}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.rowContainer}>
+                      <Text style={styles.label}>Tasa de impuesto (%)</Text>
+                      <TextInput
+                        style={[styles.input, { padding: 8, width: 80, textAlign: 'center' }]}
+                        keyboardType="numeric"
+                        value={formData.settings.taxRate}
+                        onChangeText={(val) => updateSettingField('taxRate', val)}
+                        placeholder="7.00"
+                      />
+                    </View>
+
+                    <View style={styles.rowContainer}>
+                      <Text style={styles.label}>Inventario simplificado</Text>
+                      <View style={styles.inputRow}>
+                        {['Sí', 'No'].map((opt) => (
+                          <TouchableOpacity
+                            key={opt}
+                            style={[styles.smallBtn, formData.settings.simplifiedInventory === opt && styles.smallBtnActive]}
+                            onPress={() => updateSettingField('simplifiedInventory', opt)}
+                          >
+                            <Text style={[styles.smallBtnText, formData.settings.simplifiedInventory === opt && styles.smallBtnTextActive]}>
+                              {opt}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.rowContainer}>
+                      <Text style={styles.label}>Reportes básicos</Text>
+                      <View style={styles.inputRow}>
+                        {['Sí', 'No'].map((opt) => (
+                          <TouchableOpacity
+                            key={opt}
+                            style={[styles.smallBtn, formData.settings.basicReports === opt && styles.smallBtnActive]}
+                            onPress={() => updateSettingField('basicReports', opt)}
+                          >
+                            <Text style={[styles.smallBtnText, formData.settings.basicReports === opt && styles.smallBtnTextActive]}>
+                              {opt}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                </>
               )}
 
               <TouchableOpacity
@@ -497,6 +747,7 @@ const RegisterScreen = ({ navigation }) => {
                 style={styles.button}
                 onPress={async () => {
                   try {
+                    const biometricService = require('../services/biometricService').default;
                     setBiometricLoading(true);
                     await linkBiometricSession(registeredUser.user, registeredUser.token);
                     setLogin(registeredUser.user, registeredUser.token);

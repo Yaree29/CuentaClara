@@ -17,6 +17,8 @@ import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
 
+import useAuthStore from '../../store/useAuthStore';
+
 const Tab = createBottomTabNavigator();
 
 const TAB_CONFIG = {
@@ -106,6 +108,12 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 };
 
 const MainNavigator = () => {
+  const user = useAuthStore((state) => state.user);
+  const enabledModules = user?.enabled_modules || ['dashboard', 'sales', 'credit', 'inventory'];
+  
+  // Filtrar los módulos que se mostrarán en la barra de navegación inferior
+  const visibleTabs = TAB_ORDER.filter((mod) => enabledModules.includes(mod));
+
   return (
     <Tab.Navigator 
       screenOptions={{ 
@@ -135,7 +143,7 @@ const MainNavigator = () => {
         },
       }}
     >
-      {TAB_ORDER.map((mod) => {
+      {visibleTabs.map((mod) => {
         const { component, label, icon: IconComponent } = TAB_CONFIG[mod];
         return (
           <Tab.Screen

@@ -34,6 +34,8 @@ CREATE TABLE businesses (
   plan                 VARCHAR(20) DEFAULT 'free'   CHECK (plan IN ('free','basic','pro')),
   phone                VARCHAR(30),
   address              TEXT,
+  tax_id               VARCHAR(50),
+  owner_id             UUID,
   created_at           TIMESTAMPTZ DEFAULT NOW()
 );
 

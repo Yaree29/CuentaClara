@@ -2,13 +2,18 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import useBlueprintStore from '../../store/useBlueprintStore';
 
 // Iconos Heroicons Solid
-import { 
-  HomeIcon, 
-  BanknotesIcon, 
-  CreditCardIcon, 
-  ArchiveBoxIcon 
+import {
+  HomeIcon,
+  BanknotesIcon,
+  CreditCardIcon,
+  ArchiveBoxIcon,
+  TruckIcon,
+  DocumentTextIcon,
+  UserGroupIcon,
+  CalculatorIcon,
 } from 'react-native-heroicons/solid';
 
 // Pantallas
@@ -16,19 +21,48 @@ import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
-
-import useAuthStore from '../../store/useAuthStore';
+import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
+import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
+import StaffScreen from '../../modules/staff/screens/StaffScreen';
+import CashScreen from '../../modules/cash/screens/CashScreen';
 
 const Tab = createBottomTabNavigator();
 
+// Registro de todos los módulos que pueden aparecer como tab. La clave debe
+// coincidir con el nombre que devuelve GET /auth/context en enabled_modules
+// (ver auth_service.ALL_VALID_MODULES + BASE_MODULES en el backend).
 const TAB_CONFIG = {
   dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
   sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
   credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
   inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
+  purchases: { component: PurchasesScreen, label: 'Compras',     icon: TruckIcon },
+  billing:   { component: BillingScreen,   label: 'Facturación', icon: DocumentTextIcon },
+  staff:     { component: StaffScreen,     label: 'Personal',    icon: UserGroupIcon },
+  cash:      { component: CashScreen,      label: 'Caja',        icon: CalculatorIcon },
 };
 
-const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
+// Orden canónico: define la posición de cada tab si está habilitado, no cuáles
+// se muestran. "dashboard" siempre va primero (BASE_MODULES lo garantiza).
+const CANONICAL_TAB_ORDER = [
+  'dashboard', 'sales', 'billing', 'purchases', 'credit', 'inventory', 'cash', 'staff',
+];
+
+// Fallback usado si el blueprint aún no cargó (ej. primer render tras login) —
+// reproduce el set de tabs que tenía la app antes de esta pantalla, para que
+// nunca se muestre una barra de tabs vacía o rota.
+const FALLBACK_TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
+
+const resolveTabOrder = (enabledModules) => {
+  if (!enabledModules || enabledModules.length === 0) {
+    return FALLBACK_TAB_ORDER;
+  }
+
+  const enabled = new Set(enabledModules);
+  const tabs = CANONICAL_TAB_ORDER.filter((mod) => mod !== 'dashboard' && enabled.has(mod) && TAB_CONFIG[mod]);
+
+  return ['dashboard', ...tabs];
+};
 
 // Componente animado personalizado para los iconos del Tab Bar
 const AnimatedTabBarIcon = ({ focused, children }) => {
@@ -108,11 +142,8 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 };
 
 const MainNavigator = () => {
-  const user = useAuthStore((state) => state.user);
-  const enabledModules = user?.enabled_modules || ['dashboard', 'sales', 'credit', 'inventory'];
-  
-  // Filtrar los módulos que se mostrarán en la barra de navegación inferior
-  const visibleTabs = TAB_ORDER.filter((mod) => enabledModules.includes(mod));
+  const enabledModules = useBlueprintStore((state) => state.modules);
+  const visibleTabs = resolveTabOrder(enabledModules);
 
   return (
     <Tab.Navigator 

@@ -4,19 +4,23 @@ import colors from '../../../theme/colors';
 export default StyleSheet.create({
   container: {
     width: '100%',
+    alignItems: 'center',
   },
-  title: {
+  logo: {
+    width: 96,
+    height: 96,
+    resizeMode: 'contain',
+    marginBottom: 8,
+  },
+  brandTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
     marginBottom: 24,
+    textAlign: 'center',
   },
   form: {
+    width: '100%',
     gap: 16,
   },
   input: {
@@ -71,7 +75,17 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  biometricSection: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  helloText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
   biometricButton: {
+    width: '100%',
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.primary,
@@ -84,73 +98,22 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 24,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalActions: {
-    gap: 12,
-  },
-  modalPrimaryButton: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalPrimaryButtonText: {
-    color: colors.textButton,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalSecondaryButton: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalSecondaryButtonText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonDisabled: {
-    backgroundColor: colors.disabledButton,
-  },
-  modalErrorText: {
-    color: colors.textError,
-    fontSize: 14,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
   errorText: {
     color: colors.textError,
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  registerLink: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  registerLinkText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  registerLinkTextBold: {
+    color: colors.textLink,
+    fontWeight: '700',
   },
 });

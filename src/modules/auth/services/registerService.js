@@ -67,6 +67,9 @@ const registerService = {
       nit,
       logoUrl,
       settings,
+      businessType,
+      avgPrice,
+      taxEnabled,
     } = form;
 
     if (!email || !password || !businessName || !name) {
@@ -77,6 +80,19 @@ const registerService = {
     // "empresa" → ui_mode "advanced" (pyme con pantallas completas)
     // cualquier otro → ui_mode "simple" (flujo rápido para informales)
     const uiMode = profileType === 'empresa' ? 'advanced' : 'simple';
+    const isInformal = profileType !== 'empresa';
+
+    // Datos del paso "emprendedor" (qué vendes / precio promedio) se guardan
+    // en settings junto a la metadata de onboarding — no tienen columna propia.
+    const mergedSettings = {
+      ...(settings || {}),
+      ...(isInformal
+        ? {
+            business_type: businessType || null,
+            avg_price: avgPrice ? Number(avgPrice) : null,
+          }
+        : {}),
+    };
 
     const data = await apiRequest('/auth/register', {
       method: 'POST',
@@ -92,7 +108,8 @@ const registerService = {
         address: address && address.trim() ? address.trim() : null,
         tax_id: nit || form.taxId || null,
         logo_url: logoUrl || null,
-        settings: settings || {},
+        settings: mergedSettings,
+        tax_enabled: !!taxEnabled,
       }),
     });
 

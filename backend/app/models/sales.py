@@ -9,9 +9,12 @@ class SaleItem(BaseModel):
 
 class QuickSaleRequest(BaseModel):
     items: List[SaleItem]
-    payment_method: str  # cash | card | transfer
+    payment_method: Optional[str] = "cash"  # cash | card | transfer — ignorado si is_credit
     invoice_type_id: int = 1  # por defecto: Venta
     notes: Optional[str] = None
+    # Venta a fiado: la factura queda "pending" y no se crea payment. El
+    # frontend crea la deuda aparte con POST /credit/debts (invoice_id).
+    is_credit: bool = False
 
 class SaleResponse(BaseModel):
     invoice_id: int

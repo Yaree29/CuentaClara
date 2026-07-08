@@ -5,7 +5,7 @@ import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../hooks/useAuth';
-import { 
+import {
   validateEmail, 
   validatePassword, 
   validateName, 
@@ -19,8 +19,6 @@ const RegisterScreen = ({ navigation }) => {
   const { linkBiometricSession, isBiometricAvailable } = useAuth();
   const [step, setStep] = useState(1);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState(null);
-  const [biometricLoading, setBiometricLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -211,14 +209,8 @@ const RegisterScreen = ({ navigation }) => {
                 text: 'Sí, activar',
                 onPress: async () => {
                   try {
-                    const biometricService = require('../services/biometricService').default;
-                    const available = await biometricService.isAvailable();
-                    if (available) {
-                      await biometricService.saveSession({ user: result.user, token: result.token });
-                      Alert.alert('¡Listo!', 'Biometría vinculada correctamente.');
-                    } else {
-                      Alert.alert('Aviso', 'Tu dispositivo no soporta biometría.');
-                    }
+                    await linkBiometricSession(result.user, result.token);
+                    Alert.alert('¡Listo!', 'Biometría vinculada correctamente.');
                   } catch (e) {
                     console.error(e);
                     Alert.alert('Error', 'No se pudo vincular la biometría.');
@@ -730,50 +722,6 @@ const RegisterScreen = ({ navigation }) => {
 
               <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>Finalizar</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {step === 4 && registeredUser && (
-          <>
-            <Text style={styles.title}>Vinculación de Huella</Text>
-            <Text style={styles.subtitle}>
-              ¿Deseas vincular tu huella digital para inicios de sesión rápidos?
-            </Text>
-
-            <View style={styles.form}>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={async () => {
-                  try {
-                    const biometricService = require('../services/biometricService').default;
-                    setBiometricLoading(true);
-                    await linkBiometricSession(registeredUser.user, registeredUser.token);
-                    setLogin(registeredUser.user, registeredUser.token);
-                    Alert.alert('Éxito', 'Huella vinculada correctamente. ¡Bienvenido!');
-                  } catch (err) {
-                    Alert.alert('Error', 'No se pudo vincular la huella. Intenta de nuevo.');
-                    console.error('Biometric linking error:', err);
-                  } finally {
-                    setBiometricLoading(false);
-                  }
-                }}
-                disabled={biometricLoading}
-              >
-                <Text style={styles.buttonText}>
-                  {biometricLoading ? 'Vinculando...' : 'Sí, vincular huella'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#6c757d' }]}
-                onPress={() => {
-                  setLogin(registeredUser.user, registeredUser.token);
-                  Alert.alert('Registro', 'Registro completado correctamente');
-                }}
-              >
-                <Text style={styles.buttonText}>No, hacerlo después</Text>
               </TouchableOpacity>
             </View>
           </>

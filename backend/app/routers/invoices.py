@@ -11,7 +11,7 @@ def list_invoices(
     current_user: dict = Depends(get_current_user)
 ):
     query = supabase_admin.table("invoices")\
-        .select("*, invoice_types(name, prefix), payments(method)")\
+        .select("*, invoice_types(name, prefix), payments(method), invoice_items(quantity, unit_price, products(name))")\
         .eq("business_id", current_user["business_id"])\
         .order("created_at", desc=True)\
         .limit(limit)

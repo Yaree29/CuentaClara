@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.models.auth import RegisterRequest, LoginRequest, MFAVerifyRequest, TokenResponse
+from app.models.auth import RegisterRequest, LoginRequest, MFAVerifyRequest, TokenResponse, ResetPasswordRequest
 from app.services import auth_service
 from app.database import supabase_admin
 
@@ -51,6 +51,17 @@ def register(data: RegisterRequest):
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 
+@router.post("/reset-password", summary="Enviar correo de recuperación de contraseña")
+def reset_password(data: ResetPasswordRequest):
+    # Siempre responde el mismo mensaje genérico, exista o no el correo,
+    # para no filtrar qué emails están registrados (anti-enumeración).
+    try:
+        auth_service.request_password_reset(data.email)
+    except Exception:
+        pass
+    return {"message": "Si el correo existe, se envió un enlace de recuperación."}
+
+
 @router.post("/login", response_model=TokenResponse, summary="Iniciar sesión")
 def login(data: LoginRequest):
     try:
@@ -64,7 +75,7 @@ def login(data: LoginRequest):
 @router.get("/me", summary="Datos del usuario autenticado")
 def get_me(current_user: dict = Depends(get_current_user)):
     user = supabase_admin.table("users")\
-        .select("id, name, email, role, phone, created_at")\
+        .select("id, name, email, role, phone, created_at, mfa_enabled")\
         .eq("id", current_user["sub"])\
         .execute()
     return user.data[0] if user.data else {}

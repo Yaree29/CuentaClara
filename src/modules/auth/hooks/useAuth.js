@@ -25,34 +25,27 @@ export const useAuth = () => {
     }
   };
 
-  const loginWithBiometrics = async() => {
+  // Flujo C (login diario de un solo toque): un único prompt nativo dentro
+  // de unlockWithBiometrics(). Devuelve {success, reason} en vez de lanzar,
+  // así la pantalla decide qué mostrar según la razón (cancelado, bloqueado, etc).
+  const loginWithBiometrics = async () => {
     setLoading(true);
     setError(null);
     try {
-        const available = await biometricService.isAvailable();
-        if (!available) {
-            setError('Biometría no disponible en este dispositivo');
-            return null;
-        }
-        const session = await biometricService.getSession();
-        if (!session?.user || !session?.token) {
-            setError('No hay una sesión biométrica vinculada');
-            return null;
-        }
-        setLogin(session.user, session.token);
-        return session;
-    } catch (err) {
-        const errorMsg = err.message || 'No se pudo autenticar con huella';
-        setError(errorMsg);
-        throw err;
+      const result = await biometricService.unlockWithBiometrics();
+      if (!result.success) {
+        return { success: false, reason: result.reason };
+      }
+      setLogin(result.session.user, result.session.token);
+      return { success: true };
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const linkBiometricSession = async(user, token) => {
     try {
-        await biometricService.saveSession({ user, token });
+        await biometricService.enableBiometric({ user, token });
     } catch (err) {
         setError(err.message || 'No se pudo vincular la huella');
         throw err;
@@ -60,15 +53,17 @@ export const useAuth = () => {
   };
 
   const unlinkBiometricSession = async() => {
-    await biometricService.clearSession();
+    await biometricService.disableBiometric();
   };
 
   const isBiometricAvailable = async() => biometricService.isAvailable();
-  const isBiometricEnabled = async() => biometricService.isEnabled();
+  const isBiometricEnabled = async() => biometricService.isBiometricEnabled();
 
+  // Cerrar sesión NO apaga la huella ni borra el token seguro — es una
+  // propiedad del dispositivo/cuenta, no de la sesión activa (estilo bancario).
+  // Solo unlinkBiometricSession()/disableBiometric() la apaga de verdad.
   const logout = async() => {
     await authService.logout();
-    await biometricService.clearSession();
     setLogout();
   };
 

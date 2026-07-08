@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../../store/useAuthStore';
-import { useBiometrics } from '../../auth/hooks/useBiometrics';
 import biometricService from '../../auth/services/biometricService';
 import colors from '../../../theme/colors';
 import styles from '../styles/profile.styles';
@@ -22,45 +21,48 @@ const MenuSection = ({ title, children }) => (
 const SecuritySettingsScreen = () => {
   const navigation = useNavigation();
   const { user, updateUser } = useAuthStore();
-  const { verifyIdentity, isAuthenticating } = useBiometrics();
-  
+
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
-  const [is2FAEnabled, setIs2FAEnabled] = useState(user?.is2FAEnabled || false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(user?.mfa_enabled ?? user?.is2FAEnabled ?? false);
 
   useEffect(() => {
     checkBiometricStatus();
   }, []);
 
   const checkBiometricStatus = async () => {
-    const enabled = await biometricService.isEnabled();
+    const enabled = await biometricService.isBiometricEnabled();
     setIsBiometricEnabled(enabled);
   };
 
+  // Flujo B: el propio guardado protegido (enableBiometric) ya pide la huella
+  // como parte de la operación — un solo prompt, sin pasos extra.
   const toggleBiometrics = async (value) => {
-    if (value) {
-      const success = await verifyIdentity();
-      if (success) {
-        try {
-          await biometricService.saveSession({ email: user.email });
-          setIsBiometricEnabled(true);
-          Alert.alert('Éxito', 'Huella biométrica activada correctamente.');
-        } catch (err) {
-          Alert.alert('Error', 'No se pudo activar la huella.');
-        }
+    setBiometricBusy(true);
+    try {
+      if (value) {
+        const { token } = useAuthStore.getState();
+        await biometricService.enableBiometric({ user, token });
+        setIsBiometricEnabled(true);
+        Alert.alert('Éxito', 'Huella biométrica activada correctamente.');
+      } else {
+        await biometricService.disableBiometric();
+        setIsBiometricEnabled(false);
+        Alert.alert('Info', 'Huella biométrica desactivada.');
       }
-    } else {
-      await biometricService.clearSession();
-      setIsBiometricEnabled(false);
-      Alert.alert('Info', 'Huella biométrica desactivada.');
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo actualizar la huella.');
+    } finally {
+      setBiometricBusy(false);
     }
   };
 
   const toggle2FA = (value) => {
     if (value) {
-      navigation.navigate('Token2FA', { 
+      navigation.navigate('Token2FA', {
         actionLabel: 'Activar 2FA',
-        description: 'Ingresa el código de 6 dígitos de tu aplicación de autenticación para activar esta capa de seguridad.',
-        actionType: 'generic',
+        description: 'Escanea el código QR con tu app autenticadora (Google Authenticator, Authy) e ingresa el código de 6 dígitos que genera.',
+        actionType: 'enable_mfa',
         onSuccess: () => {
           setIs2FAEnabled(true);
           updateUser({ is2FAEnabled: true });
@@ -147,7 +149,7 @@ const SecuritySettingsScreen = () => {
         </MenuSection>
       </ScrollView>
 
-      {isAuthenticating && (
+      {biometricBusy && (
         <View style={securityStyles.loadingOverlay}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>

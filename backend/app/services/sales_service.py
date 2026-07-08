@@ -49,12 +49,14 @@ def create_quick_sale(business_id: str, user_id: str, data):
     total_with_tax = total + tax_amount
 
     # 3. Crear la factura
+    # Venta a fiado: queda "pending" (no se cobró nada todavía). El frontend
+    # crea la deuda por separado (POST /credit/debts) vinculada a este invoice_id.
     invoice = supabase_admin.table("invoices").insert({
         "business_id": business_id,
         "invoice_type_id": data.invoice_type_id,
         "total": float(total_with_tax),
         "tax": float(tax_amount),
-        "status": "paid",
+        "status": "pending" if data.is_credit else "paid",
         "user_id": user_id,
         "created_at": datetime.utcnow().isoformat()
     }).execute()
@@ -66,13 +68,14 @@ def create_quick_sale(business_id: str, user_id: str, data):
         item["invoice_id"] = invoice_id
         supabase_admin.table("invoice_items").insert(item).execute()
 
-    # 5. Registrar el pago
-    supabase_admin.table("payments").insert({
-        "invoice_id": invoice_id,
-        "amount": float(total_with_tax),
-        "method": data.payment_method,
-        "paid_at": datetime.utcnow().isoformat()
-    }).execute()
+    # 5. Registrar el pago — se omite en ventas a fiado, ya que no hubo cobro
+    if not data.is_credit:
+        supabase_admin.table("payments").insert({
+            "invoice_id": invoice_id,
+            "amount": float(total_with_tax),
+            "method": data.payment_method,
+            "paid_at": datetime.utcnow().isoformat()
+        }).execute()
 
     # 6. Descontar inventario y registrar movimiento
     for item in data.items:
@@ -112,7 +115,7 @@ def create_quick_sale(business_id: str, user_id: str, data):
         "invoice_id": invoice_id,
         "total": float(total_with_tax),
         "tax": float(tax_amount),
-        "status": "paid",
+        "status": "pending" if data.is_credit else "paid",
         "created_at": datetime.utcnow().isoformat()
     }
 

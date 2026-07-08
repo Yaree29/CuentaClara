@@ -366,6 +366,23 @@ export default StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  creditNoticeBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+
+  creditNoticeText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
 
   /* =========================
      EXTRA ACTIONS

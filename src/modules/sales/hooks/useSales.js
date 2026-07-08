@@ -7,7 +7,7 @@ export const useSales = () => {
     const [error, setError] = useState(null);
     const [profitsData, setProfitsData] = useState(null);
 
-    const processSale = async (items = [], total = 0, notes = '', paymentMethod = 'cash') => {
+    const processSale = async (items = [], total = 0, notes = '', paymentMethod = 'cash', isCredit = false) => {
         setLoading(true);
         setError(null);
         try {
@@ -19,7 +19,8 @@ export const useSales = () => {
                 items,
                 paymentMethod,
                 1,
-                notes
+                notes,
+                isCredit
             );
             setLastSale(result);
             return result;

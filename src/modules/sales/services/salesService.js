@@ -5,11 +5,12 @@ const salesService = {
     /**
      * Crear una venta rápida
      * @param {Array} items - Array de items: [{product_id, quantity, unit_price}]
-     * @param {string} paymentMethod - 'cash' | 'card' | 'transfer'
+     * @param {string} paymentMethod - 'cash' | 'card' | 'transfer' (ignorado si isCredit)
      * @param {number} invoiceTypeId - ID del tipo de factura (default: 1)
      * @param {string} notes - Notas opcionales de la venta
+     * @param {boolean} isCredit - true = venta a fiado (factura queda "pending", sin payment)
      */
-    createSale: async (items = [], paymentMethod = 'cash', invoiceTypeId = 1, notes = '') => {
+    createSale: async (items = [], paymentMethod = 'cash', invoiceTypeId = 1, notes = '', isCredit = false) => {
         const token = useAuthStore.getState().token;
         const apiToken = useAuthStore.getState().user?.api_token;
         const authToken = apiToken || token;
@@ -30,6 +31,7 @@ const salesService = {
                 payment_method: paymentMethod,
                 invoice_type_id: invoiceTypeId,
                 notes: notes || null,
+                is_credit: isCredit,
             }),
         });
 

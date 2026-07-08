@@ -28,6 +28,9 @@ class RegisterRequest(BaseModel):
     tax_id: Optional[str] = Field(None, max_length=50)
     logo_url: Optional[str] = Field(None, max_length=255)
     settings: Optional[dict] = None
+    # Toggle "Impuesto 7%" del registro informal (desactivado por defecto).
+    # Para PYME se ignora — su tasa viene de settings.taxRate.
+    tax_enabled: Optional[bool] = False
     # auth_user_id ya no es necesario — Supabase Auth genera el UUID internamente
     auth_user_id: Optional[str] = None
 
@@ -99,6 +102,9 @@ class LoginRequest(BaseModel):
 class MFAVerifyRequest(BaseModel):
     email: EmailStr
     mfa_code: str
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
 
 class BiometricLoginRequest(BaseModel):
     user_id: str

@@ -86,13 +86,25 @@ def register_business(data):
     business_id = business.data[0]["id"]
 
     # 5. Crear configuración por defecto del negocio
+    # tax_rate real según el modo: PYME usa la tasa capturada en el registro
+    # (settings.taxRate), informal usa el toggle "Impuesto 7%" (desactivado
+    # por defecto) — antes quedaba hardcodeado a 7.00 en ambos casos.
+    settings_dict = getattr(data, "settings", {}) or {}
+    if (data.ui_mode or "simple") == "advanced":
+        try:
+            tax_rate = float(settings_dict.get("taxRate", 7.00))
+        except (TypeError, ValueError):
+            tax_rate = 7.00
+    else:
+        tax_rate = 7.00 if getattr(data, "tax_enabled", False) else 0.00
+
     config_payload = {
         "business_id": business_id,
         "currency": "USD",
         "weight_unit": "kg",
-        "tax_rate": 7.00,
+        "tax_rate": tax_rate,
         "language": "es",
-        "settings": getattr(data, "settings", {}) or {}
+        "settings": settings_dict
     }
     if getattr(data, "logo_url", None) and data.logo_url.strip():
         config_payload["logo_url"] = data.logo_url.strip()
@@ -105,8 +117,7 @@ def register_business(data):
     if (data.ui_mode or "simple") == "advanced":
         # Es PYME - determinar módulos basados en la categoría seleccionada y respuestas operativas
         category_id = data.category_id
-        settings_dict = getattr(data, "settings", {}) or {}
-        
+
         # Mapear de forma flexible (por ID o por template)
         # 1 o 9 = Alimentos (Carnes, Mariscos, Verduras)
         # 2 o 3 = Servicios (Estilista, Barbería, Técnicos)
@@ -188,6 +199,13 @@ def register_business(data):
         "business_id": business_id,
         "role": "owner"
     }
+
+
+def request_password_reset(email: str):
+    # Se usa el cliente anon (no admin) porque es la operación pública estándar
+    # de Supabase Auth. Los errores se tragan a propósito en el router para no
+    # revelar si un correo está o no registrado (anti-enumeración).
+    supabase.auth.reset_password_email(email.lower().strip())
 
 
 def login_user(email: str, password: str):
@@ -311,13 +329,25 @@ def generate_mfa_qr(user_id: str, email: str):
 
 def verify_mfa(email: str, code: str) -> bool:
     result = supabase_admin.table("users")\
-        .select("mfa_secret")\
+        .select("id, mfa_secret")\
         .eq("email", email)\
         .execute()
 
     if not result.data or not result.data[0].get("mfa_secret"):
         raise ValueError("MFA no configurado para este usuario")
 
-    secret = result.data[0]["mfa_secret"]
+    user_row = result.data[0]
+    secret = user_row["mfa_secret"]
     totp = pyotp.TOTP(secret)
-    return totp.verify(code)
+    is_valid = totp.verify(code)
+
+    # Primera verificación exitosa = confirma el setup y activa 2FA de forma
+    # persistente (antes solo vivía en memoria en el frontend y se perdía
+    # al cerrar la app).
+    if is_valid:
+        supabase_admin.table("users")\
+            .update({"mfa_enabled": True})\
+            .eq("id", user_row["id"])\
+            .execute()
+
+    return is_valid

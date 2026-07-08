@@ -221,7 +221,7 @@ def login_user(email: str, password: str):
         raise ValueError("Credenciales incorrectas")
 
     session = response.session
-    auth_user_id = str(session.user.id)
+    auth_user_id = str(response.user.id)
 
     # business_id no viene en el JWT, hay que leerlo de public.users
     profile = supabase_admin.table("users")\

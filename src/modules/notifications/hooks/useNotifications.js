@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../../../services/supabaseClient';
 import useAuthStore from '../../../store/useAuthStore';
 import useNotificationsStore from '../../../store/useNotificationsStore';
 import notificationsService from '../services/notificationService';
@@ -58,41 +57,10 @@ export const useNotifications = ({
   useEffect(() => {
     if (!subscribe || !user?.id) return;
 
-    let channel;
-    
-    try {
-      channel = supabase.channel(`notifications:${user.id}`);
-      
-      channel
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const notification = payload?.new;
-            if (!notification) return;
-            addNotification(notification);
-            if (typeof onNewNotification === 'function') {
-              onNewNotification(notification);
-            }
-          }
-        )
-        .subscribe((status) => {
-          // subscription status
-        });
-    } catch (err) {
-      console.error('[useNotifications] Error setting up realtime:', err);
-    }
+    // TODO: Realtime subscription was removed because Supabase clients were deleted.
+    // To restore realtime updates, a WebSocket connection to the backend or Supabase is required.
 
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
+    return () => {};
   }, [subscribe, user?.id, addNotification, onNewNotification]);
 
   useEffect(() => {

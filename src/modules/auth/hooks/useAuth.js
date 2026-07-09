@@ -15,7 +15,9 @@ export const useAuth = () => {
 
     try {
       const response = await authService.login(email, password);
-      setLogin(response.user, response.token, response.session);
+      // Si falta el reto MFA, no se inicia sesión aún — LoginScreen lo maneja.
+      if (response?.mfaRequired) return response;
+      setLogin(response.user, response.token);
       return response;
     } catch (err) {
       setError(err.message || 'Credenciales invalidas');
@@ -25,9 +27,17 @@ export const useAuth = () => {
     }
   };
 
-  // Flujo C (login diario de un solo toque): un único prompt nativo dentro
-  // de unlockWithBiometrics(). Devuelve {success, reason} en vez de lanzar,
-  // así la pantalla decide qué mostrar según la razón (cancelado, bloqueado, etc).
+  // Completa el login tras verificar el código MFA (sesión ya elevada a aal2).
+  const completeMfaLogin = async () => {
+    const response = await authService.completeAfterMfa();
+    setLogin(response.user, response.token);
+    return response;
+  };
+
+  // Flujo C (login diario de un solo toque): authenticateAsync abre el prompt
+  // una vez dentro de unlockWithBiometrics(); si tiene éxito, la sesión ya está
+  // en el SDK y se arma el perfil completo con getCurrentSession(). Devuelve
+  // {success, reason} en vez de lanzar, para que la pantalla decida el mensaje.
   const loginWithBiometrics = async () => {
     setLoading(true);
     setError(null);
@@ -36,19 +46,25 @@ export const useAuth = () => {
       if (!result.success) {
         return { success: false, reason: result.reason };
       }
-      setLogin(result.session.user, result.session.token);
+      const session = await authService.getCurrentSession();
+      if (!session?.user) {
+        return { success: false, reason: 'unknown' };
+      }
+      setLogin(session.user, session.token);
       return { success: true };
     } finally {
       setLoading(false);
     }
   };
 
-  const linkBiometricSession = async(user, token) => {
+  // Activa la huella para el usuario actual. enableBiometric() toma el refresh
+  // token vigente directamente del SDK; aquí solo se pasa el user para el saludo.
+  const linkBiometricSession = async (user) => {
     try {
-        await biometricService.enableBiometric({ user, token });
+      await biometricService.enableBiometric({ user });
     } catch (err) {
-        setError(err.message || 'No se pudo vincular la huella');
-        throw err;
+      setError(err.message || 'No se pudo vincular la huella');
+      throw err;
     }
   };
 
@@ -59,10 +75,11 @@ export const useAuth = () => {
   const isBiometricAvailable = async() => biometricService.isAvailable();
   const isBiometricEnabled = async() => biometricService.isBiometricEnabled();
 
-  // Cerrar sesión NO apaga la huella ni borra el token seguro — es una
-  // propiedad del dispositivo/cuenta, no de la sesión activa (estilo bancario).
-  // Solo unlinkBiometricSession()/disableBiometric() la apaga de verdad.
+  // Logout explícito (cambiar de cuenta / salir a propósito): borra el refresh
+  // token biométrico y oculta el botón, y revoca la sesión en Supabase. Distinto
+  // de cerrar la app: al reabrir, el botón de huella sigue disponible.
   const logout = async() => {
+    await biometricService.disableBiometric();
     await authService.logout();
     setLogout();
   };
@@ -84,6 +101,7 @@ export const useAuth = () => {
 
   return {
     login,
+    completeMfaLogin,
     loginWithBiometrics,
     linkBiometricSession,
     unlinkBiometricSession,

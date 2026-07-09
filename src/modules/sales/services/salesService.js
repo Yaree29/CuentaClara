@@ -1,5 +1,4 @@
-import { API_URL } from '../../../config/env';
-import useAuthStore from '../../../store/useAuthStore';
+import { apiRequest } from '../../../services/apiClient';
 
 const salesService = {
     /**
@@ -11,21 +10,8 @@ const salesService = {
      * @param {boolean} isCredit - true = venta a fiado (factura queda "pending", sin payment)
      */
     createSale: async (items = [], paymentMethod = 'cash', invoiceTypeId = 1, notes = '', isCredit = false) => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-
-        if (!authToken) {
-            throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
-        }
-
-        const apiUrl = API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/sales/quick`, {
+        return apiRequest('/sales/quick', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
             body: JSON.stringify({
                 items: items.length > 0 ? items : [],
                 payment_method: paymentMethod,
@@ -34,20 +20,6 @@ const salesService = {
                 is_credit: isCredit,
             }),
         });
-
-        if (!response.ok) {
-            let errorDetail = 'Error al registrar la venta';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
     },
 
     /**
@@ -56,40 +28,14 @@ const salesService = {
      * @param {string} dateTo - Fecha final (YYYY-MM-DD)
      */
     getProfitsAndExpenses: async (dateFrom, dateTo) => {
-        const token = useAuthStore.getState().token;
-        const apiToken = useAuthStore.getState().user?.api_token;
-        const authToken = apiToken || token;
-
-        if (!authToken) {
-            throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
-        }
-
-        const apiUrl = API_URL || 'http://localhost:8000';
         const params = new URLSearchParams({
             date_from: dateFrom,
             date_to: dateTo,
         });
 
-        const response = await fetch(`${apiUrl}/sales/profits?${params}`, {
+        return apiRequest(`/sales/profits?${params}`, {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
         });
-
-        if (!response.ok) {
-            let errorDetail = 'Error al obtener el reporte de ganancias';
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                errorDetail = errorData.detail || errorDetail;
-            } catch (e) {
-                errorDetail = `Error del servidor: ${errorText.substring(0, 100)}`;
-            }
-            throw new Error(errorDetail);
-        }
-
-        return response.json();
     },
 
     /**

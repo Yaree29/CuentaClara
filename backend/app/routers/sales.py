@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.sales import QuickSaleRequest
 from app.services import sales_service
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, require_role
 
 router = APIRouter()
 
@@ -21,7 +21,8 @@ def quick_sale(data: QuickSaleRequest, current_user: dict = Depends(get_current_
 def get_profits(
     date_from: str,
     date_to: str,
-    current_user: dict = Depends(get_current_user)
+    # Solo dueño/admin ven ganancias y gastos; un 'staff' (cajero) recibe 403.
+    current_user: dict = Depends(require_role("owner", "admin"))
 ):
     try:
         return sales_service.get_profits_and_expenses(

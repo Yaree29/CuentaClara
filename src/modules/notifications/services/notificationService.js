@@ -19,49 +19,7 @@
 //         2) crear la tabla `push_tokens` en la base de datos
 //         3) montar <NotificationsListener /> en App.js
 // =============================================================================
-import { API_URL } from '../../../config/env';
-import useAuthStore from '../../../store/useAuthStore';
-
-const baseUrl = () => API_URL || 'http://localhost:8000';
-
-// Resuelve el token desde el store, priorizando api_token (registro/login)
-const getAuthToken = () => {
-  const token = useAuthStore.getState().token;
-  const apiToken = useAuthStore.getState().user?.api_token;
-  return apiToken || token;
-};
-
-const apiRequest = async (path, options = {}) => {
-  const authToken = getAuthToken();
-  if (!authToken) {
-    throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${authToken}`,
-    ...(options.headers || {}),
-  };
-
-  const response = await fetch(`${baseUrl()}${path}`, { ...options, headers });
-
-  if (!response.ok) {
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      throw new Error(data.detail || 'Error en la solicitud');
-    } catch (e) {
-      if (e.message !== 'Error en la solicitud' && !e.message.startsWith('Error del servidor:')) {
-        throw new Error(`Error del servidor: ${text.substring(0, 150)}`);
-      }
-      throw e;
-    }
-  }
-
-  // 204 / cuerpos vacíos
-  const raw = await response.text();
-  return raw ? JSON.parse(raw) : null;
-};
+import { apiRequest } from '../../../services/apiClient';
 
 // El backend expone `is_read` y `sent_at`; el store/pantallas del front usan
 // `read_at` y `created_at`. Normalizamos para mantener compatibilidad.

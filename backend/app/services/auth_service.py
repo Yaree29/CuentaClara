@@ -13,10 +13,6 @@
 from app.database import supabase, supabase_admin
 from app.config import settings
 from datetime import datetime
-import pyotp
-import qrcode
-import io
-import base64
 
 # Módulos fijos para usuarios informales: inicio, ventas, fiado, inventario
 DEFAULT_INFORMAL_MODULES = ['sales', 'credit', 'inventory']
@@ -189,11 +185,13 @@ def register_business(data):
     try:
         sign_in = supabase.auth.sign_in_with_password({"email": email, "password": data.password})
         access_token = sign_in.session.access_token
+        refresh_token = sign_in.session.refresh_token
     except Exception as e:
         raise ValueError(f"Registro exitoso pero no se pudo iniciar sesión: {str(e)}")
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user_id": auth_user_id,
         "business_id": business_id,
@@ -249,10 +247,30 @@ def login_user(email: str, password: str):
 
     return {
         "access_token": session.access_token,
+        "refresh_token": session.refresh_token,
         "token_type": "bearer",
         "user_id": auth_user_id,
         "business_id": user_data["business_id"],
         "role": user_data["role"]
+    }
+
+
+def refresh_session(refresh_token: str) -> dict:
+    # Cambia un refresh_token por un access_token nuevo sin pedir credenciales.
+    # Supabase rota el refresh_token en cada uso: el que se devuelve aquí
+    # reemplaza al anterior, que queda inválido.
+    try:
+        response = supabase.auth.refresh_session(refresh_token)
+    except Exception:
+        raise ValueError("Sesión expirada, inicia sesión nuevamente")
+
+    if not response.session:
+        raise ValueError("Sesión expirada, inicia sesión nuevamente")
+
+    return {
+        "access_token": response.session.access_token,
+        "refresh_token": response.session.refresh_token,
+        "token_type": "bearer",
     }
 
 
@@ -307,47 +325,7 @@ def get_user_context(user_id: str) -> dict:
         "userType": "pyme" if business_data.get("ui_mode") == "advanced" else "informal"
     }
 
-
-def generate_mfa_qr(user_id: str, email: str):
-    secret = pyotp.random_base32()
-
-    supabase_admin.table("users")\
-        .update({"mfa_secret": secret})\
-        .eq("id", user_id)\
-        .execute()
-
-    totp = pyotp.TOTP(secret)
-    uri = totp.provisioning_uri(email, issuer_name="CuentaClara")
-
-    qr = qrcode.make(uri)
-    buffer = io.BytesIO()
-    qr.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-    return {"qr_code": f"data:image/png;base64,{qr_base64}", "secret": secret}
-
-
-def verify_mfa(email: str, code: str) -> bool:
-    result = supabase_admin.table("users")\
-        .select("id, mfa_secret")\
-        .eq("email", email)\
-        .execute()
-
-    if not result.data or not result.data[0].get("mfa_secret"):
-        raise ValueError("MFA no configurado para este usuario")
-
-    user_row = result.data[0]
-    secret = user_row["mfa_secret"]
-    totp = pyotp.TOTP(secret)
-    is_valid = totp.verify(code)
-
-    # Primera verificación exitosa = confirma el setup y activa 2FA de forma
-    # persistente (antes solo vivía en memoria en el frontend y se perdía
-    # al cerrar la app).
-    if is_valid:
-        supabase_admin.table("users")\
-            .update({"mfa_enabled": True})\
-            .eq("id", user_row["id"])\
-            .execute()
-
-    return is_valid
+# Nota: el 2FA (TOTP) migró al MFA nativo de Supabase en el cliente
+# (supabase.auth.mfa.*). Las funciones generate_mfa_qr/verify_mfa basadas en
+# pyotp/qrcode se eliminaron por quedar sin uso; los factores viven ahora en el
+# esquema auth de Supabase, no en las columnas users.mfa_secret/mfa_enabled.

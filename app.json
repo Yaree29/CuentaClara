@@ -3,6 +3,7 @@
     "name": "CuentaClara",
     "slug": "CuentaClara",
     "version": "1.0.0",
+    "scheme": "cuentaclara",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,7 +24,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.CuentaClara"
     },
     "web": {
       "favicon": "./assets/favicon.png"

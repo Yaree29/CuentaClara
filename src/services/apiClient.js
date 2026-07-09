@@ -17,17 +17,34 @@
 // =============================================================================
 import { API_URL } from '../config/env';
 import useAuthStore from '../store/useAuthStore';
+import { supabase } from './supabaseClient';
 
 const baseUrl = () => API_URL || 'http://localhost:8000';
 
+const requestWithToken = (path, options, authToken) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${authToken}`,
+    ...(options.headers || {}),
+  };
+  return fetch(`${baseUrl()}${path}`, { ...options, headers });
+};
+
 /**
- * Resuelve el token JWT desde el store de Zustand.
- * Prioriza api_token (set during registro/login) sobre el token de sesión.
+ * Resuelve el access_token vigente desde el SDK de Supabase.
+ * getSession() devuelve el token guardado y lo refresca solo si está por
+ * expirar, así siempre sale un token fresco sin lógica manual. Fallback al
+ * store para el instante justo tras el registro, antes de hidratar el SDK.
  */
-export const getAuthToken = () => {
-  const token = useAuthStore.getState().token;
-  const apiToken = useAuthStore.getState().user?.api_token;
-  return apiToken || token;
+export const getAuthToken = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return session.access_token;
+  } catch {
+    // Si el SDK falla, caemos al token del store.
+  }
+  const state = useAuthStore.getState();
+  return state.user?.api_token || state.token || null;
 };
 
 /**
@@ -58,18 +75,22 @@ const parseErrorResponse = async (response) => {
  * @returns {Promise<any>} — JSON parseado de la respuesta
  */
 export const apiRequest = async (path, options = {}) => {
-  const authToken = getAuthToken();
+  const authToken = await getAuthToken();
   if (!authToken) {
     throw new Error('No hay sesión activa. Por favor inicia sesión nuevamente.');
   }
 
-  const headers = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${authToken}`,
-    ...(options.headers || {}),
-  };
+  let response = await requestWithToken(path, options, authToken);
 
-  const response = await fetch(`${baseUrl()}${path}`, { ...options, headers });
+  // Red de seguridad: si el token venció justo en el envío, el SDK lo refresca
+  // (deduplica renovaciones concurrentes internamente) y se reintenta una vez.
+  if (response.status === 401) {
+    const { data } = await supabase.auth.refreshSession();
+    const newToken = data?.session?.access_token;
+    if (newToken) {
+      response = await requestWithToken(path, options, newToken);
+    }
+  }
 
   if (!response.ok) {
     await parseErrorResponse(response);

@@ -1,30 +1,53 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../../services/supabaseClient';
 
-// Dos niveles de almacenamiento con responsabilidades separadas a propósito:
-// - AsyncStorage: datos públicos (no requieren huella para leerse). Consultarlos
-//   NUNCA debe disparar el prompt nativo del SO.
-// - SecureStore con requireAuthentication:true: solo la sesión real. Leer o
-//   escribir esta clave es lo ÚNICO que debe pedir huella, y solo cuando el
-//   usuario lo pide explícitamente (tocar el botón / activar el switch).
+// =============================================================================
+// Arquitectura de la huella (auditada contra el checklist de 10 puntos):
+//
+//  · AsyncStorage (cosmético, NO sensible): bandera de activación + nombre para
+//    el saludo. Consultarlos nunca dispara prompts.                     [#1]
+//  · SecureStore (cifrado en reposo por Keychain/Keystore): SOLO el REFRESH
+//    token de Supabase (dura días, rota). NUNCA el access token (vence 1h). [#2]
+//
+//  Gate biométrico: se hace con LocalAuthentication.authenticateAsync() a nivel
+//  de app (UN solo prompt) en vez de requireAuthentication:true en el ítem.
+//  Motivo: requireAuthentication dispara el prompt en CADA escritura, lo que
+//  hace imposible rotar el token en silencio (#6) sin spam de prompts. El
+//  estándar bancario es gatear la ACCIÓN y guardar cifrado.        [#4 adaptado]
+//
+//  Rotación (#6): Supabase rota el refresh token en cada refresco. Mientras la
+//  app vive, App.js escucha onAuthStateChange y llama syncStoredRefreshToken()
+//  para mantener el token de SecureStore al día. Además unlockWithBiometrics()
+//  guarda el token rotado inmediatamente tras canjearlo.
+// =============================================================================
 const BIOMETRIC_FLAG_KEY = 'cc_biometric_enabled'; // AsyncStorage: null | 'true' | 'false'
-const REMEMBERED_USER_KEY = 'cc_remembered_user'; // AsyncStorage: {name, email}
-const SECURE_SESSION_KEY = 'cc_secure_session'; // SecureStore, requireAuthentication:true: {user, token}
+const REMEMBERED_USER_KEY = 'cc_remembered_user';  // AsyncStorage: {name, email}
+const REFRESH_TOKEN_KEY = 'cc_biometric_refresh';  // SecureStore: refresh_token (string)
 
-const classifyAuthError = (err) => {
-  const msg = (err?.message || '').toLowerCase();
-  if (msg.includes('cancel')) return 'user_cancel';
-  if (msg.includes('lockout') || msg.includes('too many') || msg.includes('locked')) return 'lockout';
-  if (msg.includes('not available') || msg.includes('not enrolled') || msg.includes('no hardware')) return 'unavailable';
-  return 'unknown';
+// Mapea los códigos de error de expo-local-authentication a razones estables.
+const mapAuthError = (error) => {
+  switch (error) {
+    case 'user_cancel':
+    case 'system_cancel':
+    case 'app_cancel':
+    case 'user_fallback':
+      return 'user_cancel';
+    case 'lockout':
+    case 'lockout_permanent':
+      return 'lockout';
+    case 'not_enrolled':
+    case 'not_available':
+    case 'passcode_not_set':
+      return 'unavailable';
+    default:
+      return 'unknown';
+  }
 };
 
 const biometricService = {
-  /**
-   * Hardware + huellas/rostro registrados en el dispositivo. Consulta pura,
-   * nunca dispara el prompt nativo.
-   */
+  // Hardware + huella/rostro registrados. Consulta pura, nunca prompt.
   isAvailable: async () => {
     try {
       const compatible = await LocalAuthentication.hasHardwareAsync();
@@ -36,22 +59,17 @@ const biometricService = {
     }
   },
 
-  /**
-   * Bandera tri-estado en AsyncStorage — nunca toca SecureStore, nunca dispara
-   * el prompt. null = nunca se decidió; 'true'/'false' = ya se decidió.
-   */
+  // Bandera tri-estado en AsyncStorage. null = nunca se decidió.   [#3 sin prompt]
   getBiometricFlag: async () => {
     try {
       return await AsyncStorage.getItem(BIOMETRIC_FLAG_KEY);
-    } catch (err) {
-      console.error('Error leyendo bandera de biometría:', err);
+    } catch {
       return null;
     }
   },
 
   isBiometricEnabled: async () => (await biometricService.getBiometricFlag()) === 'true',
 
-  /** "Ahora no" — no se vuelve a preguntar automáticamente. */
   declineBiometric: async () => {
     await AsyncStorage.setItem(BIOMETRIC_FLAG_KEY, 'false');
   },
@@ -60,8 +78,7 @@ const biometricService = {
     try {
       const raw = await AsyncStorage.getItem(REMEMBERED_USER_KEY);
       return raw ? JSON.parse(raw) : null;
-    } catch (err) {
-      console.error('Error leyendo usuario recordado:', err);
+    } catch {
       return null;
     }
   },
@@ -74,53 +91,99 @@ const biometricService = {
     }
   },
 
-  /**
-   * Activa la huella: guarda la sesión en SecureStore con requireAuthentication:true.
-   * Ese guardado ya obliga al SO a pedir la huella como parte de la operación —
-   * es el ÚNICO prompt de esta función, no se pide una segunda vez aparte.
-   */
-  enableBiometric: async ({ user, token }) => {
-    try {
-      await SecureStore.setItemAsync(
-        SECURE_SESSION_KEY,
-        JSON.stringify({ user, token }),
-        {
-          keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-          requireAuthentication: true,
-        }
-      );
-      await AsyncStorage.setItem(BIOMETRIC_FLAG_KEY, 'true');
-      await biometricService.setRememberedUser({ name: user?.name, email: user?.email });
-    } catch (err) {
-      console.error('Error activando biometría:', err);
-      throw new Error('No se pudo activar la huella');
-    }
+  // Escribe el refresh token en SecureStore (cifrado en reposo, sin prompt).
+  _storeRefreshToken: async (refreshToken) => {
+    if (!refreshToken) return;
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    });
   },
 
-  /** Apaga la huella: borra la sesión protegida y la bandera. */
+  // Activa la huella: toma el refresh token VIGENTE del SDK (no del store, que
+  // podría estar desfasado por una rotación) y lo guarda. No pide prompt: el
+  // usuario ya está autenticado; el gate ocurre al iniciar sesión con huella.
+  enableBiometric: async ({ user } = {}) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const refreshToken = session?.refresh_token;
+    if (!refreshToken) {
+      throw new Error('No hay sesión activa para vincular la huella');
+    }
+    await biometricService._storeRefreshToken(refreshToken);
+    await AsyncStorage.setItem(BIOMETRIC_FLAG_KEY, 'true');
+    await biometricService.setRememberedUser({
+      name: user?.name,
+      email: user?.email || session.user?.email,
+    });
+  },
+
+  // Logout explícito / desactivar: borra el token y oculta el botón.   [#7]
   disableBiometric: async () => {
     try {
-      await SecureStore.deleteItemAsync(SECURE_SESSION_KEY);
-      await AsyncStorage.setItem(BIOMETRIC_FLAG_KEY, 'false');
-    } catch (err) {
-      console.error('Error desactivando biometría:', err);
+      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    } catch {
+      // ignorar
+    }
+    await AsyncStorage.setItem(BIOMETRIC_FLAG_KEY, 'false');
+  },
+
+  // Rotación silenciosa (#6): mantener el token guardado al día cada vez que el
+  // SDK rota la sesión mientras la app vive. Sin prompt. No-op si no está activa.
+  syncStoredRefreshToken: async (refreshToken) => {
+    if (!refreshToken) return;
+    if ((await biometricService.getBiometricFlag()) !== 'true') return;
+    try {
+      await biometricService._storeRefreshToken(refreshToken);
+    } catch {
+      // ignorar
     }
   },
 
-  /**
-   * Flujo C — login diario de un solo toque. Se llama SOLO cuando el usuario
-   * toca el botón "Iniciar con Huella"; el SO pide la huella una única vez.
-   */
+  // Login diario de un solo toque (#5). authenticateAsync abre el prompt UNA vez;
+  // si es exitoso, se lee el refresh token y se canjea por una sesión nueva.
+  // El SDK establece la sesión (en memoria) y devuelve el token rotado, que se
+  // vuelve a guardar de inmediato para la próxima vez (#6).
   unlockWithBiometrics: async () => {
+    // 1) Gate biométrico
+    let authResult;
     try {
-      const raw = await SecureStore.getItemAsync(SECURE_SESSION_KEY, {
-        requireAuthentication: true,
+      authResult = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Inicia sesión con tu huella',
+        cancelLabel: 'Usar contraseña',
+        disableDeviceFallback: false,
       });
-      if (!raw) return { success: false, reason: 'no_session' };
-      return { success: true, session: JSON.parse(raw) };
-    } catch (err) {
-      return { success: false, reason: classifyAuthError(err) };
+    } catch {
+      return { success: false, reason: 'unknown' };
     }
+    if (!authResult.success) {
+      return { success: false, reason: mapAuthError(authResult.error) }; // [#10 cancel]
+    }
+
+    // 2) Leer el refresh token (sin prompt)
+    let refreshToken = null;
+    try {
+      refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+    } catch {
+      refreshToken = null;
+    }
+    if (!refreshToken) return { success: false, reason: 'no_session' };
+
+    // 3) Canjear por una sesión nueva vía Supabase (equivale a /auth/refresh).
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (error || !data?.session) {
+      // Refresh token rechazado (rotado/expirado/revocado) → borrar y forzar
+      // contraseña. Se resetea la bandera a null para volver a ofrecer activar
+      // la huella tras el próximo login por contraseña.               [#10]
+      await biometricService.disableBiometric();
+      await AsyncStorage.removeItem(BIOMETRIC_FLAG_KEY);
+      return { success: false, reason: 'expired' };
+    }
+
+    // 4) Guardar el token rotado de inmediato (el anterior ya se consumió).
+    await biometricService._storeRefreshToken(data.session.refresh_token);
+
+    return { success: true };
   },
 };
 

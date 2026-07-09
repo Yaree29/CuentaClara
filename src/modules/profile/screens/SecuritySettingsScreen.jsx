@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../../store/useAuthStore';
 import biometricService from '../../auth/services/biometricService';
+import mfaService from '../../auth/services/mfaService';
 import colors from '../../../theme/colors';
 import styles from '../styles/profile.styles';
 import securityStyles from '../styles/security.styles';
@@ -30,9 +31,30 @@ const SecuritySettingsScreen = () => {
     checkBiometricStatus();
   }, []);
 
+  // Re-verifica el estado del 2FA cada vez que la pantalla recupera el foco.
+  // Así, al volver de Token2FA tras activar/desactivar, el switch refleja el
+  // estado real sin pasar un callback onSuccess por params (React Navigation
+  // marca las funciones en params como no serializables y lo advierte).
+  useFocusEffect(
+    useCallback(() => {
+      checkMfaStatus();
+    }, [])
+  );
+
   const checkBiometricStatus = async () => {
     const enabled = await biometricService.isBiometricEnabled();
     setIsBiometricEnabled(enabled);
+  };
+
+  // Estado real del 2FA leído de los factores de Supabase (no de user.mfa_enabled,
+  // que ya no es la fuente de verdad con MFA nativo).
+  const checkMfaStatus = async () => {
+    try {
+      const enabled = await mfaService.isEnabled();
+      setIs2FAEnabled(enabled);
+    } catch {
+      // se deja el valor inicial
+    }
   };
 
   // Flujo B: el propio guardado protegido (enableBiometric) ya pide la huella
@@ -41,8 +63,8 @@ const SecuritySettingsScreen = () => {
     setBiometricBusy(true);
     try {
       if (value) {
-        const { token } = useAuthStore.getState();
-        await biometricService.enableBiometric({ user, token });
+        // enableBiometric toma el refresh token vigente directamente del SDK.
+        await biometricService.enableBiometric({ user });
         setIsBiometricEnabled(true);
         Alert.alert('Éxito', 'Huella biométrica activada correctamente.');
       } else {
@@ -59,14 +81,12 @@ const SecuritySettingsScreen = () => {
 
   const toggle2FA = (value) => {
     if (value) {
+      // Sin onSuccess en params (no serializable): al volver, el useFocusEffect
+      // de arriba re-lee el estado real del 2FA.
       navigation.navigate('Token2FA', {
         actionLabel: 'Activar 2FA',
-        description: 'Escanea el código QR con tu app autenticadora (Google Authenticator, Authy) e ingresa el código de 6 dígitos que genera.',
+        description: 'Copia la clave (o escanea el QR) en tu app autenticadora (Google Authenticator, Authy) e ingresa el código de 6 dígitos que genera.',
         actionType: 'enable_mfa',
-        onSuccess: () => {
-          setIs2FAEnabled(true);
-          updateUser({ is2FAEnabled: true });
-        }
       });
     } else {
       Alert.alert(
@@ -77,9 +97,14 @@ const SecuritySettingsScreen = () => {
           {
             text: 'Desactivar',
             style: 'destructive',
-            onPress: () => {
-              setIs2FAEnabled(false);
-              updateUser({ is2FAEnabled: false });
+            onPress: async () => {
+              try {
+                await mfaService.disable();
+                setIs2FAEnabled(false);
+                updateUser({ is2FAEnabled: false, mfa_enabled: false });
+              } catch (e) {
+                Alert.alert('Error', 'No se pudo desactivar el 2FA. Intenta de nuevo.');
+              }
             },
           },
         ]

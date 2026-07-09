@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.models.auth import RegisterRequest, LoginRequest, MFAVerifyRequest, TokenResponse, ResetPasswordRequest
+from app.models.auth import RegisterRequest, LoginRequest, TokenResponse, ResetPasswordRequest, RefreshTokenRequest
 from app.services import auth_service
 from app.database import supabase_admin
 
@@ -10,34 +10,57 @@ security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     # Validamos el JWT contra Supabase Auth en lugar de verificarlo localmente;
-    # así no necesitamos mantener el SECRET_KEY sincronizado con Supabase
+    # así no necesitamos mantener el SECRET_KEY sincronizado con Supabase.
+    #
+    # Se separan dos fases a propósito para no volver a confundir un problema de
+    # infraestructura con uno de token (como pasó cuando la service_role estaba
+    # mal configurada en Render y TODO devolvía "Token inválido o expirado"):
+    #   1) validar el token → si falla, es 401 (token realmente inválido/vencido)
+    #   2) leer el perfil → si falla la consulta, es 503 (backend/BD no disponible)
+
+    # Fase 1 — validar el token
     try:
         auth_response = supabase_admin.auth.get_user(credentials.credentials)
-        auth_user = auth_response.user
-        user_id = str(auth_user.id)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
-        # business_id no está en el JWT de Supabase; lo leemos de public.users
+    auth_user = getattr(auth_response, "user", None)
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    user_id = str(auth_user.id)
+
+    # Fase 2 — resolver el perfil (business_id + role viven en public.users)
+    try:
         profile = supabase_admin.table("users")\
             .select("id, business_id, role, name, email")\
             .eq("id", user_id)\
             .single()\
             .execute()
-
-        if not profile.data:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado en el sistema")
-
-        # "sub" mantiene compatibilidad con los routers de sales e invoices
-        return {
-            "sub": user_id,
-            "business_id": profile.data["business_id"],
-            "role": profile.data["role"],
-            "email": profile.data["email"],
-            "name": profile.data["name"],
-        }
-    except HTTPException:
-        raise
     except Exception:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+        raise HTTPException(status_code=503, detail="Servicio no disponible temporalmente")
+
+    if not profile.data:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado en el sistema")
+
+    # "sub" mantiene compatibilidad con los routers de sales e invoices
+    return {
+        "sub": user_id,
+        "business_id": profile.data["business_id"],
+        "role": profile.data["role"],
+        "email": profile.data["email"],
+        "name": profile.data["name"],
+    }
+
+
+def require_role(*allowed_roles):
+    """Dependency factory: exige que el rol del usuario esté en allowed_roles.
+    Ej.: current_user: dict = Depends(require_role("owner", "admin")).
+    Un rol no permitido (p.ej. 'staff' pidiendo ganancias) recibe 403."""
+    def dependency(current_user: dict = Depends(get_current_user)):
+        if current_user.get("role") not in allowed_roles:
+            raise HTTPException(status_code=403, detail="No tienes permisos para esta acción")
+        return current_user
+    return dependency
 
 
 @router.post("/register", summary="Registro de negocio y dueño")
@@ -67,6 +90,14 @@ def login(data: LoginRequest):
     try:
         result = auth_service.login_user(data.email, data.password)
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@router.post("/refresh", summary="Renovar access token usando el refresh token")
+def refresh(data: RefreshTokenRequest):
+    try:
+        return auth_service.refresh_session(data.refresh_token)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
@@ -111,21 +142,7 @@ def get_templates():
         .execute()
     return result.data
 
-
-@router.post("/mfa/setup", summary="Configurar autenticación MFA")
-def setup_mfa(current_user: dict = Depends(get_current_user)):
-    try:
-        return auth_service.generate_mfa_qr(current_user["sub"], current_user["email"])
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/mfa/verify", summary="Verificar código MFA")
-def verify_mfa(data: MFAVerifyRequest):
-    try:
-        valid = auth_service.verify_mfa(data.email, data.mfa_code)
-        if not valid:
-            raise HTTPException(status_code=401, detail="Código MFA incorrecto")
-        return {"verified": True, "message": "MFA verificado correctamente"}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# Nota: el 2FA (TOTP) se maneja ahora de forma nativa en el cliente con
+# supabase.auth.mfa.* (ver src/modules/auth/services/mfaService.js). Los
+# endpoints /mfa/setup y /mfa/verify basados en pyotp se eliminaron por quedar
+# sin uso tras esa migración.

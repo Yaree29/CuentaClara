@@ -1,55 +1,22 @@
 // =============================================================================
-// MODIFICADO: 2026-05-20
-// Propósito: Servicio de registro de nuevos usuarios y negocios. Todas las
-//            peticiones van a la API FastAPI — sin contacto directo con Supabase.
-// Cambios:
-//   - Se añadió getTemplates() para cargar las plantillas de industria desde
-//     GET /auth/templates (usadas en el combobox del paso 3 PYME).
-//   - register(): ahora destructura y envía el campo `address` al backend
-//     para que se guarde en businesses.address.
-//   - register(): después de crear el usuario en el backend, guarda el token
-//     en AsyncStorage y hace fetch paralelo de /auth/me y /auth/context para
-//     retornar el perfil completo con enabled_modules y userType, igual que
-//     el flujo de login. Esto evita que el usuario llegue a la app con perfil vacío.
+// registerService.js — Registro de negocio + usuario.
 // =============================================================================
-// Sin imports de Supabase — el registro pasa completamente por la API.
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../../../config/env';
-
-const TOKEN_KEY = 'cc_access_token';
-
-const baseUrl = () => API_URL || 'https://cuentaclara-api.onrender.com';
-
-const apiRequest = async (path, options = {}, token = null) => {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const response = await fetch(`${baseUrl()}${path}`, { ...options, headers });
-
-  if (!response.ok) {
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      throw new Error(data.detail || 'Error al registrar');
-    } catch (e) {
-      if (e.message !== 'Error al registrar' && !e.message.startsWith('Error del servidor:')) {
-        throw new Error(`Error del servidor: ${text.substring(0, 150)}`);
-      }
-      throw e;
-    }
-  }
-
-  return response.json();
-};
+// El registro se crea en FastAPI (rollback atómico + dependencia circular
+// negocio↔usuario). La SESIÓN resultante se entrega al SDK de Supabase
+// (setSession) para que a partir de ahí la gestione y auto-refresque igual que
+// en el login. Las peticiones HTTP reutilizan apiRequestPublic (apiClient).
+// =============================================================================
+import { supabase } from '../../../services/supabaseClient';
+import { apiRequestPublic } from '../../../services/apiClient';
 
 const registerService = {
   getCategories: async () => {
-    return apiRequest('/auth/categories');
+    return apiRequestPublic('/auth/categories');
   },
 
   // Plantillas de industria para el paso 3 del registro PYME
   getTemplates: async () => {
-    return apiRequest('/auth/templates');
+    return apiRequestPublic('/auth/templates');
   },
 
   register: async (form) => {
@@ -94,7 +61,7 @@ const registerService = {
         : {}),
     };
 
-    const data = await apiRequest('/auth/register', {
+    const data = await apiRequestPublic('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         business_name: businessName,
@@ -113,20 +80,23 @@ const registerService = {
       }),
     });
 
-    // Guardar token antes de las siguientes llamadas autenticadas
-    await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
+    // Entregar la sesión al SDK: de aquí en adelante Supabase gestiona y
+    // auto-refresca el token (igual que en el login por SDK).
+    await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    });
 
     // Igual que login: cargar perfil completo + contexto para que
     // AuthProvider tenga enabled_modules y userType desde el primer render
     const [profile, context] = await Promise.all([
-      apiRequest('/auth/me', {}, data.access_token),
-      apiRequest('/auth/context', {}, data.access_token),
+      apiRequestPublic('/auth/me', {}, data.access_token),
+      apiRequestPublic('/auth/context', {}, data.access_token),
     ]);
 
     return {
       user: { ...profile, ...context, api_token: data.access_token },
       token: data.access_token,
-      session: null,
     };
   },
 };

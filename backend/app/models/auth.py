@@ -99,19 +99,15 @@ class LoginRequest(BaseModel):
             raise ValueError('El correo electrónico no puede estar vacío')
         return v.lower().strip()
 
-class MFAVerifyRequest(BaseModel):
-    email: EmailStr
-    mfa_code: str
-
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
 
-class BiometricLoginRequest(BaseModel):
-    user_id: str
-    biometric_token: str  # token firmado desde el dispositivo móvil
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user_id: str
     business_id: str

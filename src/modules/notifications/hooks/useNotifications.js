@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import useAuthStore from '../../../store/useAuthStore';
 import useNotificationsStore from '../../../store/useNotificationsStore';
 import notificationsService from '../services/notificationService';
+import { supabase } from '../../../services/supabaseClient';
 
 export const useNotifications = ({
   autoFetch = true,
@@ -54,14 +55,35 @@ export const useNotifications = ({
     fetchNotifications();
   }, [autoFetch, user?.id, fetchNotifications]);
 
+  const businessId = user?.business?.id || user?.business_id;
+
   useEffect(() => {
-    if (!subscribe || !user?.id) return;
+    if (!subscribe || !user?.id || !businessId) return;
 
-    // TODO: Realtime subscription was removed because Supabase clients were deleted.
-    // To restore realtime updates, a WebSocket connection to the backend or Supabase is required.
+    // Realtime: nuevas notificaciones del negocio llegan sin refrescar. La RLS
+    // activa en `notifications` + la sesión autenticada del SDK garantizan que
+    // solo lleguen las del propio negocio.
+    const channel = supabase
+      .channel(`notifications:${businessId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload) => {
+          addNotification(payload.new);
+          onNewNotification?.(payload.new);
+        }
+      )
+      .subscribe();
 
-    return () => {};
-  }, [subscribe, user?.id, addNotification, onNewNotification]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [subscribe, user?.id, businessId, addNotification, onNewNotification]);
 
   useEffect(() => {
     if (!user?.id) {

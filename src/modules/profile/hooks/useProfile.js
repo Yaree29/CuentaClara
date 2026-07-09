@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from '../../../store/useAuthStore';
 import authService from '../../auth/services/authService';
+import biometricService from '../../auth/services/biometricService';
 import profileService from '../services/profileService';
 
 const useProfile = () => {
@@ -25,6 +26,11 @@ const useProfile = () => {
 
   const logout = async () => {
     try {
+      // Logout explícito (el usuario sale a propósito): borra el refresh token
+      // biométrico y baja la bandera para OCULTAR el botón de huella en Login.
+      // Sin esto, el botón seguía visible y, como signOut() ya revocó el token
+      // en el servidor, al presionarlo daba "Sesión expirada".
+      await biometricService.disableBiometric();
       // Cerrar sesión en Supabase (servidor)
       await authService.logout();
       // Limpiar cualquier sesión local persistida

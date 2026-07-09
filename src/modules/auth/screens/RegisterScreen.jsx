@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AuthLayout from '../../../views/layouts/AuthLayout';
+import colors from '../../../theme/colors';
 import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
 import useAuthStore from '../../../store/useAuthStore';
@@ -19,6 +21,7 @@ const RegisterScreen = ({ navigation }) => {
   const { linkBiometricSession, isBiometricAvailable } = useAuth();
   const [step, setStep] = useState(1);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -209,7 +212,7 @@ const RegisterScreen = ({ navigation }) => {
                 text: 'Sí, activar',
                 onPress: async () => {
                   try {
-                    await linkBiometricSession(result.user, result.token);
+                    await linkBiometricSession(result.user);
                     Alert.alert('¡Listo!', 'Biometría vinculada correctamente.');
                   } catch (e) {
                     console.error(e);
@@ -317,14 +320,27 @@ const RegisterScreen = ({ navigation }) => {
               </View>
 
               <View>
-                <TextInput
-                  style={[styles.input, errors.password && styles.inputError]}
-                  placeholder="Contraseña"
-                  secureTextEntry
-                  value={formData.password}
-                  onChangeText={(val) => updateField('password', val)}
-                  maxLength={128}
-                />
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
+                    placeholder="Contraseña"
+                    secureTextEntry={!showPassword}
+                    value={formData.password}
+                    onChangeText={(val) => updateField('password', val)}
+                    maxLength={128}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword((v) => !v)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
                 {formData.password ? (
                   <Text style={[styles.helperText, passwordStrength.level === 'fuerte' && styles.strongPassword]}>
                     Fortaleza: {passwordStrength.level} ({passwordStrength.percentage}%)

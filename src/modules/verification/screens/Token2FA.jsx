@@ -1,20 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, Image,
+  View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../theme/colors';
 import styles from '../styles/mfaStyles';
-import { apiRequest, apiRequestPublic } from '../../../services/apiClient';
+import { SvgXml } from 'react-native-svg';
+import * as Clipboard from 'expo-clipboard';
+import mfaService from '../../auth/services/mfaService';
 import useAuthStore from '../../../store/useAuthStore';
 
 const emptyDigits = () => ['', '', '', '', '', ''];
 
+// El SDK ya arma el QR como data URI completo: "data:image/svg+xml;utf-8,<svg
+// crudo>" (confirmado en @supabase/auth-js GoTrueClient.js, _enroll) — el SVG
+// NO viene percent-encoded, así que basta con recortar el prefijo; no hace
+// falta (ni conviene) decodeURIComponent, que podía lanzar si el SVG contenía
+// un "%" literal. react-native-svg dibuja ese XML crudo (RN Image no sabe).
+const svgFromDataUri = (uri) => {
+  if (!uri) return null;
+  const comma = uri.indexOf(',');
+  return comma >= 0 ? uri.substring(comma + 1) : uri;
+};
+
 export default function Token2FA({ navigation, route }) {
   // Parámetros: actionLabel (ej: 'Borrar cuenta'), description (opcional), actionType (opcional)
-  // actionType 'enable_mfa' conecta el TOTP real (POST /auth/mfa/setup + /verify).
+  // actionType 'enable_mfa' activa el TOTP con el MFA nativo de Supabase (mfaService).
   // Cualquier otro actionType sigue siendo el placeholder de verificación genérica
   // (nada lo invoca hoy — se conecta cuando exista un gate real de acciones críticas).
   const {
@@ -25,7 +38,7 @@ export default function Token2FA({ navigation, route }) {
   } = route?.params || {};
 
   const isEnableMfa = actionType === 'enable_mfa';
-  const { user, updateUser } = useAuthStore();
+  const { updateUser } = useAuthStore();
 
   const [digits, setDigits] = useState(emptyDigits());
   const [confirmText, setConfirmText] = useState('');
@@ -35,8 +48,20 @@ export default function Token2FA({ navigation, route }) {
   // Setup real de MFA (actionType === 'enable_mfa')
   const [qrCode, setQrCode] = useState(null);
   const [mfaSecret, setMfaSecret] = useState(null);
+  const [factorId, setFactorId] = useState(null);
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupError, setSetupError] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  // Copia la clave TOTP al portapapeles. En móvil casi nadie escanea el QR
+  // (el autenticador suele estar en el mismo teléfono), así que copiar y pegar
+  // la clave es el flujo real; por eso se le da protagonismo.
+  const handleCopySecret = async () => {
+    if (!mfaSecret) return;
+    await Clipboard.setStringAsync(mfaSecret);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Estado para el modal de Google Authenticator (solo se usa fuera de enable_mfa)
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -53,13 +78,20 @@ export default function Token2FA({ navigation, route }) {
       setSetupLoading(true);
       setSetupError('');
       try {
-        const data = await apiRequest('/auth/mfa/setup', { method: 'POST' });
+        const { factorId: fid, qrCode: qr, secret } = await mfaService.startEnroll();
         if (mounted) {
-          setQrCode(data.qr_code);
-          setMfaSecret(data.secret);
+          setFactorId(fid);
+          setQrCode(qr);
+          setMfaSecret(secret);
         }
       } catch (err) {
-        if (mounted) setSetupError('No se pudo generar el código QR. Intenta de nuevo.');
+        // Se muestra el mensaje real de Supabase (ej. "MFA is not enabled for
+        // this project") en vez de un genérico — con el mensaje genérico este
+        // mismo error tomó varias rondas de diagnóstico a ciegas la vez pasada.
+        console.error('[Token2FA] Error al iniciar enrolamiento MFA:', err);
+        if (mounted) {
+          setSetupError(err?.message || 'No se pudo generar el código QR. Intenta de nuevo.');
+        }
       } finally {
         if (mounted) setSetupLoading(false);
       }
@@ -134,11 +166,8 @@ export default function Token2FA({ navigation, route }) {
       setLoading(true);
       setError('');
       try {
-        const result = await apiRequestPublic('/auth/mfa/verify', {
-          method: 'POST',
-          body: JSON.stringify({ email: user?.email, mfa_code: enteredCode }),
-        });
-        if (!result?.verified) {
+        const verified = await mfaService.confirmEnroll(factorId, enteredCode);
+        if (!verified) {
           setError('Código incorrecto. Verifica la hora de tu dispositivo e intenta de nuevo.');
           setDigits(emptyDigits());
           digitRefs.current[0]?.focus();
@@ -216,19 +245,59 @@ export default function Token2FA({ navigation, route }) {
                 <ActivityIndicator color={colors.primary} />
               ) : setupError ? (
                 <Text style={styles.errorText}>{setupError}</Text>
-              ) : qrCode ? (
+              ) : mfaSecret ? (
                 <>
-                  <Image
-                    source={{ uri: qrCode }}
-                    style={{ width: 200, height: 200, marginBottom: 8 }}
-                    resizeMode="contain"
-                  />
-                  <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>
-                    ¿No puedes escanear? Ingresa esta clave manualmente:
+                  {/* Flujo principal en móvil: copiar la clave y pegarla en la
+                      app de 2FA (Google Authenticator, Authy, etc.). */}
+                  <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', marginBottom: 10 }}>
+                    Copia esta clave y pégala en tu app de autenticación:
                   </Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textPrimary, marginTop: 4 }}>
-                    {mfaSecret}
+                  <TouchableOpacity
+                    onPress={handleCopySecret}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      alignSelf: 'center',
+                      borderWidth: 1,
+                      borderColor: copied ? colors.success : colors.border,
+                      borderRadius: 10,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      backgroundColor: colors.surface || '#f5f6f8',
+                    }}
+                  >
+                    <Text
+                      selectable
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        letterSpacing: 1,
+                        color: colors.textPrimary,
+                        marginRight: 12,
+                      }}
+                    >
+                      {mfaSecret}
+                    </Text>
+                    <Ionicons
+                      name={copied ? 'checkmark-circle' : 'copy-outline'}
+                      size={20}
+                      color={copied ? colors.success : colors.primary}
+                    />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 12, color: copied ? colors.success : colors.textMuted, textAlign: 'center', marginTop: 6, minHeight: 16 }}>
+                    {copied ? '¡Clave copiada!' : 'Toca la clave para copiarla'}
                   </Text>
+
+                  {/* El QR queda como alternativa secundaria. */}
+                  {svgFromDataUri(qrCode) ? (
+                    <>
+                      <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: 16, marginBottom: 8 }}>
+                        O escanea el código QR:
+                      </Text>
+                      <SvgXml xml={svgFromDataUri(qrCode)} width={160} height={160} />
+                    </>
+                  ) : null}
                 </>
               ) : null}
             </View>

@@ -31,6 +31,23 @@ export default StyleSheet.create({
     borderColor: colors.textError,
     borderWidth: 2,
   },
+  // Contenedor del campo de contraseña: relativo para anclar el ícono de
+  // mostrar/ocultar a la derecha, superpuesto sobre el TextInput.
+  passwordWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 48, // espacio para que el texto no quede debajo del ícono
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
   errorMessage: {
     color: colors.textError,
     fontSize: 12,

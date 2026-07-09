@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
         if (!isMounted) return;
 
         if (currentSession?.user) {
-          setLogin(currentSession.user, currentSession.token, null);
+          setLogin(currentSession.user, currentSession.token);
         } else {
           setLogout();
         }

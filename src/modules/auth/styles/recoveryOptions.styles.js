@@ -18,5 +18,36 @@ export default StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  icon: {
+    alignSelf: 'center',
+    marginVertical: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface || '#fff',
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

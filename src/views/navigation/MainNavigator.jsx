@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 
@@ -110,13 +111,14 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 const MainNavigator = () => {
   const user = useAuthStore((state) => state.user);
   const enabledModules = user?.enabled_modules || ['dashboard', 'sales', 'credit', 'inventory'];
-  
+  const insets = useSafeAreaInsets();
+
   // Filtrar los módulos que se mostrarán en la barra de navegación inferior
   const visibleTabs = TAB_ORDER.filter((mod) => enabledModules.includes(mod));
 
   return (
-    <Tab.Navigator 
-      screenOptions={{ 
+    <Tab.Navigator
+      screenOptions={{
         headerShown: false,
 
         tabBarActiveTintColor: colors.tabIconActive,
@@ -128,9 +130,12 @@ const MainNavigator = () => {
           backgroundColor: colors.tabBackground,
           borderTopWidth: 0,
 
-          height: 72,
+          // Se suma insets.bottom para reservar el espacio de la barra de
+          // navegación del sistema (Android edge-to-edge) y evitar que los
+          // botones "atrás/inicio/recientes" se superpongan con la tab bar.
+          height: 72 + insets.bottom,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
 
           shadowColor: '#000',
           shadowOffset: {

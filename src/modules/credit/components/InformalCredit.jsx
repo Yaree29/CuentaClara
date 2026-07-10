@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MagnifyingGlassIcon, PlusIcon, CurrencyDollarIcon, XMarkIcon, PencilIcon } from 'react-native-heroicons/solid';
 import { FontAwesome } from '@expo/vector-icons';
 import { useInformalCredit } from '../hooks/useInformalCredit';
@@ -15,6 +16,8 @@ const InformalCredit = () => {
     saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
     inventoryProducts,
   } = useInformalCredit();
+
+  const insets = useSafeAreaInsets();
 
   // Estados del Formulario
   const [formClientName, setFormClientName] = useState('');
@@ -67,7 +70,11 @@ const InformalCredit = () => {
         <Text style={styles.clientName}>{item.clientName}</Text>
         <View style={styles.amountContainer}>
           <Text style={styles.debtAmount}>${item.totalDebt.toFixed(2)}</Text>
-          <TouchableOpacity style={styles.editIconBtn} onPress={() => openEditModal(item)}>
+          <TouchableOpacity
+            style={styles.editIconBtn}
+            onPress={() => openEditModal(item)}
+            accessibilityLabel={`Editar fiado de ${item.clientName}`}
+          >
             <PencilIcon size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -75,7 +82,11 @@ const InformalCredit = () => {
       <Text style={styles.itemsText} numberOfLines={2}>Fiado: {item.items}</Text>
 
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.payBtn} onPress={() => openPaymentModal(item)}>
+        <TouchableOpacity
+          style={styles.payBtn}
+          onPress={() => openPaymentModal(item)}
+          accessibilityLabel={`Abonar a ${item.clientName}`}
+        >
           <CurrencyDollarIcon size={18} color={colors.success} />
           <Text style={styles.payBtnText}>Abonar / Pagar</Text>
         </TouchableOpacity>
@@ -106,7 +117,7 @@ const InformalCredit = () => {
       />
 
       <View style={styles.fabContainer}>
-        <TouchableOpacity style={styles.fabButton} onPress={openAddModal}>
+        <TouchableOpacity style={styles.fabButton} onPress={openAddModal} accessibilityLabel="Agregar fiado">
           <PlusIcon size={28} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -114,13 +125,13 @@ const InformalCredit = () => {
       {/* MODAL: Crear / Editar Fiado */}
       <Modal visible={isFormModalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16}}>
               <Text style={styles.modalTitle}>{editingCredit ? 'Editar Fiado' : 'Anotar Nuevo Fiado'}</Text>
               <TouchableOpacity onPress={() => setIsFormModalVisible(false)}><XMarkIcon size={24} color={colors.textSecondary}/></TouchableOpacity>
             </View>
 
-            <View style={styles.formGroup}><Text style={styles.formLabel}>Nombre del Cliente *</Text><TextInput style={styles.formInput} value={formClientName} onChangeText={setFormClientName} /></View>
+            <View style={styles.formGroup}><Text style={styles.formLabel}>Nombre del Cliente *</Text><TextInput style={styles.formInput} value={formClientName} onChangeText={setFormClientName} accessibilityLabel="Nombre del Cliente" placeholder="Ej. Doña María" /></View>
 
             <View style={{flexDirection: 'row', gap: 12}}>
               <View style={[styles.formGroup, {flex: 1}]}>
@@ -192,7 +203,7 @@ const InformalCredit = () => {
       {/* MODAL: Registrar Pago*/}
       <Modal visible={isPaymentModalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16}}>
               <Text style={styles.modalTitle}>Registrar Pago de {selectedClient?.clientName}</Text>
               <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}><XMarkIcon size={24} color={colors.textSecondary}/></TouchableOpacity>

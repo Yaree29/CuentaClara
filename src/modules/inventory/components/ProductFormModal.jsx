@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XMarkIcon } from 'react-native-heroicons/solid';
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
@@ -160,6 +161,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   };
 
   const hasErrors = !!nameError || !!priceError || !!stockError || !!minStockError;
+  const insets = useSafeAreaInsets();
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -170,7 +172,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             {/* Encabezado */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <Text style={styles.modalTitle}>{initialData ? 'Editar Producto' : 'Nuevo Producto'}</Text>

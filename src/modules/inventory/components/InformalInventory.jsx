@@ -135,7 +135,11 @@ const InformalInventory = () => {
 
         {/* Botón de editar (solo fuera del modo selección) */}
         {!isSelectionMode && (
-          <TouchableOpacity style={styles.editBtn} onPress={() => openEditForm(item)}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => openEditForm(item)}
+            accessibilityLabel={`Editar ${item.name}`}
+          >
             <PencilIcon size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
@@ -255,7 +259,11 @@ const InformalInventory = () => {
       {/* FAB: Modo normal → agregar producto */}
       {!isSelectionMode && (
         <View style={styles.fabContainer}>
-          <TouchableOpacity style={styles.fabButton} onPress={openAddForm}>
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={openAddForm}
+            accessibilityLabel="Agregar producto"
+          >
             <PlusIcon size={28} color="#FFF" />
           </TouchableOpacity>
         </View>

@@ -255,7 +255,7 @@ const RegisterScreen = ({ navigation }) => {
     (async () => {
       try {
         const [tmplData, biometricEnabled] = await Promise.all([
-          registerService.getTemplates(),
+          registerService. getCategories(),
           isBiometricAvailable(),
         ]);
         if (mounted) {

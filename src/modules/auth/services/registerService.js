@@ -15,10 +15,10 @@ const registerService = {
   },
 
   // Plantillas de industria para el paso 3 del registro PYME
-  getTemplates: async () => {
+ /* getTemplates: async () => {
     return apiRequestPublic('/auth/templates');
   },
-
+*/
   register: async (form) => {
     const {
       name,
@@ -29,7 +29,7 @@ const registerService = {
       businessName,
       profileType,
       categoryId,
-      industryTemplateId,
+      //industryTemplateId,
       address,
       nit,
       logoUrl,
@@ -70,7 +70,7 @@ const registerService = {
         password,
         phone: phone || null,
         category_id: categoryId || null,
-        industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
+        //industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
         ui_mode: uiMode,
         address: address && address.trim() ? address.trim() : null,
         tax_id: nit || form.taxId || null,

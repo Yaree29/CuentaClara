@@ -29,7 +29,7 @@ Este documento define las condiciones de éxito y los criterios de aceptación (
 * **AC-02-02:** Después del registro, la aplicación debe presentar una pantalla de selección visual clara con dos opciones estratégicas para habilitar la interfaz adaptativa:
   1. **"Gestión rápida y sencilla"** (Bifurcación Informal / Emprendedor)
   2. **"Control avanzado"** (Bifurcación PYME)
-* **AC-02-03:** El sistema debe registrar la elección guardando el valor de `ui_mode` (`simple` o `advanced`) en la tabla `businesses`, adaptando automáticamente los módulos visibles de forma condicional.
+* **AC-02-03:** El sistema debe registrar la elección guardando el valor de `ui_mode` (`simple` o `advanced`) en la tabla `businesses`. Para PYME, el sistema activa por defecto los módulos correspondientes a la categoría de industria seleccionada (ver `onboarding-engine.md`), sin restringir permanentemente el acceso a otros módulos de la Biblioteca de Módulos.
 
 ### CC-13 / CC-14: Configuración de Perfil y Plantillas de Industria (*Smart Defaults*)
 * **AC-02-04:** El usuario PYME debe poder configurar campos fiscales como RUC/NIT, tipo de sociedad e incorporar la carga de un logo corporativo en formato (.png, .jpg) menor a 5MB, el cual se inyectará dinámicamente en la cabecera de las facturas estructuradas.
@@ -53,6 +53,28 @@ Este documento define las condiciones de éxito y los criterios de aceptación (
 * **AC-03-06:** El algoritmo de monitoreo de inventario debe realizar una comparativa continua entre el `stock_actual` y el `min_stock` establecido para activar estados de alerta proactivos.
 * **AC-03-07:** **Alertas Predictivas (Algoritmo de Agotamiento):** El sistema debe analizar la velocidad de venta histórica (promedio de salida por día) para estimar la fecha en que el producto quedará en desabastecimiento total (*Out of Stock*). Si el modelo predice desabastecimiento en un periodo menor o igual a 5 días, generará una alerta predictiva visual en el dashboard de la PYME.
 * **AC-03-08:** Para usuarios informales, las alertas predictivas y de quiebre de stock deben incorporar un botón de acción rápida que abra WhatsApp con el número telefónico del proveedor guardado en la DB, auto-rellenando una plantilla pre-redactada de orden de suministro con el nombre del artículo y la cantidad recomendada para reponer.
+
+---
+
+## 🧩 ÉPICA 3.5: Biblioteca de Módulos y Personalización (PYME)
+
+### CC-18b: Activación/Desactivación de Módulos
+* **AC-03-09:** El usuario con rol Administrador debe poder acceder a Configuración → Módulos y ver el listado completo de la Biblioteca de Módulos, indicando cuáles están activos y cuáles disponibles para activar.
+* **AC-03-10:** Al desactivar un módulo, el sistema debe ocultar sus pantallas, formularios y alertas de la navegación sin eliminar los datos ya registrados. Al reactivarlo, la información debe volver a mostrarse íntegramente.
+* **AC-03-11:** El Dashboard y la navegación deben regenerarse automáticamente (sin requerir reinicio de la app) al activar o desactivar un módulo.
+
+### CC-18c: Módulo de Servicios
+* **AC-03-12:** El sistema debe permitir crear, editar y eliminar servicios del catálogo, cada uno con nombre, precio y duración estimada.
+* **AC-03-13:** La agenda debe soportar vistas diaria, semanal y mensual, permitiendo reprogramar o cancelar citas pendientes.
+* **AC-03-14:** Cada servicio debe poder asignarse a un empleado específico y transicionar entre los estados `pendiente`, `en_proceso`, `finalizado`.
+
+### CC-18d: Comisiones y Propinas
+* **AC-03-15:** El sistema debe permitir configurar un porcentaje de comisión (fijo o variable) por empleado, calculado automáticamente sobre las ventas o servicios que dicho empleado registre.
+* **AC-03-16:** El registro de propinas debe permitir distribución automática (dividida entre empleados según regla configurada) o manual (asignación específica por transacción).
+
+### CC-18e: Gestor de Ofertas
+* **AC-03-17:** El sistema debe permitir crear descuentos por producto individual o por categoría completa, con fecha de inicio y fin definidas.
+* **AC-03-18:** Al vencer la fecha de finalización de una oferta, el sistema debe desactivarla automáticamente sin intervención manual, conservando el registro en el historial de promociones.
 
 ---
 

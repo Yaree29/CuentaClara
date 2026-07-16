@@ -54,9 +54,13 @@ La plataforma adapta de forma adaptativa sus privilegios e interfaces para tres 
 2. **Pequeñas y Medianas Empresas (PYMEs):**
    * *Perfil:* Comercios minoristas establecidos, talleres de confección/manufactura ligera, restaurantes formalizados.
    * *Necesidad:* Control granular de existencias físicas, administración fiscal localizada (ITBMS), alertas de stock mínimo, trazabilidad de costos e insumos por recetas y reportes ejecutivos periódicos.
-3. **Gerentes Operativos / Personal de Staff:**
+3. **Personal de Staff (rol Asistente):**
    * *Perfil:* Cajeros, dependientes de tienda o encargados de almacén delegados por el dueño de la PYME.
-   * *Necesidad:* Restricciones de seguridad estrictas que limiten su interacción únicamente al registro de ventas o auditorías de existencias asignadas, protegiendo las métricas de rentabilidad consolidada mediante políticas RLS.
+   * *Necesidad:* Restricciones de seguridad estrictas que limiten su 
+     interacción únicamente al registro de ventas o auditorías de 
+     existencias asignadas, protegiendo las métricas de rentabilidad 
+     consolidada del rol Administrador mediante políticas RLS y permisos 
+     de aplicación.
 
 ### User Personas Detalladas
 
@@ -94,75 +98,52 @@ La base del ecosistema tecnológico asegura aislamiento absoluto, alta disponibi
 
 ---
 
-## 7. Funcionalidades Detalladas & Criterios de Aceptación (AC)
+## 7. Funcionalidades Detalladas & Criterios de Aceptación
 
-### 7.1. Onboarding Adaptativo y Registro Personalizado (Épica 2)
-* **AC-02-01:** El formulario de registro recolecta los campos obligatorios: Nombre, Apellido, Teléfono, Nombre del Negocio, Email y Contraseña.
-* **AC-02-02:** Después del registro, la aplicación presenta una pantalla de selección visual clara con dos opciones: "Gestión rápida y sencilla" (Bifurcación Informal) y "Control avanzado" (Bifurcación PYME).
-* **AC-02-03:** El sistema registra la elección guardando el valor de `ui_mode` (`simple` o `advanced`) en la tabla `businesses`.
-* **AC-02-04:** El usuario PYME puede configurar campos fiscales como RUC/NIT y subir un logo corporativo en formato (.png, .jpg) menor a 5MB para cabeceras de facturas.
-* **AC-02-05:** Para usuarios informales, el sistema autoconfigura valores por defecto (*Smart Defaults*): moneda "USD", tasa ITBMS en 7% (inactiva por defecto) e insumos deshabilitados.
-* **AC-02-06:** El sistema carga plantillas pre-configuradas según la vertical seleccionada (Alimentos, Servicios, Retail), mapeando metadatos especializados en la base de datos de manera automatizada.
+El detalle completo de criterios de aceptación por épica vive en 
+`docs/product/acceptance-criteria.md`. Resumen de épicas cubiertas:
 
-### 7.2. Gestión Híbrida de Inventario y Alertas Predictivas (Épica 3)
-* **AC-03-01:** **SERVICE (Servicios):** Al realizar una venta, el inventario del producto no disminuye. Su stock en base de datos permanece como `NULL` (infinito).
-* **AC-03-02:** **RETAIL (Minorista):** Cada unidad vendida decrementa el stock de forma lineal (`stock_nuevo = stock_anterior - cantidad_vendida`).
-* **AC-03-03:** **MANUFACTURE (Manufactura/Recetas):** Al venderse un producto terminado, el backend descuenta automáticamente el stock de sus insumos insulares basándose en una receta en formato JSONB. Si un insumo rompe el inventario mínimo, la transacción se completa pero arroja una alerta en el dashboard.
-* **AC-03-04:** El escáner de la cámara (Expo) debe leer códigos de barras (EAN-13, QR) e identificar el producto de forma automática en menos de 1 segundo.
-* **AC-03-05:** El backend interpreta etiquetas de balanzas de peso variable con prefijos específicos, extrayendo el ID del producto y calculando el peso neto y precio final de venta.
-* **AC-03-06:** El algoritmo de monitoreo dispara una alerta visual cuando el stock de un producto o insumo cae por debajo de su `min_stock` establecido.
-* **AC-03-07:** **Alertas Predictivas (Algoritmo de Agotamiento):** El sistema analiza la velocidad de venta histórica diaria para estimar la fecha en que el producto quedará en stock cero. Si el modelo predice desabastecimiento en un periodo menor o igual a 5 días, generará una alerta predictiva en el dashboard.
-* **AC-03-08:** Para perfiles informales, la alerta incluye un botón directo que abre WhatsApp con el número telefónico del proveedor guardado en la DB, pre-redactando un mensaje con la orden de suministro sugerida.
-
-### 7.3. Módulo de Ventas, Finanzas y Sistema de Fiados (Épica 4)
-* **AC-04-01:** La interfaz de venta rápida permite registrar transacciones con solo seleccionar un monto o un producto rápido y presionar "Completar Venta".
-* **AC-04-02:** El cajero dispone de un botón binario visible en el checkout para clasificar la venta como "Al Contado" o "Fiado".
-* **AC-04-03:** Al marcar una venta como "Fiado", el sistema exige asociar obligatoriamente un Cliente (nombre/apodo) y registra el saldo de la deuda en una cuenta corriente dedicada.
-* **AC-04-04:** El módulo permite registrar amortizaciones e ingresos parciales. Al registrar un Abono, el saldo de la deuda se decrementa linealmente. Si llega a `0.00`, el estado de la deuda cambia automáticamente a `paid`.
-* **AC-04-05:** **Cobro Proactivo por WhatsApp:** La lista de cuentas por cobrar incluye un botón para enviar un recordatorio pre-redactado por WhatsApp mediante deep linking que incluye el nombre del cliente, el saldo pendiente consolidado y la fecha de vencimiento.
-* **AC-04-06:** Los comprobantes/facturas generadas en Panamá calculan automáticamente el ITBMS (7% sobre el subtotal imponible, excluyendo productos exentos).
-* **AC-04-07:** El comprobante se genera asíncronamente en PDF y puede compartirse en formato de texto estructurado o archivo PDF mediante el menú de compartir nativo del dispositivo (optimizando el envío a WhatsApp).
-
-### 7.4. Inteligencia de Negocio, Growth y Marketing WhatsApp (Épica 5)
-* **AC-05-01:** **Marketing por WhatsApp (Catálogos Digitales):** El usuario puede seleccionar múltiples artículos del inventario para generar una plantilla de texto enriquecido con nombres, precios y promociones junto a links de imágenes para compartir directamente en sus estados o chats.
-* **AC-05-02:** El Dashboard en Modo Avanzado (PYME) muestra gráficos nativos de barra/pastel del ranking de productos más vendidos e indicadores comerciales clave.
-* **AC-05-03:** El motor de balance financiero calcula el total de ganancias netas restando los gastos operativos registrados de los subtotales de ingresos de forma diaria.
-* **AC-05-04:** **Sistema de Detección de Cliente Frecuente:** El backend ejecuta algoritmos de agrupación basados en la recurrencia de nombres, apodos o teléfonos recolectados en el historial de ventas. Compila una sección con el "Top Clientes Más Frecuentes", visualizando su frecuencia mensual, volumen total de gasto e identificando sus productos preferidos para campañas dirigidas.
-* **AC-05-05:** El planificador asíncrono (`APScheduler`) corre diariamente a las 11:59 PM para ejecutar de forma automática:
-  1. Consolidar el cierre financiero diario.
-  2. Actualizar estados vencidos de fiados a `overdue` comparando con la fecha límite.
-  3. Limpiar e invalidar sesiones de caja que hayan quedado inactivas o abiertas por error.
+* **Épica 2 — Onboarding Adaptativo y Registro Personalizado:** selección 
+  de modo (Informal/PYME), Smart Defaults, plantillas por industria. 
+  Ver `AC-02-01` a `AC-02-06`.
+* **Épica 3 — Gestión Híbrida de Inventario y Alertas Predictivas:** 
+  lógica SERVICE/RETAIL/MANUFACTURE, escáner, alertas predictivas. 
+  Ver `AC-03-01` a `AC-03-08`. Incluye además la Biblioteca de Módulos 
+  y sub-funcionalidades de Inventario Avanzado — ver `AC-03-09` a `AC-03-18` 
+  y `docs/product/onboarding-engine.md`.
+* **Épica 4 — Ventas, Finanzas y Sistema de Fiados:** venta rápida, 
+  clasificación Contado/Fiado, ITBMS, facturación PDF. 
+  Ver `AC-04-01` a `AC-04-07`.
+* **Épica 5 — Inteligencia de Negocio, Growth y Marketing WhatsApp:** 
+  catálogos digitales, dashboard PYME, detección de cliente frecuente, 
+  tareas programadas. Ver `AC-05-01` a `AC-05-05`.
 
 ---
 
-## 8. Requisitos de Sistema
+## 8. Principios de Requisitos de Alto Nivel
 
-### 8.1. Requisitos Funcionales (RF)
-* **RF-01 (Multi-tenancy & Isolation):** El sistema debe inyectar de manera transparente filtros de seguridad a nivel de base de datos empleando RLS para restringir el acceso a los datos únicamente al `business_id` del token activo.
-* **RF-02 (Autenticación Biométrica):** El frontend debe interactuar con las APIs de hardware de iOS/Android para validar inicios biométricos seguros con un sistema de respaldo numérico (PIN).
-* **RF-03 (MFA Contable):** Acciones destructivas o fiscales críticas deben exigir obligatoriamente una verificación secundaria vía Token TOTP de Supabase antes de confirmar el commit en la base de datos.
-* **RF-04 (Procesamiento Asíncrono):** El backend de FastAPI debe delegar a colas de ejecución en background las operaciones pesadas de renderizado de reportes PDF y despachos automáticos de emails corporativos.
+> Estos 4 principios resumen las prioridades arquitectónicas del sistema. 
+> No sustituyen el listado completo de requisitos funcionales y no 
+> funcionales, que vive en `docs/product/requirements.md` 
+> (`RF-001`...`RF-034`, `RNF-001`...`RNF-004`, `RN-01`...`RN-08`).
 
-### 8.2. Requisitos No Funcionales (RNF)
-* **RNF-01 (Velocidad del Escáner):** El módulo de escaneo de códigos de barra mediante cámara móvil debe enfocar, descodificar (EAN-13) e insertar el ítem en el carrito en un tiempo inferior a 1.0 segundo.
-* **RNF-02 (Cifrado Local de Credenciales):** Cualquier dato sensible del cliente almacenado en el teléfono inteligente debe persistirse cifrado con algoritmos AES-256 usando `expo-secure-store`.
-* **RNF-03 (Latencia de la API):** Los endpoints transaccionales centrales (inserción de ventas, actualización de stock) deben responder con latencias de servidor inferiores a 200ms bajo redes móviles estándar.
-* **RNF-04 (Resiliencia Offline Efímera):** La aplicación debe almacenar el catálogo de productos esenciales en memoria local para permitir la confección de carritos de compra ante caídas temporales de la cobertura de red.
+* **Principio 1 (Multi-tenancy & Isolation):** El sistema debe inyectar 
+  de manera transparente filtros de seguridad a nivel de base de datos 
+  empleando RLS para restringir el acceso a los datos únicamente al 
+  `business_id` del token activo.
+* **Principio 2 (Autenticación Biométrica):** El frontend debe interactuar 
+  con las APIs de hardware de iOS/Android para validar inicios biométricos 
+  seguros con un sistema de respaldo numérico (PIN).
+* **Principio 3 (MFA Contable):** Acciones destructivas o fiscales críticas 
+  deben exigir obligatoriamente una verificación secundaria vía Token 
+  TOTP de Supabase antes de confirmar el commit en la base de datos.
+* **Principio 4 (Procesamiento Asíncrono):** El backend de FastAPI debe 
+  delegar a colas de ejecución en background las operaciones pesadas de 
+  renderizado de reportes PDF y despachos automáticos de emails corporativos.
 
----
-
-## 9. Historias de usuario
-* **HU-01: Registro y Onboarding Adaptativo** (Ver especificaciones detalladas en AC-02-01 a AC-02-05).
-* **HU-02: Cobro Proactivo de Cuentas por Cobrar (Fiados)** (Ver especificaciones detalladas en AC-04-03 a AC-04-05).
-* **HU-03: Alertas de Abastecimiento Predictivo** (Ver especificaciones detalladas en AC-03-06 a AC-03-08).
-
----
-
-## 10. Métricas Comerciales y de Producto
-1. **Tasa de Adopción (Ratio de Conmutación de Perfil):** Distribución porcentual mensual de comercios que operan en Modo Informal (`simple`) contra Modo Avanzado (`advanced`).
-2. **Métrica de Retención de Cohortes (MAU / Retention Rate):** Porcentaje de negocios que continúan ejecutando movimientos transaccionales transcurridos 30, 60 y 90 días. Target: > 70%.
-3. **Métrica de Stickiness del Módulo de Fiados:** Volumen promedio semanal de deudas y abonos por usuario activo, validando el reemplazo de la libreta física.
-4. **WhatsApp Recovery Rate:** Ratio de mensajes de recordatorio emitidos que se traducen en un abono financiero en menos de 48 horas.
+Los requisitos no funcionales de rendimiento y seguridad (velocidad de 
+escáner, cifrado local, latencia de API, resiliencia offline) están 
+detallados en `docs/product/requirements.md`, sección RNF.
 
 ---
 

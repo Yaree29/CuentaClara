@@ -4,6 +4,24 @@ Este documento registra cronológicamente los hitos de desarrollo, versiones del
 
 ---
 
+## [1.0.0-alpha.2] - [2026-07-10]
+### Cambiado
+* **Reorganización de `docs/`:** documentos separados en `product/`, 
+  `technical/`, `ops/`. Se añadieron `GLOSSARY.md` y `STATUS.md` como 
+  nuevas fuentes de verdad para terminología y estado real del proyecto.
+* **Corrección de estado:** el estado "en progreso" reportado en la 
+  entrada `[1.0.0-draft]` para Crédito/Fiado y Google Auth ya no refleja 
+  la realidad.
+
+### Añadido
+* Migración de la lógica de login, recuperación de contraseña y gestión de sesiones al lado del cliente.
+* Implementación de autenticación de dos factores (2FA) y huella dactilar mejorada.
+* Mejoras generales en la interfaz de usuario relacionadas con el flujo de autenticación.
+* Documentación del estado real (implementado/parcial/no iniciado) de 
+  cada módulo del Modo PYME, en `STATUS.md`.
+
+---
+
 ## [1.0.0-draft] - 2026-06-03
 ### Añadido
 * **Documentación Base de Producto:** Redacción del PRD inicial, Historias de Usuario e Inventario de Requisitos Funcionales y No Funcionales.

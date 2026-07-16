@@ -97,13 +97,6 @@ El frontend móvil en React Native ajusta dinámicamente las pantallas, botones 
 
 ---
 
-## 🔄 Disponibilidad Offline y Sincronización
-
-* **Almacenamiento Local:** La aplicación móvil utiliza un almacenamiento local ligero en caché para guardar datos estáticos clave (ej. catálogo de productos activos, saldo pendiente de clientes frecuentes).
-* **Sincronización en Conexión:** En caso de desconexión, la aplicación móvil encola las ventas rápidas localmente. Una vez detectada la restauración de internet (`NetInfo`), se procesan secuencialmente contra el backend.
-
----
-
 ## ⏲️ Procesamiento Asíncrono y Tareas Programadas
 
 El backend de FastAPI utiliza dos mecanismos de procesamiento en segundo plano para evitar bloquear el hilo principal de las solicitudes HTTP:

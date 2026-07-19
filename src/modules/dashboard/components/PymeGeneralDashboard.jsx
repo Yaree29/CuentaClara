@@ -4,11 +4,11 @@ import { BanknotesIcon, ChartBarIcon, ArrowUpIcon, ArrowDownIcon } from 'react-n
 import styles from './styles/PymeDashboards.styles';
 import colors from '../../../theme/colors';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 
 const PymeGeneralDashboard = () => {
   // Extraemos los datos del usuario actual desde Zustand
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);//ya no se usa este dashbord ya que se implementara otro mejorado
   const userName = user?.name || 'Comerciante';
 
   const [refreshing, setRefreshing] = useState(false);

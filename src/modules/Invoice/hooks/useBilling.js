@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import billingService from '../services/billingService';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../../inventory/services/inventoryService';
 import debtService from '../../credit/services/debtService';
 
@@ -16,7 +16,7 @@ export const useBilling = () => {
   const [customersLoading, setCustomersLoading] = useState(true);
   const [customersError, setCustomersError] = useState(null);
   const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
+  const businessData = 'informal';
 
   const resolveBusinessId = () =>
     businessData?.id ||

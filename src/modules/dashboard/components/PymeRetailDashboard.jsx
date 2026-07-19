@@ -4,13 +4,13 @@ import { ScaleIcon, ArchiveBoxIcon, ExclamationTriangleIcon } from 'react-native
 import styles from './styles/PymeDashboards.styles';
 import colors from '../../../theme/colors';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 
 
 const PymeRetailDashboard = () => {
 
   // Extraemos los datos del usuario actual desde Zustand
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);//ya no se usa este dashbord ya que se implementara otro mejorado
   const userName = user?.name || 'Comerciante';
 
   return (

@@ -7,7 +7,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 import colors from '../../../theme/colors';
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 
@@ -16,7 +16,7 @@ import InformalInventory from '../components/InformalInventory';
 // import PymeInventory from '../components/PymeInventory'; Próximamente...
 
 const InventoryScreen = () => {
-  const userType = useUserStore((state) => state.userType);
+  const userType = 'informal';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>

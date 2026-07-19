@@ -1,17 +1,19 @@
 import React, { createContext, useContext } from 'react';
-import useUserStore from '../../store/useUserStore';
+import useAuthStore from '../../store/useAuthStore';
 
 const UserTypeContext = createContext({});
 
 export const UserTypeProvider = ({ children }) => {
-  const userType = useUserStore((state) => state.userType);
-  const businessData = useUserStore((state) => state.businessData);
+  const user = useAuthStore((state) => state.user);
+
+  const userType = user?.userType || 'informal';
+  const businessData = user?.business || null;
 
   const value = {
     userType,
     businessData,
     isPyme: userType === 'pyme',
-    isInformal: userType === 'informal'
+    isInformal: userType === 'informal',
   };
 
   return (

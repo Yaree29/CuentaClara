@@ -22,6 +22,12 @@ const colors = {
   successDark: '#328339',
   successBorder: '#96c29b',
 
+  //Colores para estados
+  takenBackground: '#84c7ee',
+  occupiedBackground: '#ffe77a',
+  freeBackground: '#b1ecb6',
+  savedBackground: '#c281ff',
+
   warning: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',

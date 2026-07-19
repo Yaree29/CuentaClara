@@ -20,14 +20,21 @@ erDiagram
     businesses ||--o{ invoices : "emite"
     businesses ||--o{ cash_sessions : "registra"
     businesses ||--o{ customers : "asocia"
+    businesses ||--o{ suppliers : "registra"
+    businesses ||--o{ purchase_orders : "ordena"
     
     users ||--o{ invoices : "registra"
     users ||--o{ cash_sessions : "abre/cierra"
     users ||--o{ debt_payments : "recauda"
+    users ||--o{ purchase_orders : "crea"
     
     products ||--o| product_categories : "pertenece"
     products ||--o| inventory : "mapea"
     products ||--o{ invoice_items : "detalla"
+    products ||--o{ purchase_items : "detalla"
+    
+    suppliers ||--o{ purchase_orders : "provee"
+    purchase_orders ||--o{ purchase_items : "contiene"
     
     invoices ||--o{ invoice_items : "contiene"
     invoices ||--o{ payments : "paga"
@@ -53,11 +60,18 @@ erDiagram
   * `role` (VARCHAR): Rol (`owner`, `staff`, `admin`).
 * **`features`**: Tabla que determina los módulos habilitados por negocio.
   * `business_id` (UUID, FK), `module` (VARCHAR), `is_active` (BOOLEAN).
+* **`business_configs`**: Configuración personalizable por negocio (1:1 con `businesses`).
+  * `business_id` (UUID, FK, UNIQUE), `currency`, `weight_unit`, `tax_rate` (DECIMAL), `logo_url`, `primary_color`, `language`, `settings` (JSONB).
+* **`subscriptions`**: Historial de suscripciones/planes de pago del negocio.
+  * `business_id` (UUID, FK), `plan` (`free`, `basic`, `pro`), `status` (`active`, `expired`, `cancelled`), `starts_at`, `ends_at`, `payment_ref`.
+* **`users.mfa_secret` / `users.mfa_enabled`**: columnas de autenticación de dos factores (TOTP) sobre la tabla `users` (`database/schema/13_mfa.sql`).
 
 ### 2. Inventario e Insumos
+* **`product_categories`**: Categorías de productos definidas por negocio.
+  * `business_id` (UUID, FK), `name` (VARCHAR), `color` (VARCHAR).
 * **`products`**: Productos o servicios a vender.
   * `id` (SERIAL, PK).
-  * `business_id` (UUID, FK).
+  * `business_id` (UUID, FK), `category_id` (INTEGER, FK a `product_categories`).
   * `name` (VARCHAR), `sku` (VARCHAR), `price` (DECIMAL).
   * `unit_type` (VARCHAR): Unidad de medida.
 * **`inventory`**: Tabla que contiene los niveles de existencias actuales.
@@ -65,6 +79,14 @@ erDiagram
 * **`inventory_movements`**: Kardex o historial de transacciones físicas de stock.
   * `type` (`in`, `out`, `adjust`, `loss`).
   * `reason` (`sale`, `purchase`, `waste`, `manual`, `return`).
+
+### 2.1 Compras
+* **`suppliers`**: Proveedores del negocio.
+  * `business_id` (UUID, FK), `name` (VARCHAR), `phone`, `email`, `tax_id`, `is_active` (BOOLEAN).
+* **`purchase_orders`**: Cabecera de una orden de compra a proveedor.
+  * `business_id` (UUID, FK), `supplier_id` (FK), `total` (DECIMAL), `status` (`draft`, `received`, `cancelled`), `user_id` (FK), `ordered_at`, `received_at`.
+* **`purchase_items`**: Detalle de productos dentro de una orden de compra.
+  * `purchase_order_id` (FK), `product_id` (FK), `quantity` (DECIMAL), `unit_cost` (DECIMAL), `subtotal` (DECIMAL).
 
 ### 3. Ventas y Facturación
 * **`invoices`**: Cabecera de transacciones comerciales.

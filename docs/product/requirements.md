@@ -196,9 +196,16 @@
 - [ ] Tema (claro/oscuro)
 
 ### RF-025: Gestión de Usuarios (Staff)
-- [ ] Admin puede crear usuarios adicionales
-- [ ] Roles: admin, vendedor, gerente-inventario
-- [ ] Asignación de permisos por rol
+- [ ] Roles vigentes: **Administrador**, **Asistente** 
+      (reemplaza nomenclatura anterior admin/vendedor/gerente-inventario)
+- [ ] Administrador: acceso completo — ventas, ganancia/margen del día, 
+      caja disponible, transacciones, gestión de módulos y permisos
+- [ ] Asistente: acceso restringido — ventas propias realizadas, cantidad 
+      de ventas, servicios atendidos (si aplica); sin acceso a información 
+      financiera consolidada del negocio
+- [ ] Admin puede crear usuarios adicionales con rol Asistente
+- [ ] Restricción de edición y eliminación configurable por permiso
+- [ ] Control de acciones críticas mediante MFA (ver RF-002)
 - [ ] Ver histórico de usuarios (inactivos)
 - [ ] Deshabilitar usuario sin eliminar
 
@@ -250,6 +257,51 @@
 - [ ] Datos se persisten localmente durante desconexión
 
 ---
+
+## 📚 MÓDULO: Biblioteca de Módulos PYME
+
+### RF-029: Activación/desactivación de módulos
+- [ ] Usuario PYME accede a Configuración → Módulos
+- [ ] Puede activar módulos no incluidos por defecto en su categoría
+- [ ] Puede desactivar módulos activos que no esté usando
+- [ ] Al desactivar un módulo, la información existente se conserva 
+      (no se elimina, solo se oculta de la interfaz)
+- [ ] Al reactivar, la información previamente registrada vuelve a mostrarse
+- [ ] Ver `docs/product/onboarding-engine.md` para el detalle de biblioteca completa
+
+### RF-030: Módulo de Servicios (PYME)
+- [ ] Catálogo de servicios (crear, editar, eliminar)
+- [ ] Agenda (diaria, semanal, mensual)
+- [ ] Gestión de citas: pendientes, reprogramación, cancelación
+- [ ] Asignación de empleado a servicio
+- [ ] Estados: pendiente, en proceso, finalizado
+- [ ] Historial por servicio, por cliente, por empleado
+
+### RF-031: Módulo de Comisiones (PYME)
+- [ ] Configuración de porcentaje por empleado
+- [ ] Comisión fija o variable
+- [ ] Reporte de comisión por empleado y por período
+- [ ] Historial y total pagado
+
+### RF-032: Módulo de Propinas (PYME)
+- [ ] Registro de propina por transacción
+- [ ] Distribución automática o manual entre empleados
+- [ ] Reporte de total y resumen mensual
+
+### RF-033: Gestor de Ofertas (PYME)
+- [ ] Crear descuentos por producto o por categoría
+- [ ] Ofertas temporales con fecha de inicio y fin
+- [ ] Historial de promociones aplicadas
+
+### RF-034: Inventario Avanzado — sub-funcionalidades
+- [ ] Escáner de código de barras (venta, compra, inventario)
+- [ ] Control por peso (kg/lb) con conversión automática
+- [ ] Lectura de etiquetas de balanza de peso variable
+- [ ] Gestión de caducidad con alertas de vencimiento próximo/vencido
+- [ ] Registro de mermas con motivo e impacto económico
+- [ ] Stock predictivo: predicción de agotamiento y recomendación de compra
+
+---
 ## 🏢 Reglas de Negocio (RN)
 Las siguientes reglas gobiernan de manera estricta todas las operaciones, flujos de datos e interfaces del sistema y deben ser aplicadas de forma determinista por el código:
 
@@ -278,6 +330,7 @@ Las siguientes reglas gobiernan de manera estricta todas las operaciones, flujos
 - El planificador de tareas (APScheduler) del backend debe congelar de forma inmutable los estados de caja de manera diaria a las 11:59 PM, calculando la ganancia neta (ingresos - gastos) y migrando las deudas activas cuya fecha límite sea menor o igual al día en curso a estado overdue.
 
 ---
+
 ## Matriz de Capacidades
 | Funcionalidad | Informal | Comercio | Alimentos | Alimentos Preparados | Servicios |
 |---------------|-----------|-----------|------------|----------------------|------------|
@@ -291,4 +344,3 @@ Las siguientes reglas gobiernan de manera estricta todas las operaciones, flujos
 
 
 ---
-*Última actualización: 2026-06-07*

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { AppState, Linking, Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 
 import { supabase } from './src/services/supabaseClient';
 import biometricService from './src/modules/auth/services/biometricService';
@@ -110,6 +111,7 @@ export default function App() {
                     </UserTypeProvider>
                 </AuthProvider>
             </NavigationContainer>
+            <Toast />
         </SafeAreaProvider >
     );
 }

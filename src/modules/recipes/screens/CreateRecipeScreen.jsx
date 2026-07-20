@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, ActivityIndicator,
 } from 'react-native';
-import MainLayout from '../../../layouts/MainLayout';
+import MainLayout from '../../../views/layouts/MainLayout';
 import useRecipeForm from '../hooks/useRecipeForm';
 import styles from '../styles/recipeStyles';
 

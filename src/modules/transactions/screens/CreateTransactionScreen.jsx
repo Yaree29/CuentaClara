@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../../../store/useAuthStore';
+import colors from '../../../theme/colors';
 
 const CreateTransactionScreen = ({ route }) => {
   const navigation = useNavigation();
   const type = route?.params?.type || 'expense';
   const { user } = useAuthStore();
 
-  const userType = user?.type || 'informal';
+  const userType = user?.userType || 'informal';
   const businessType = user?.businessType || null;
 
   const [amount, setAmount] = useState('');
@@ -84,14 +85,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.cardSecondary,
   },
   closeButton: {
     position: 'absolute',
     top: 40,
     right: 20,
     zIndex: 10,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.border,
     width: 35,
     height: 35,
     borderRadius: 20,
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: colors.textPrimary,
   },
   title: {
     textAlign: 'center',
@@ -111,12 +112,12 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 12,
     borderRadius: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   button: {
     backgroundColor: '#2563eb',
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.textButton,
     fontWeight: 'bold',
   },
 });

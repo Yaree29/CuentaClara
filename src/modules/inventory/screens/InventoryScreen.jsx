@@ -13,7 +13,7 @@ import InformalInventory from '../components/InformalInventory';
 const InventoryScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <DashboardHeader title="Mi Catálogo" isHome={false} />
+      <DashboardHeader title="Mi Catálogo" variant="default" />
       <InformalInventory />
     </SafeAreaView>
   );

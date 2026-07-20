@@ -148,7 +148,7 @@ const SalesInformal = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
 
-      <DashboardHeader title="Venta Rápida" isHome={false} />
+      <DashboardHeader title="Venta Rápida" variant="default" />
 
       {/* TABS DE NAVEGACIÓN INTERNA */}
       <View style={styles.tabsContainer}>

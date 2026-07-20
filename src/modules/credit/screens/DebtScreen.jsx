@@ -11,7 +11,7 @@ const DebtScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <DashboardHeader title="Libreta de Fiados" isHome={false} />
+      <DashboardHeader title="Libreta de Fiados" variant="default" />
 
       {/* Orquestador visual: Solo Informales pueden ver esto */}
       {userType === 'informal' ? (

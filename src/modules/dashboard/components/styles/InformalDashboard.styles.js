@@ -23,12 +23,17 @@ export default StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 20,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   welcomeTitle: {
     color: colors.greeting,
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 34,
+  },
+  welcomeTitleRegular: {
+    fontWeight: '400',
+  },
+  welcomeTitleBold: {
+    fontWeight: '700',
   },
   welcomeSubtitle: {
     color: colors.textSecondary,

@@ -1,6 +1,9 @@
 // =============================================================================
-// CREADO: 2026-05-26
-// Propósito: Estilos del DashboardHeader. Integrado desde la rama Fronted.
+// MODIFICADO: 2026-07-19
+// Propósito: Estilos del DashboardHeader. Ambas variantes son transparentes,
+//            integradas al colors.background de la pantalla que las contiene
+//            (sin fondo de tarjeta ni sombra). El saludo dinámico vive en
+//            DashboardGreeting.
 // =============================================================================
 import { StyleSheet, Platform } from 'react-native';
 import colors from '../../../../../theme/colors';
@@ -10,54 +13,67 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.card,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 0,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    paddingTop: Platform.OS === 'ios' ? 12 : 14,
+    paddingTop: Platform.OS === 'ios' ? 20 : 24,
+  },
+  headerContainerDefault: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingTop: Platform.OS === 'ios' ? 20 : 24,
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
-  },
-  welcomeText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  businessText: {
-    color: colors.greeting,
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: -0.3,
-    marginLeft: 10,
   },
   screenTitle: {
     color: colors.greeting,
     fontSize: 22,
     fontWeight: 'bold',
     letterSpacing: -0.5,
-    marginLeft: 10,
   },
   avatarContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 0,
   },
-  notificationsContainer: {
-    marginRight: 25,
-  },
-  settingsContainer: {
+  kebabContainer: {
     marginRight: -1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  modalContent: {
+    position: 'absolute',
+    zIndex: 1000,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    minWidth: 170,
+    paddingVertical: 8,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  modalOptionText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 12,
   },
 });

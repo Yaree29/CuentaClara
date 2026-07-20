@@ -20,8 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import colors from '../../../theme/colors';
 import styles from './styles/InformalDashboard.styles';
 
-import useAuthStore from '../../../store/useAuthStore';
 import { useInformalDashboard } from '../hooks/useInformalDashboard';
+import DashboardGreeting from './shared/DashboardGreeting';
 
 const REASON_LABEL = {
   sale: 'Venta',
@@ -47,8 +47,6 @@ const formatTimeAgo = (iso) => {
 
 const InformalDashboard = () => {
   const navigation = useNavigation();
-  const user = useAuthStore((state) => state.user);
-  const userName = user?.name || 'Comerciante';
 
   const {
     loading,
@@ -86,12 +84,7 @@ const InformalDashboard = () => {
       }
     >
       {/* BIENVENIDA */}
-      <View style={styles.welcomeContainer}>
-        <View>
-          <Text style={styles.welcomeTitle}>¡Hola, {userName}!</Text>
-          <Text style={styles.welcomeSubtitle}>Tu negocio está creciendo hoy.</Text>
-        </View>
-      </View>
+      <DashboardGreeting todayIncome={todayIncome} />
 
       {/* VENTAS DEL DÍA */}
       <View style={styles.mainCard}>

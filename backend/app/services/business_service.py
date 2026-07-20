@@ -45,6 +45,25 @@ def update_business(business_id: str, data):
     if getattr(data, 'tax_id', None) is not None:
         update_fields["tax_id"] = data.tax_id.strip() or None
 
+    if getattr(data, 'ui_mode', None) is not None:
+        # Solo se permite crecer de Informal a PYME ('simple' -> 'advanced').
+        # Nunca degradar, y nunca reescribir un negocio que ya es PYME.
+        if data.ui_mode != "advanced":
+            raise ValueError("Solo se permite actualizar ui_mode a 'advanced'")
+
+        current = supabase_admin.table("businesses")\
+            .select("ui_mode")\
+            .eq("id", business_id)\
+            .execute()
+
+        if not current.data:
+            raise ValueError("Negocio no encontrado")
+
+        if current.data[0].get("ui_mode", "simple") == "advanced":
+            raise ValueError("El negocio ya está en modo PYME (advanced)")
+
+        update_fields["ui_mode"] = data.ui_mode
+
     if not update_fields:
         raise ValueError("No se proporcionaron campos para actualizar")
 

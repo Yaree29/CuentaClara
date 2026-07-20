@@ -13,6 +13,7 @@ class BusinessUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
+    ui_mode: Optional[str] = None
 
 
 class BusinessConfigUpdate(BaseModel):

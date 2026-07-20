@@ -4,7 +4,7 @@ import colors from '../../../../theme/colors';
 // Sombra reutilizable para tarjetas
 const shadowStyle = Platform.select({
   ios: {
-    shadowColor: '#000',
+    shadowColor: colors.shadowCard,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -58,7 +58,7 @@ export default StyleSheet.create({
   },
 
   tabTextActive: {
-    color: '#FFFFFF',
+    color: colors.textButton,
   },
 
   /* ==============================================================================================================================
@@ -304,7 +304,7 @@ export default StyleSheet.create({
   quantityBtnTextPlus: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.textButton,
   },
 
   quantityValue: {
@@ -386,7 +386,7 @@ export default StyleSheet.create({
   },
 
   saveButtonText: {
-    color: '#FFFFFF',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,

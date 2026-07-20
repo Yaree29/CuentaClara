@@ -81,7 +81,7 @@ const InformalCredit = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.waBtn} onPress={() => sendWhatsAppReminder(item.clientName, item.phone, item.totalDebt)}>
-          <FontAwesome name="whatsapp" size={20} color="#FFF" />
+          <FontAwesome name="whatsapp" size={20} color={colors.textButton} />
         </TouchableOpacity>
       </View>
     </View>
@@ -107,7 +107,7 @@ const InformalCredit = () => {
 
       <View style={styles.fabContainer}>
         <TouchableOpacity style={styles.fabButton} onPress={openAddModal}>
-          <PlusIcon size={28} color="#FFF" />
+          <PlusIcon size={28} color={colors.textButton} />
         </TouchableOpacity>
       </View>
 
@@ -142,7 +142,7 @@ const InformalCredit = () => {
               {!editingCredit && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddScroll}>
                   {inventoryProducts.length === 0 ? (
-                    <Text style={{ color: '#94A3B8', paddingVertical: 8, fontSize: 13 }}>
+                    <Text style={{ color: colors.textMuted, paddingVertical: 8, fontSize: 13 }}>
                       Sin productos en inventario
                     </Text>
                   ) : (

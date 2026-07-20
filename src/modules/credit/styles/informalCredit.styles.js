@@ -140,7 +140,7 @@ export default StyleSheet.create({
     marginTop: 10 },
 
   primaryBtnText: {
-    color: '#FFF',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: 'bold' },
 

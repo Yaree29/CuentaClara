@@ -11,6 +11,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityInd
 import MainLayout from '../../../views/layouts/MainLayout';
 import { usePurchases } from '../hooks/usePurchases';
 import styles from '../styles/purchases.styles';
+import colors from '../../../theme/colors';
 
 const STATUS_LABEL = {
   draft: 'Pendiente',
@@ -193,7 +194,7 @@ const PurchasesScreen = () => {
               </View>
 
               <TouchableOpacity style={styles.input} onPress={() => setShowSuppliers(!showSuppliers)}>
-                <Text style={{ color: supplierPicked ? '#1e293b' : '#94a3b8' }}>
+                <Text style={{ color: supplierPicked ? colors.textPrimary : colors.textMuted }}>
                   {supplierPicked
                     ? (selectedSupplier ? selectedSupplier.name : 'Sin proveedor')
                     : 'Seleccionar proveedor'}
@@ -354,7 +355,7 @@ const PurchasesScreen = () => {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.textButton} />
               ) : (
                 <Text style={styles.mainButtonText}>Crear Orden de Compra</Text>
               )}

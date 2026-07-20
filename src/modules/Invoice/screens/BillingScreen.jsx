@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityInd
 import MainLayout from '../../../views/layouts/MainLayout';
 import { useBilling } from '../hooks/useBilling';
 import styles from '../styles/billing.styles';
+import colors from '../../../theme/colors';
 
 const BillingScreen = () => {
   const [items, setItems] = useState([{ id: 1, desc: '', price: '', quantity: '1', productId: null }]);
@@ -126,7 +127,7 @@ const BillingScreen = () => {
           </View>
 
           <TouchableOpacity style={styles.input} onPress={() => setShowCustomers(!showCustomers)}>
-            <Text style={{ color: customerPicked ? '#1e293b' : '#94a3b8' }}>
+            <Text style={{ color: customerPicked ? colors.textPrimary : colors.textMuted }}>
               {customerPicked
                 ? (selectedCustomer ? selectedCustomer.name : 'Consumidor final')
                 : 'Seleccionar cliente'}
@@ -305,7 +306,7 @@ const BillingScreen = () => {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textButton} />
           ) : (
             <Text style={styles.mainButtonText}>Generar Factura Fiscal</Text>
           )}

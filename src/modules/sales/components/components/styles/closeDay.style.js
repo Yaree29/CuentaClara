@@ -3,7 +3,7 @@ import colors from '../../../../../theme/colors';
 
 const shadowStyle = Platform.select({
   ios: {
-    shadowColor: '#000',
+    shadowColor: colors.shadowCard,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -87,7 +87,7 @@ export default StyleSheet.create({
   },
 
   saveButtonText: {
-    color: '#FFFFFF',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,

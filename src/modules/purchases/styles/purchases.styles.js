@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import colors from '../../../theme/colors';
 
 export default StyleSheet.create({
   title: {
@@ -6,14 +7,14 @@ export default StyleSheet.create({
     padding: 30,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: colors.textPrimary,
     marginBottom: 10,
   },
   tabsContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.borderLight,
     borderRadius: 10,
     padding: 4,
   },
@@ -24,12 +25,12 @@ export default StyleSheet.create({
     borderRadius: 8,
   },
   tabActive: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.textSecondary,
   },
   tabTextActive: {
     color: '#2563eb',
@@ -41,13 +42,13 @@ export default StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
@@ -64,12 +65,12 @@ export default StyleSheet.create({
     fontWeight: 'bold',
   },
   errorText: {
-    color: '#ef4444',
+    color: colors.danger,
     fontSize: 13,
     marginBottom: 8,
   },
   emptyText: {
-    color: '#94a3b8',
+    color: colors.textMuted,
     fontSize: 13,
     marginBottom: 8,
     textAlign: 'center',
@@ -82,19 +83,19 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 8,
   },
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: colors.textPrimary,
   },
   itemMeta: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   itemRow: {
@@ -111,18 +112,18 @@ export default StyleSheet.create({
     marginHorizontal: 16,
   },
   disabledButton: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: colors.disabledButton,
   },
   mainButtonText: {
-    color: '#fff',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: 'bold',
   },
   orderCard: {
     padding: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 10,
     marginBottom: 10,
   },
@@ -135,16 +136,16 @@ export default StyleSheet.create({
   orderSupplier: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1e293b',
+    color: colors.textPrimary,
   },
   orderTotal: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1e293b',
+    color: colors.textPrimary,
   },
   orderMeta: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   statusBadge: {
@@ -171,7 +172,7 @@ export default StyleSheet.create({
     color: '#166534',
   },
   statusCancelled: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.logoutBackground,
   },
   statusCancelledText: {
     color: '#991b1b',
@@ -190,15 +191,15 @@ export default StyleSheet.create({
     backgroundColor: '#2563eb',
   },
   receiveBtnText: {
-    color: '#fff',
+    color: colors.textButton,
     fontWeight: '600',
     fontSize: 13,
   },
   cancelBtn: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.borderLight,
   },
   cancelBtnText: {
-    color: '#ef4444',
+    color: colors.danger,
     fontWeight: '600',
     fontSize: 13,
   },

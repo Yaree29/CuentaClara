@@ -173,8 +173,8 @@ const recipeStyles = StyleSheet.create({
   saveButtonDisabled: { 
     backgroundColor: colors.border },
 
-  saveButtonText: { 
-    color: '#FFFFFF', 
+  saveButtonText: {
+    color: colors.textButton,
     fontWeight: 'bold', 
     fontSize: 16 },
   

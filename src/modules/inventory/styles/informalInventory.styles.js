@@ -66,7 +66,7 @@ export default StyleSheet.create({
     fontWeight: '600',
     fontSize: 13 },
 
-  categoryTextActive: { color: '#FFF' },
+  categoryTextActive: { color: colors.textButton },
 
   /* --- Lista de Productos --- */
   listContainer: {
@@ -130,7 +130,7 @@ export default StyleSheet.create({
     shadowRadius: 8 },
 
   generatePromoBtnText: {
-    color: '#FFF',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8 },
@@ -290,7 +290,7 @@ export default StyleSheet.create({
 
 
   saveBtnText: {
-    color: '#FFF',
+    color: colors.textButton,
     fontSize: 16,
     fontWeight: 'bold' },
 
@@ -369,7 +369,7 @@ export default StyleSheet.create({
   },
 
   addCatConfirmText: {
-    color: '#FFF',
+    color: colors.textButton,
     fontWeight: '700',
   },
 

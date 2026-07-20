@@ -11,8 +11,8 @@ export default StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.tabBorder,
+    backgroundColor: colors.card,
   },
 
   headerTitle: {
@@ -38,7 +38,7 @@ export default StyleSheet.create({
   docIcon: {
     width: 14,
     height: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderRadius: 2,
   },
 
@@ -62,7 +62,7 @@ export default StyleSheet.create({
 
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     borderRadius: 12,
     padding: 4,
     marginBottom: 20,
@@ -113,7 +113,7 @@ export default StyleSheet.create({
     marginBottom: 10,
     marginHorizontal: 16,
 
-    shadowColor: '#000',
+    shadowColor: colors.shadowCard,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -151,7 +151,7 @@ export default StyleSheet.create({
   },
 
   badge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.salesBadgeBackground,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -177,7 +177,7 @@ export default StyleSheet.create({
   quickGrid: {
     maxHeight: 340,
 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
 
     borderWidth: 1,
     borderColor: colors.border,
@@ -188,7 +188,7 @@ export default StyleSheet.create({
 
     marginBottom: 10,
 
-    shadowColor: '#000000',
+    shadowColor: colors.shadowCard,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -286,14 +286,14 @@ export default StyleSheet.create({
 
     borderRadius: 17,
 
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.logoutBackground,
 
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   removeBtnText: {
-    color: '#EF4444',
+    color: colors.danger,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -313,7 +313,7 @@ export default StyleSheet.create({
   },
 
   addBtnText: {
-    color: '#FFFFFF',
+    color: colors.textButton,
     fontSize: 22,
     fontWeight: 'bold',
     lineHeight: 24,
@@ -363,13 +363,13 @@ export default StyleSheet.create({
   },
 
   methodBtnTextActive: {
-    color: '#FFFFFF',
+    color: colors.textButton,
   },
 
   creditNoticeBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.salesBadgeBackground,
     borderWidth: 1,
-    borderColor: '#93C5FD',
+    borderColor: colors.secondary,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -417,7 +417,7 @@ export default StyleSheet.create({
   },
 
   secondaryBtnBlue: {
-    backgroundColor: '#93C5FD',
+    backgroundColor: colors.secondary,
     flex: 1,
     height: 54,
     borderRadius: 12,
@@ -457,14 +457,14 @@ export default StyleSheet.create({
   },
 
   checkMark: {
-    color: '#FFFFFF',
+    color: colors.textButton,
     fontSize: 20,
     fontWeight: 'bold',
     marginRight: 8,
   },
 
   checkoutBtnText: {
-    color: '#FFFFFF',
+    color: colors.textButton,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -490,7 +490,7 @@ modalOverlay: {
 noteModal: {
   width: '100%',
 
-  backgroundColor: '#FFFFFF',
+  backgroundColor: colors.card,
 
   borderRadius: 20,
 
@@ -501,7 +501,7 @@ noteModalTitle: {
   fontSize: 20,
   fontWeight: '700',
 
-  color: '#0F2747',
+  color: colors.primary,
 
   marginBottom: 16,
 },
@@ -517,11 +517,11 @@ noteInput: {
   padding: 14,
 
   fontSize: 16,
-  color: '#1E293B',
+  color: colors.textPrimary,
 
   textAlignVertical: 'top',
 
-  backgroundColor: '#F8FAFC',
+  backgroundColor: colors.cardSecondary,
 },
 
 noteActions: {
@@ -537,7 +537,7 @@ deleteNoteBtn: {
 
   borderRadius: 12,
 
-  backgroundColor: '#FEE2E2',
+  backgroundColor: colors.logoutBackground,
 },
 
 deleteNoteText: {
@@ -555,7 +555,7 @@ closeNoteBtn: {
 },
 
 closeNoteText: {
-  color: '#FFFFFF',
+  color: colors.textButton,
   fontWeight: '700',
 },
 
@@ -573,7 +573,7 @@ closeIconBtn: {
 
   borderRadius: 17,
 
-  backgroundColor: '#F1F5F9',
+  backgroundColor: colors.borderLight,
 
   justifyContent: 'center',
   alignItems: 'center',
@@ -583,7 +583,7 @@ closeIconText: {
   fontSize: 18,
   fontWeight: '700',
 
-  color: '#64748B',
+  color: colors.textSecondary,
 },
 
   /* =========================
@@ -605,7 +605,7 @@ closeIconText: {
   },
 
   clearAmountBtn: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.logoutBackground,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

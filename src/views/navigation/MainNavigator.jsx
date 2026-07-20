@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import useBlueprintStore from '../../store/useBlueprintStore';
+import useAuthStore from '../../store/useAuthStore';
 
 // Iconos Heroicons Solid
 import {
@@ -10,10 +10,8 @@ import {
   BanknotesIcon,
   CreditCardIcon,
   ArchiveBoxIcon,
-  TruckIcon,
   DocumentTextIcon,
-  UserGroupIcon,
-  CalculatorIcon,
+  Squares2X2Icon,
 } from 'react-native-heroicons/solid';
 
 // Pantallas
@@ -21,48 +19,32 @@ import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
-import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
 import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
-import StaffScreen from '../../modules/staff/screens/StaffScreen';
-import CashScreen from '../../modules/cash/screens/CashScreen';
+import ModulesScreen from '../../modules/modules/screens/ModulesScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Registro de todos los módulos que pueden aparecer como tab. La clave debe
-// coincidir con el nombre que devuelve GET /auth/context en enabled_modules
-// (ver auth_service.ALL_VALID_MODULES + BASE_MODULES en el backend).
+// Registro de los tabs fijos por tipo de usuario. Los módulos PYME que antes
+// eran tabs dinámicos (Compras, Personal, Caja, Servicios, Recetas,
+// Comisiones, Propinas, Ofertas) ahora viven como screens del stack,
+// navegables desde ModulesScreen (tab "modules").
 const TAB_CONFIG = {
-  dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
-  sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
-  credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
-  inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
-  purchases: { component: PurchasesScreen, label: 'Compras',     icon: TruckIcon },
-  billing:   { component: BillingScreen,   label: 'Facturación', icon: DocumentTextIcon },
-  staff:     { component: StaffScreen,     label: 'Personal',    icon: UserGroupIcon },
-  cash:      { component: CashScreen,      label: 'Caja',        icon: CalculatorIcon },
+  dashboard: { component: HomeScreen,      label: 'Inicio',   icon: HomeIcon },
+  sales:     { component: SalesScreen,     label: 'Ventas',   icon: BanknotesIcon },
+  credit:    { component: DebtScreen,      label: 'Fiado',    icon: CreditCardIcon },
+  inventory: { component: InventoryScreen, label: 'Inventario', icon: ArchiveBoxIcon },
+  billing:   { component: BillingScreen,   label: 'MiRUC',    icon: DocumentTextIcon },
+  modules:   { component: ModulesScreen,   label: 'Módulos',  icon: Squares2X2Icon },
 };
 
-// Orden canónico: define la posición de cada tab si está habilitado, no cuáles
-// se muestran. "dashboard" siempre va primero (BASE_MODULES lo garantiza).
-const CANONICAL_TAB_ORDER = [
-  'dashboard', 'sales', 'billing', 'purchases', 'credit', 'inventory', 'cash', 'staff',
-];
+// Tabs fijos por tipo de usuario: Informal conserva el flujo rápido con
+// Fiado + Inventario propios; PYME usa Facturación (MiRUC) + Módulos como
+// punto de entrada al resto de funcionalidades del negocio.
+const INFORMAL_TABS = ['dashboard', 'sales', 'credit', 'inventory'];
+const PYME_TABS = ['dashboard', 'sales', 'billing', 'modules'];
 
-// Fallback usado si el blueprint aún no cargó (ej. primer render tras login) —
-// reproduce el set de tabs que tenía la app antes de esta pantalla, para que
-// nunca se muestre una barra de tabs vacía o rota.
-const FALLBACK_TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
-
-const resolveTabOrder = (enabledModules) => {
-  if (!enabledModules || enabledModules.length === 0) {
-    return FALLBACK_TAB_ORDER;
-  }
-
-  const enabled = new Set(enabledModules);
-  const tabs = CANONICAL_TAB_ORDER.filter((mod) => mod !== 'dashboard' && enabled.has(mod) && TAB_CONFIG[mod]);
-
-  return ['dashboard', ...tabs];
-};
+const resolveTabOrder = (userType) =>
+  userType === 'informal' ? INFORMAL_TABS : PYME_TABS;
 
 // Componente animado personalizado para los iconos del Tab Bar
 const AnimatedTabBarIcon = ({ focused, children }) => {
@@ -142,8 +124,8 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 };
 
 const MainNavigator = () => {
-  const enabledModules = useBlueprintStore((state) => state.modules);
-  const visibleTabs = resolveTabOrder(enabledModules);
+  const userType = useAuthStore((state) => state.user?.userType);
+  const visibleTabs = resolveTabOrder(userType);
 
   return (
     <Tab.Navigator 

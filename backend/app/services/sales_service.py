@@ -6,6 +6,22 @@ def create_quick_sale(business_id: str, user_id: str, data):
     total = Decimal("0")
     tax_rate = Decimal("0")
 
+    # Snapshot del nombre del asistente al momento de la venta. Se guarda como
+    # texto (invoices.assistant_name), NO se calcula al leer — así el registro
+    # histórico ("vendido por Juan") sobrevive aunque el asistente se elimine
+    # después. assistant_id sigue existiendo para joins mientras el asistente
+    # exista, pero queda en NULL si se borra (ON DELETE SET NULL); el nombre
+    # ya quedó fijado aquí y no depende de esa fila.
+    assistant_name = None
+    if data.assistant_id is not None:
+        assistant = supabase_admin.table("business_assistants")\
+            .select("name")\
+            .eq("id", data.assistant_id)\
+            .eq("business_id", business_id)\
+            .execute()
+        if assistant.data:
+            assistant_name = assistant.data[0]["name"]
+
     # 1. Obtener el tax_rate del negocio
     config = supabase_admin.table("business_configs")\
         .select("tax_rate")\
@@ -58,6 +74,8 @@ def create_quick_sale(business_id: str, user_id: str, data):
         "tax": float(tax_amount),
         "status": "pending" if data.is_credit else "paid",
         "user_id": user_id,
+        "assistant_id": data.assistant_id,
+        "assistant_name": assistant_name,
         "created_at": datetime.utcnow().isoformat()
     }).execute()
 
@@ -119,15 +137,21 @@ def create_quick_sale(business_id: str, user_id: str, data):
         "created_at": datetime.utcnow().isoformat()
     }
 
-def get_profits_and_expenses(business_id: str, date_from: str, date_to: str):
+def get_profits_and_expenses(business_id: str, date_from: str, date_to: str, assistant_id: int = None):
     # Ganancias: facturas pagadas en el período
-    invoices = supabase_admin.table("invoices")\
+    query = supabase_admin.table("invoices")\
         .select("total, tax, created_at")\
         .eq("business_id", business_id)\
         .eq("status", "paid")\
         .gte("created_at", date_from)\
-        .lte("created_at", date_to)\
-        .execute()
+        .lte("created_at", date_to)
+
+    # Filtra al resumen propio de un asistente (Modo Asistente) — no toca los
+    # gastos del negocio, que siguen siendo información completa del dueño.
+    if assistant_id is not None:
+        query = query.eq("assistant_id", assistant_id)
+
+    invoices = query.execute()
 
     total_income = sum(Decimal(str(i["total"])) for i in invoices.data)
 

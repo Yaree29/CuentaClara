@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.models.auth import RegisterRequest, LoginRequest, TokenResponse, ResetPasswordRequest, RefreshTokenRequest
+from app.models.auth import RegisterRequest, LoginRequest, TokenResponse, ResetPasswordRequest, RefreshTokenRequest, VerifyPasswordRequest
 from app.services import auth_service
 from app.database import supabase_admin
 
@@ -92,6 +92,18 @@ def login(data: LoginRequest):
         return result
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+
+
+@router.post("/verify-password", summary="Confirmar contraseña sin crear una sesión nueva")
+def verify_password(
+    data: VerifyPasswordRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    # El email sale de la sesión activa (JWT) — el body solo trae la contraseña,
+    # para que el frontend no pueda pedir verificar la contraseña de otra cuenta.
+    if not auth_service.verify_password(current_user["email"], data.password):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+    return {"valid": True}
 
 
 @router.post("/refresh", summary="Renovar access token usando el refresh token")

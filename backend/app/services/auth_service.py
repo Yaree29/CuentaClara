@@ -199,6 +199,23 @@ def register_business(data):
     }
 
 
+def verify_password(email: str, password: str) -> bool:
+    # Reutiliza sign_in_with_password para validar la contraseña contra Supabase
+    # Auth sin construir un mecanismo de hashing propio. Se descarta la sesión
+    # resultante (nunca se devuelve al frontend) — la sesión real del dueño en
+    # el dispositivo no se toca. Usado para "confirmar que eres tú" (ej. salir
+    # del Modo Asistente) sin forzar un logout/login completo.
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": email.lower().strip(),
+            "password": password,
+        })
+    except Exception:
+        return False
+
+    return bool(response.session)
+
+
 def request_password_reset(email: str):
     # Se usa el cliente anon (no admin) porque es la operación pública estándar
     # de Supabase Auth. Los errores se tragan a propósito en el router para no

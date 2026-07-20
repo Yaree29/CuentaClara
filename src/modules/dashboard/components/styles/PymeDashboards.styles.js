@@ -27,7 +27,7 @@ export default StyleSheet.create({
 
   /* --- BOTONES DE ACCIÓN --- */
   primaryActionBtn: { backgroundColor: colors.success, flexDirection: 'row', padding: 14, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  primaryActionBtnText: { color: '#FFF', fontWeight: '700', marginLeft: 8 },
+  primaryActionBtnText: { color: colors.textButton, fontWeight: '700', marginLeft: 8 },
 
   /* --- BANNERS DE ALERTA --- */
   alertBanner: { backgroundColor: '#FEF2F2', borderLeftWidth: 4, borderLeftColor: colors.danger, padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

@@ -10,7 +10,7 @@
 //     el servidor, evitando que el frontend maneje IDs sensibles.
 //   - Se reemplazó el apiRequest inline repetido por el apiClient centralizado.
 // =============================================================================
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from './apiClient';
 
 const businessService = {
   /**
@@ -22,7 +22,9 @@ const businessService = {
 
   /**
    * Actualizar información del negocio
-   * @param {Object} data - Datos a actualizar: {name, phone, address}
+   * @param {Object} data - Datos a actualizar: {name, phone, address, ui_mode}
+   *   ui_mode solo acepta la transición 'simple' -> 'advanced' (el backend
+   *   rechaza cualquier otro valor u orden, ver business_service.py).
    */
   updateBusinessInfo: async (data) => {
     return apiRequest('/businesses/me', {

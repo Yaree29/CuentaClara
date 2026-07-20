@@ -88,7 +88,7 @@ const SettingsScreen = () => {
                 subLabel="Gestionar colaboradores"
                 iconBgStyle={styles.iconContainerBusiness}
                 iconColor={colors.primary}
-                onPress={() => {}}
+                onPress={() => navigation.navigate('TeamScreen')}
               />
               <MenuItem
                 icon="notifications-outline"

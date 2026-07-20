@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import Toast from 'react-native-toast-message';
 
 import styles from '../styles/salesPyme.style';
-import useUserStore from '../../../../store/useUserStore';
+import useAuthStore from '../../../../store/useAuthStore';
 import useSalesStore from '../../../../store/useSaleStore';
-//import productsPyme from '../../../../data/productsPyme';
+import inventoryService from '../../../inventory/services/inventoryService';
 
 const SalesPyme = () => {
-  const businessData = useUserStore((state) => state.businessData);
-  const category = businessData?.category || 'general';
-  const products = null; //productsPyme[category] || productsPyme.general;
+  const user = useAuthStore((state) => state.user);
+  const businessData = user?.business;
+
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   const addSaleToAccounting = useSalesStore((state) => state.addSale);
   const sales = useSalesStore((state) => state.openSales);
@@ -19,23 +21,46 @@ const SalesPyme = () => {
   const selectedSale = useSalesStore((state) => state.selectedSale);
   const setSelectedSale = useSalesStore((state) => state.setSelectedSale);
 
-  const currentSale = sales.find((sale) => sale.id === selectedSale) || sales[0] || { id: 1, products: [], note: '' };
+  const currentSale =
+    sales.find((sale) => sale.id === selectedSale) ||
+    sales[0] || {
+      id: 1,
+      products: [],
+      note: '',
+    };
 
-  /*const dropdownProducts = products.map((product) => ({
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoadingProducts(true);
+
+        const data = await inventoryService.getProducts();
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  const dropdownProducts = products.map((product) => ({
     label: `${product.name} - $${product.price}`,
     value: product.id,
     product,
   }));
-*/ 
 
   const calculateTotal = () =>
-    currentSale.products.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    currentSale.products.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
   const addNewSale = () => {
-    // Buscar una venta vacía
-    const emptySale = sales.find(
-      (sale) => sale.products.length === 0
-    );
+    const emptySale = sales.find((sale) => sale.products.length === 0);
 
     if (emptySale) {
       setSelectedSale(emptySale.id);
@@ -76,13 +101,17 @@ const SalesPyme = () => {
     const updatedSales = sales.map((sale) => {
       if (sale.id !== selectedSale) return sale;
 
-      const existing = sale.products.find((item) => item.id === product.id);
+      const existing = sale.products.find(
+        (item) => item.id === product.id
+      );
 
       if (existing) {
         return {
           ...sale,
           products: sale.products.map((item) =>
-            item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+            item.id === product.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
           ),
         };
       }
@@ -103,7 +132,11 @@ const SalesPyme = () => {
       return {
         ...sale,
         products: sale.products
-          .map((item) => (item.id === productId ? { ...item, quantity: item.quantity + change } : item))
+          .map((item) =>
+            item.id === productId
+              ? { ...item, quantity: item.quantity + change }
+              : item
+          )
           .filter((item) => item.quantity > 0),
       };
     });
@@ -120,7 +153,6 @@ const SalesPyme = () => {
       return;
     }
 
-    // Evita guardar la misma venta dos veces
     if (currentSale.saved) {
       Alert.alert(
         'Venta ya guardada',
@@ -139,21 +171,19 @@ const SalesPyme = () => {
         0
       ),
 
-      userId: businessData?.id || 'admin',
+      userId: user?.id,
 
-      userName:
-        businessData?.ownerName ||
-        businessData?.name ||
-        'Administrador',
+      userName: user?.name || 'Administrador',
 
-      userRole: 'Administrador',
+      userRole: user?.role || 'owner',
+
+      businessId: businessData?.id,
 
       createdAt: new Date().toISOString(),
     };
 
     addSaleToAccounting(saleData);
 
-    // Marcar la venta como guardada
     const updatedSales = sales.map((sale) =>
       sale.id === selectedSale
         ? {
@@ -227,16 +257,20 @@ const SalesPyme = () => {
         ]}
         placeholderStyle={styles.dropdownPlaceholder}
         selectedTextStyle={styles.dropdownSelectedText}
-        data={dropdownProducts}
+        data={dropdownProducts ?? [] }
         search={!currentSale.saved}
-        disable={currentSale.saved}
+        disable={currentSale.saved || loadingProducts || products.length === 0}
         maxHeight={300}
         labelField="label"
         valueField="value"
         placeholder={
           currentSale.saved
             ? 'Venta guardada'
-            : 'Buscar producto...'
+            : loadingProducts
+              ? 'Cargando productos...'
+              : products.length === 0
+                ? 'No existen productos registrados'
+                : 'Buscar producto...'
         }
         searchPlaceholder="Escriba el nombre..."
         onChange={(item) => {
@@ -266,9 +300,20 @@ const SalesPyme = () => {
         >
           {!currentSale.products || currentSale.products.length === 0 ? (
             <View style={{ alignItems: 'center' }}>
-              <Text style={styles.emptyProductsText}>No hay productos agregados</Text>
+                <Text style={styles.emptyProductsText}>
+                {loadingProducts
+                  ? 'Cargando productos...'
+                  : products.length === 0
+                    ? 'No existen productos registrados'
+                    : 'No hay productos agregados'}
+              </Text>
+
               <Text style={styles.emptyProductsSubText}>
-                Utilice el buscador para agregar productos
+                {loadingProducts
+                  ? 'Espere un momento...'
+                  : products.length === 0
+                    ? 'Primero debe crear productos en Inventario.'
+                    : 'Utilice el buscador para agregar productos'}
               </Text>
             </View>
           ) : (

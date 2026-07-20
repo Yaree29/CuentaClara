@@ -1,13 +1,15 @@
 import React from 'react';
-import useUserStore from '../../../store/useUserStore';
+import useAuthStore from '../../../store/useAuthStore';
 
 import SalesInformal from '../components/screens/salesInformal';
 import SalesPyme from '../components/screens/salesPyme';
 
 const SalesScreen = () => {
-  const userType = useUserStore((state) => state.userType);
+  const user = useAuthStore((state) => state.user);
 
-  if (userType === 'simple') {
+  const uiMode = user?.business?.ui_mode;
+
+  if (uiMode === 'simple') {
     return <SalesInformal />;
   }
 

@@ -20,12 +20,17 @@ import { Linking, Alert } from 'react-native';
 import debtService from '../services/debtService';
 import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
 
 export const useInformalCredit = () => {
   const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
-  const senderName = businessData?.name || user?.name || 'mi negocio';
+
+  // Información del negocio obtenida desde el contexto del usuario autenticado
+  const businessData = user?.business || {};
+
+  const senderName =
+    businessData?.name ||
+    user?.name ||
+    'Mi negocio';
 
   // Datos crudos de la API
   const [customers, setCustomers] = useState([]);
@@ -47,6 +52,7 @@ export const useInformalCredit = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       const [customersData, debtsData, inventoryData] = await Promise.all([
         debtService.getCustomers(),
@@ -56,6 +62,7 @@ export const useInformalCredit = () => {
           return [];
         }),
       ]);
+
       setCustomers(customersData || []);
       setDebts(debtsData || []);
       setInventoryProducts(inventoryData || []);
@@ -74,8 +81,10 @@ export const useInformalCredit = () => {
   // Construir el shape plano que espera la UI a partir de debts + customers
   const credits = useMemo(() => {
     const customersById = new Map(customers.map((c) => [c.id, c]));
+
     return debts.map((d) => {
       const customer = customersById.get(d.customer_id);
+
       return {
         id: String(d.id),
         customerId: d.customer_id,
@@ -90,12 +99,15 @@ export const useInformalCredit = () => {
 
   const filteredCredits = useMemo(() => {
     if (!searchQuery) return credits;
+
     const q = searchQuery.toLowerCase();
-    return credits.filter((c) => c.clientName.toLowerCase().includes(q));
+
+    return credits.filter((c) =>
+      c.clientName.toLowerCase().includes(q)
+    );
   }, [credits, searchQuery]);
 
-  // Busca cliente existente por nombre (case insensitive). El backend no expone
-  // búsqueda por nombre, así que filtramos localmente sobre los ya cargados.
+  // Busca cliente existente por nombre (case insensitive).
   const findCustomerByName = (name) => {
     const target = name.trim().toLowerCase();
     return customers.find((c) => c.name.toLowerCase() === target) || null;
@@ -107,6 +119,7 @@ export const useInformalCredit = () => {
       creditData.phone && creditData.phone.trim() !== '+507'
         ? creditData.phone
         : '';
+
     const clientName = creditData.clientName.trim();
     const amount = Number(creditData.totalDebt) || 0;
     const items = creditData.items?.trim() || '';
@@ -118,20 +131,17 @@ export const useInformalCredit = () => {
 
     try {
       if (editingCredit) {
-        // Editar: actualizar cliente (nombre + phone) y solo la descripción de la deuda.
-        // NO se envía amount porque el monto original no cambia al editar; los abonos
-        // se registran por separado y el backend recalcula remaining_amount desde
-        // original_amount, por lo que enviar remaining_amount aquí lo reduciría de nuevo.
         await debtService.updateCustomer(editingCredit.customerId, {
           name: clientName,
           phone: cleanPhone || null,
         });
+
         await debtService.updateDebt(editingCredit.id, {
           description: items || null,
         });
       } else {
-        // Crear: si el cliente ya existe, lo reutilizamos; si no, lo creamos
         let customer = findCustomerByName(clientName);
+
         if (!customer) {
           customer = await debtService.createCustomer({
             name: clientName,
@@ -139,9 +149,11 @@ export const useInformalCredit = () => {
             notes: null,
           });
         } else if (cleanPhone && !customer.phone) {
-          // Si el cliente existía sin teléfono y ahora se proveyó uno, lo actualizamos
-          await debtService.updateCustomer(customer.id, { phone: cleanPhone });
+          await debtService.updateCustomer(customer.id, {
+            phone: cleanPhone,
+          });
         }
+
         await debtService.createDebt({
           customer_id: customer.id,
           amount,
@@ -151,6 +163,7 @@ export const useInformalCredit = () => {
 
       setIsFormModalVisible(false);
       setEditingCredit(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al guardar fiado:', err);
@@ -162,8 +175,10 @@ export const useInformalCredit = () => {
   const deleteCredit = async (creditId) => {
     try {
       await debtService.cancelDebt(creditId);
+
       setIsFormModalVisible(false);
       setEditingCredit(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al eliminar fiado:', err);
@@ -174,6 +189,7 @@ export const useInformalCredit = () => {
   // Registrar abono / pago
   const registerPayment = async (creditId, paymentAmount) => {
     const amount = Number(paymentAmount) || 0;
+
     if (amount <= 0) {
       Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero.');
       return;
@@ -184,8 +200,10 @@ export const useInformalCredit = () => {
         amount,
         method: 'cash',
       });
+
       setIsPaymentModalVisible(false);
       setSelectedClient(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al registrar abono:', err);
@@ -193,17 +211,32 @@ export const useInformalCredit = () => {
     }
   };
 
-  // WhatsApp reminder (lógica intacta de Fronted)
+  // WhatsApp reminder
   const sendWhatsAppReminder = (clientName, phone, amount) => {
     if (!phone || phone === '+507') {
-      Alert.alert('Sin número', `No tienes registrado un número válido para ${clientName}.`);
+      Alert.alert(
+        'Sin número',
+        `No tienes registrado un número válido para ${clientName}.`
+      );
       return;
     }
-    const text = `¡Hola *${clientName}*! 👋\nTe escribo de *${senderName}* para recordarte que tienes un saldo pendiente de *$${amount.toFixed(2)}* por tus compras.\n\nPor favor, confírmame cuándo podrías pasar a cancelarlo o abonar. ¡Gracias!`;
-    const url = `whatsapp://send?phone=${phone.replace('+', '')}&text=${encodeURIComponent(text)}`;
+
+    const text = `¡Hola *${clientName}*! 👋
+    Te escribo de *${senderName}* para recordarte que tienes un saldo pendiente de *$${amount.toFixed(2)}* por tus compras.
+
+    Por favor, confírmame cuándo podrías pasar a cancelarlo o abonar. ¡Gracias!`;
+
+    const url = `whatsapp://send?phone=${phone.replace(
+      '+',
+      ''
+    )}&text=${encodeURIComponent(text)}`;
+
     Linking.openURL(url).catch((err) => {
       console.error('Error al abrir WA', err);
-      Alert.alert('Error', 'No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.');
+      Alert.alert(
+        'Error',
+        'No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.'
+      );
     });
   };
 
@@ -211,25 +244,27 @@ export const useInformalCredit = () => {
     setEditingCredit(null);
     setIsFormModalVisible(true);
   };
+
   const openEditModal = (credit) => {
     setEditingCredit(credit);
     setIsFormModalVisible(true);
   };
+
   const openPaymentModal = (client) => {
     setSelectedClient(client);
     setIsPaymentModalVisible(true);
   };
 
   return {
-    // datos
-    searchQuery, setSearchQuery, filteredCredits, senderName,
-    loading, error, refresh: fetchAll,
+    // Datos
+    searchQuery,setSearchQuery,filteredCredits,senderName,loading,error,refresh: fetchAll,
     inventoryProducts,
-    // modales
-    isFormModalVisible, setIsFormModalVisible, editingCredit,
-    isPaymentModalVisible, setIsPaymentModalVisible, selectedClient,
-    openAddModal, openEditModal, openPaymentModal,
-    // acciones
-    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
+
+    // Modales
+    isFormModalVisible,setIsFormModalVisible,editingCredit,isPaymentModalVisible,
+    setIsPaymentModalVisible,selectedClient,openAddModal,openEditModal,openPaymentModal,
+
+    // Acciones
+    saveCredit,registerPayment,sendWhatsAppReminder,deleteCredit,
   };
 };

@@ -13,16 +13,16 @@ import { useNavigation } from '@react-navigation/native';
 import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
 
-// Stores para extraer datos del usuario y negocio
+// Store de autenticación
 import useAuthStore from '../../../../store/useAuthStore';
-import useUserStore from '../../../../store/useUserStore';
 
 const DashboardHeader = ({ title, isHome = false }) => {
   const navigation = useNavigation();
-  const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
 
-  const businessName = businessData?.name || 'CuentaClara';
+  const user = useAuthStore((state) => state.user);
+
+  // El negocio ahora viene dentro del usuario autenticado
+  const businessName = user?.business?.name || 'CuentaClara';
 
   return (
     <View style={styles.headerContainer}>
@@ -44,7 +44,7 @@ const DashboardHeader = ({ title, isHome = false }) => {
       )}
 
       {/* Configuración */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.settingsContainer}
         onPress={() => navigation.navigate('profile')}
         activeOpacity={0.7}

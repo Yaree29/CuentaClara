@@ -2,7 +2,6 @@
 // manualmente desde AsyncStorage a través de authService.
 import React, { createContext, useContext, useEffect } from 'react';
 import useAuthStore from '../../store/useAuthStore';
-import useUserStore from '../../store/useUserStore';
 import useBlueprintStore from '../../store/useBlueprintStore';
 import authService from '../../modules/auth/services/authService';
 
@@ -20,13 +19,17 @@ const buildBlueprint = (user) => ({
 });
 
 export const AuthProvider = ({ children }) => {
-  const { isAuthenticated, user, setLogin, setLogout, setInitializing } = useAuthStore();
-  const { setUserType } = useUserStore();
+  const {
+    isAuthenticated,
+    user,
+    setLogin,
+    setLogout,
+    setInitializing,
+  } = useAuthStore();
+
   const { setBlueprint, resetBlueprint } = useBlueprintStore();
 
   // Al arrancar la app intenta restaurar la sesión desde AsyncStorage.
-  // isInitializing se mantiene en true hasta que esto termine, para
-  // que el navigator no muestre nada antes de saber si hay sesión activa.
   useEffect(() => {
     let isMounted = true;
 
@@ -43,9 +46,14 @@ export const AuthProvider = ({ children }) => {
         }
       } catch {
         await authService.clearLocalSession();
-        if (isMounted) setLogout();
+
+        if (isMounted) {
+          setLogout();
+        }
       } finally {
-        if (isMounted) setInitializing(false);
+        if (isMounted) {
+          setInitializing(false);
+        }
       }
     };
 
@@ -56,19 +64,21 @@ export const AuthProvider = ({ children }) => {
     };
   }, [setInitializing, setLogin, setLogout]);
 
-  // Reconstruye el blueprint cada vez que cambia el usuario autenticado,
-  // lo que actualiza los tabs visibles en la navegación
+  // Reconstruye el blueprint cada vez que cambia el usuario autenticado
   useEffect(() => {
     if (isAuthenticated && user) {
       const blueprint = buildBlueprint(user);
-      setUserType(blueprint.userType);
       setBlueprint(blueprint);
     } else {
       resetBlueprint();
     }
-  }, [isAuthenticated, user, resetBlueprint, setBlueprint, setUserType]);
+  }, [isAuthenticated, user, setBlueprint, resetBlueprint]);
 
-  return <AuthContext.Provider value={{}}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{}}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuthContext = () => useContext(AuthContext);

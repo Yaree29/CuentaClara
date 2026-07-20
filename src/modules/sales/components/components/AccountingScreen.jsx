@@ -1,44 +1,52 @@
-// Archivo: AccountingScreen.jsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import styles from './styles/accounting.style';
 import useSalesStore from '../../../../store/useSaleStore';
-import useUserStore from '../../../../store/useUserStore';
+import useAuthStore from '../../../../store/useAuthStore';
 import { ArchiveBoxIcon } from 'react-native-heroicons/outline';
 
 const AccountingScreen = () => {
   const dailySales = useSalesStore((state) => state.dailySales);
-  const businessData = useUserStore((state) => state.businessData);
+
+  // Usuario autenticado (dueño por ahora)
+  const user = useAuthStore((state) => state.user);
+
   const [selectedUser, setSelectedUser] = useState(null);
 
-// valores estaticos que luego hay que quitarlos para que funcionen con datos reales
+  // Por ahora solo existe el dueño del negocio.
+  // Cuando existan asistentes, este arreglo vendrá de la API.
   const users = useMemo(() => {
     return [
       {
-        id: 1,
-        name: businessData?.ownerName || 'Administrador',
-        role: 'Administrador',
+        id: user?.id || 1,
+        name: user?.name || 'Administrador',
+        role: user?.role || 'owner',
       },
-      { id: 2, name: 'Ana', role: 'Asistente' },
-      { id: 3, name: 'Carlos', role: 'Asistente' },
     ];
-  }, [businessData]);
+  }, [user]);
 
   const userSales = useMemo(() => {
-    return users.map((user) => {
-      const sales = user.role === 'Administrador' ? dailySales : [];
-      const totalMoney = sales.reduce((sum, sale) => sum + sale.total, 0);
-      const totalProducts = sales.reduce((sum, sale) => sum + sale.totalProducts, 0);
+    return users.map((currentUser) => {
+      const sales = dailySales;
+
+      const totalMoney = sales.reduce(
+        (sum, sale) => sum + sale.total,
+        0
+      );
+
+      const totalProducts = sales.reduce(
+        (sum, sale) => sum + sale.totalProducts,
+        0
+      );
 
       return {
-        ...user,
+        ...currentUser,
         sales,
         totalMoney,
         totalProducts,
       };
     });
   }, [users, dailySales]);
-//fin de los datos y configuraciones de pruebas estaticas
 
   return (
     <>
@@ -56,21 +64,28 @@ const AccountingScreen = () => {
                 <Text style={styles.userName}>{user.name}</Text>
                 <Text style={styles.userRole}>{user.role}</Text>
               </View>
-              <Text style={styles.userMoney}>${user.totalMoney.toFixed(2)}</Text>
+
+              <Text style={styles.userMoney}>
+                ${user.totalMoney.toFixed(2)}
+              </Text>
             </View>
 
             <View style={styles.userStatsRow}>
               <ArchiveBoxIcon size={20} color="#000000" />
+
               <Text style={styles.userInfoText}>
-                 {user.totalProducts} {user.totalProducts === 1 ? 'producto' : 'productos'}
+                {user.totalProducts}{' '}
+                {user.totalProducts === 1 ? 'producto' : 'productos'}
               </Text>
-              <Text style={styles.viewMoreText}>Ver detalle →</Text>
+
+              <Text style={styles.viewMoreText}>
+                Ver detalle →
+              </Text>
             </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* MODAL */}
       <Modal
         visible={selectedUser !== null}
         transparent
@@ -79,24 +94,43 @@ const AccountingScreen = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Ventas de {selectedUser?.name}</Text>
+            <Text style={styles.modalTitle}>
+              Ventas de {selectedUser?.name}
+            </Text>
 
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {selectedUser?.sales?.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No existen ventas registradas hoy.</Text>
+                  <Text style={styles.emptyText}>
+                    No existen ventas registradas hoy.
+                  </Text>
                 </View>
               ) : (
                 selectedUser?.sales?.map((sale) => (
                   <View key={sale.id} style={styles.saleCard}>
                     <View style={styles.saleHeader}>
-                      <Text style={styles.saleId}>Venta #{sale.id}</Text>
-                      <Text style={styles.saleTotal}>${sale.total.toFixed(2)}</Text>
+                      <Text style={styles.saleId}>
+                        Venta #{sale.id}
+                      </Text>
+
+                      <Text style={styles.saleTotal}>
+                        ${sale.total.toFixed(2)}
+                      </Text>
                     </View>
+
                     <View style={styles.saleProductsList}>
                       {sale.products.map((product) => (
-                        <Text key={product.id} style={styles.productItem}>
-                          • {product.name} <Text style={styles.productQty}>x{product.quantity}</Text>
+                        <Text
+                          key={product.id}
+                          style={styles.productItem}
+                        >
+                          • {product.name}{' '}
+                          <Text style={styles.productQty}>
+                            x{product.quantity}
+                          </Text>
                         </Text>
                       ))}
                     </View>
@@ -109,7 +143,9 @@ const AccountingScreen = () => {
               style={styles.closeButton}
               onPress={() => setSelectedUser(null)}
             >
-              <Text style={styles.closeButtonText}>Cerrar</Text>
+              <Text style={styles.closeButtonText}>
+                Cerrar
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

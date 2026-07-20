@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 import colors from '../../../theme/colors';
 import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 import InformalCredit from '../components/InformalCredit';
 
 const DebtScreen = () => {
-  const userType = useUserStore((state) => state.userType);
+  const userType = 'informal'; // Cambiar esto para que funcione con el API y el store de usuario
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>

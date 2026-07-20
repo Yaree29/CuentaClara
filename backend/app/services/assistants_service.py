@@ -92,7 +92,19 @@ def list_active_assistants(business_id: str) -> list:
 
 
 def update_assistant(business_id: str, assistant_id: int, data) -> dict:
-    _get_assistant_or_404(business_id, assistant_id)
+    assistant = _get_assistant_or_404(business_id, assistant_id)
+    if data.is_blocked is False and assistant["is_blocked"]:
+        active_count = supabase_admin.table("business_assistants")\
+            .select("id", count="exact")\
+            .eq("business_id", business_id)\
+            .eq("is_blocked", False)\
+            .execute()
+
+        if (active_count.count or 0) >= MAX_ASSISTANTS_PER_BUSINESS:
+            raise ValueError(
+                f"Ya tienes {MAX_ASSISTANTS_PER_BUSINESS} asistentes activos, "
+                "bloquea uno antes de desbloquear otro"
+            )
 
     update_fields = {}
     if data.name is not None:

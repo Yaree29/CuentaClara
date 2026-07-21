@@ -34,6 +34,7 @@ class CategoryResponse(BaseModel):
 class ProductCreateRequest(BaseModel):
     name: str
     price: Decimal
+    cost_price: Optional[Decimal] = None    # costo del insumo (usado por Recetas)
     category_name: Optional[str] = None   # se busca/crea por nombre
     sku: Optional[str] = None
     unit_type: Optional[str] = None
@@ -62,6 +63,13 @@ class ProductCreateRequest(BaseModel):
             raise ValueError("El precio debe ser mayor a $0.00.")
         return v
 
+    @field_validator("cost_price")
+    @classmethod
+    def cost_price_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v < 0:
+            raise ValueError("El costo no puede ser negativo.")
+        return v
+
     @field_validator("initial_stock")
     @classmethod
     def stock_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
@@ -79,6 +87,7 @@ class ProductCreateRequest(BaseModel):
 class ProductUpdateRequest(BaseModel):
     name: Optional[str] = None
     price: Optional[Decimal] = None
+    cost_price: Optional[Decimal] = None
     category_name: Optional[str] = None
     sku: Optional[str] = None
     unit_type: Optional[str] = None
@@ -103,6 +112,13 @@ class ProductUpdateRequest(BaseModel):
             raise ValueError("El precio debe ser mayor a $0.00.")
         return v
 
+    @field_validator("cost_price")
+    @classmethod
+    def cost_price_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v < 0:
+            raise ValueError("El costo no puede ser negativo.")
+        return v
+
     @field_validator("stock")
     @classmethod
     def stock_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
@@ -122,6 +138,7 @@ class ProductResponse(BaseModel):
     name: str
     sku: Optional[str]
     price: Decimal
+    cost_price: Optional[Decimal] = None
     unit_type: Optional[str]
     category: Optional[str]
     category_color: Optional[str]
@@ -151,7 +168,7 @@ class StockAdjustRequest(BaseModel):
     @field_validator("reason")
     @classmethod
     def reason_valid(cls, v: str) -> str:
-        allowed = {"purchase", "waste", "manual", "return"}
+        allowed = {"purchase", "waste", "manual", "return", "production"}
         if v not in allowed:
             raise ValueError(f"Razón inválida. Opciones: {', '.join(allowed)}")
         return v
@@ -163,3 +180,18 @@ class StockAdjustResponse(BaseModel):
     movement_id: int
     is_low_stock: bool
     min_stock: Decimal
+
+
+# ─── Configuración interna de inventario ────────────────────────────────────────
+
+class InventoryConfigUpdateRequest(BaseModel):
+    """Actualización parcial de business_inventory_config — solo se envían
+    los flags que el dueño quiere cambiar. Sin restricción sobre qué flags
+    puede tocar (editable libremente después del registro)."""
+    control_peso: Optional[bool] = None
+    caducidad: Optional[bool] = None
+    mermas: Optional[bool] = None
+    recetas: Optional[bool] = None
+    produccion: Optional[bool] = None
+    escaner: Optional[bool] = None
+    stock_predictivo: Optional[bool] = None

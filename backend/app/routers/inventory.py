@@ -20,6 +20,10 @@ Rutas:
   Stock / Movimientos
     POST   /inventory/stock/adjust          — entrada compra / ajuste / pérdida / devolución
     GET    /inventory/stock/low             — productos por debajo del stock mínimo
+
+  Configuración interna
+    GET    /inventory/config                — flags actuales (control_peso, caducidad, etc.)
+    PATCH  /inventory/config                — editar flags (parcial, sin restricción)
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -30,6 +34,7 @@ from app.models.inventory import (
     ProductCreateRequest,
     ProductUpdateRequest,
     StockAdjustRequest,
+    InventoryConfigUpdateRequest,
 )
 
 router = APIRouter()
@@ -235,5 +240,45 @@ def low_stock_alerts(current_user: dict = Depends(get_current_user)):
         return inventory_service.list_low_stock(
             business_id=current_user["business_id"]
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONFIGURACIÓN INTERNA DE INVENTARIO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/config", summary="Estado actual de la configuración de inventario")
+def get_inventory_config(current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve los flags de configuración interna de inventario del negocio
+    (control_peso, caducidad, mermas, recetas, produccion, escaner,
+    stock_predictivo), inicializados al registrar según la categoría elegida.
+    """
+    try:
+        return inventory_service.get_inventory_config(
+            business_id=current_user["business_id"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/config", summary="Editar configuración de inventario")
+def update_inventory_config(
+    data: InventoryConfigUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza parcialmente los flags de configuración de inventario. Solo se
+    modifican los campos incluidos en el body — sin restricción sobre qué
+    flags puede tocar el dueño después del registro.
+    """
+    try:
+        return inventory_service.update_inventory_config(
+            business_id=current_user["business_id"],
+            data=data,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -20,6 +20,8 @@ def create_invoice(data: InvoiceCreateRequest, current_user: dict = Depends(get_
 @router.get("/", summary="Listar facturas del negocio")
 def list_invoices(
     status: str = None,
+    date_from: str = None,
+    date_to: str = None,
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
@@ -31,6 +33,10 @@ def list_invoices(
 
     if status:
         query = query.eq("status", status)
+    if date_from:
+        query = query.gte("created_at", date_from)
+    if date_to:
+        query = query.lte("created_at", date_to)
 
     result = query.execute()
     return result.data

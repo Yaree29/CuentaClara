@@ -19,7 +19,7 @@ from app.database import supabase_admin
 MAX_ASSISTANTS_PER_BUSINESS = 3
 
 # Columnas seguras para exponer al frontend — nunca incluir pin_hash/pin_salt.
-SAFE_COLUMNS = "id, business_id, name, access_type, is_blocked, created_at"
+SAFE_COLUMNS = "id, business_id, name, access_type, role, is_blocked, created_at"
 
 
 def _hash_pin(pin: str, salt: str) -> str:
@@ -61,11 +61,12 @@ def create_assistant(business_id: str, data) -> dict:
         "pin_hash": pin_hash,
         "pin_salt": salt,
         "access_type": data.access_type,
+        "role": data.role,
         "is_blocked": False,
     }).execute()
 
     row = result.data[0]
-    return {k: row[k] for k in ("id", "business_id", "name", "access_type", "is_blocked", "created_at")}
+    return {k: row[k] for k in ("id", "business_id", "name", "access_type", "role", "is_blocked", "created_at")}
 
 
 def list_assistants(business_id: str) -> list:
@@ -82,7 +83,7 @@ def list_assistants(business_id: str) -> list:
 def list_active_assistants(business_id: str) -> list:
     """Solo activos, para el selector que ven los asistentes al entrar."""
     result = supabase_admin.table("business_assistants")\
-        .select("id, name, access_type")\
+        .select("id, name, access_type, role")\
         .eq("business_id", business_id)\
         .eq("is_blocked", False)\
         .order("name")\
@@ -111,6 +112,8 @@ def update_assistant(business_id: str, assistant_id: int, data) -> dict:
         update_fields["name"] = data.name.strip()
     if data.access_type is not None:
         update_fields["access_type"] = data.access_type
+    if data.role is not None:
+        update_fields["role"] = data.role
     if data.is_blocked is not None:
         update_fields["is_blocked"] = data.is_blocked
     if data.new_pin is not None:
@@ -149,6 +152,7 @@ def verify_pin(business_id: str, assistant_id: int, pin: str) -> dict:
         "id": assistant["id"],
         "name": assistant["name"],
         "access_type": assistant["access_type"],
+        "role": assistant.get("role"),
     }
 
 

@@ -73,6 +73,7 @@ def _map_product(inv_row: dict) -> dict:
         "name": product.get("name"),
         "sku": product.get("sku"),
         "price": product.get("price"),
+        "cost_price": product.get("cost_price"),
         "unit_type": product.get("unit_type"),
         "category": cat.get("name"),
         "category_color": cat.get("color"),
@@ -136,7 +137,7 @@ def list_products(business_id: str) -> list:
     negocio aparezca aunque su fila de inventario embebida venga vacía.
     """
     products_result = supabase_admin.table("products") \
-        .select("id, name, sku, price, unit_type, is_active, category_id") \
+        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id") \
         .eq("business_id", business_id) \
         .eq("is_active", True) \
         .execute()
@@ -186,6 +187,7 @@ def list_products(business_id: str) -> list:
                 "name": prod.get("name"),
                 "sku": prod.get("sku"),
                 "price": prod.get("price"),
+                "cost_price": prod.get("cost_price"),
                 "unit_type": prod.get("unit_type"),
                 "is_active": prod.get("is_active"),
                 "product_categories": cat,
@@ -212,6 +214,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "name": data.name,
         "sku": data.sku or None,
         "price": float(data.price),
+        "cost_price": float(data.cost_price) if data.cost_price is not None else 0,
         "unit_type": data.unit_type or None,
         "is_active": True,
     }
@@ -282,6 +285,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "name": product["name"],
         "sku": product.get("sku"),
         "price": product["price"],
+        "cost_price": product.get("cost_price"),
         "unit_type": product.get("unit_type"),
         "category": data.category_name,
         "category_color": "#6366f1",
@@ -304,6 +308,8 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         product_payload["name"] = data.name
     if data.price is not None:
         product_payload["price"] = float(data.price)
+    if data.cost_price is not None:
+        product_payload["cost_price"] = float(data.cost_price)
     if data.category_name is not None:
         product_payload["category_id"] = _get_or_create_category(business_id, data.category_name)
     if data.sku is not None:
@@ -354,7 +360,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
 
     # Re-fetch producto para devolver datos actualizados
     prod = supabase_admin.table("products") \
-        .select("id, name, sku, price, unit_type") \
+        .select("id, name, sku, price, cost_price, unit_type") \
         .eq("id", product_id) \
         .execute()
     product = prod.data[0] if prod.data else {}
@@ -364,6 +370,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         "name": product.get("name"),
         "sku": product.get("sku"),
         "price": product.get("price"),
+        "cost_price": product.get("cost_price"),
         "unit_type": product.get("unit_type"),
         "category": data.category_name,
         "stock": stock,
@@ -394,19 +401,21 @@ def soft_delete_product(business_id: str, product_id: int) -> dict:
 def adjust_stock(business_id: str, user_id: str, data) -> dict:
     """
     Registra un movimiento de inventario manual:
-      - purchase  → type='in',  reason='purchase'   (llegó mercancía)
-      - waste     → type='out', reason='waste'       (producto dañado/vencido)
-      - manual    → type='adjust'                    (conteo físico)
-      - return    → type='in',  reason='return'      (devolución de cliente)
+      - purchase   → type='in',  reason='purchase'    (llegó mercancía)
+      - waste      → type='out', reason='waste'       (producto dañado/vencido)
+      - manual     → type='adjust'                    (conteo físico)
+      - return     → type='in',  reason='return'      (devolución de cliente)
+      - production → type='out', reason='production'  (consumo de insumo al producir una receta)
 
     Actualiza la columna quantity en inventory.
     Valida que el stock resultante no sea negativo.
     """
     REASON_TO_TYPE = {
-        "purchase": "in",
-        "return":   "in",
-        "waste":    "out",
-        "manual":   "adjust",
+        "purchase":   "in",
+        "return":     "in",
+        "waste":      "out",
+        "manual":     "adjust",
+        "production": "out",
     }
 
     quantity = Decimal(str(data.quantity))
@@ -518,7 +527,7 @@ def list_low_stock(business_id: str) -> list:
     """Devuelve los productos cuyo stock actual <= min_stock (alertas)."""
     result = supabase_admin.table("inventory") \
         .select("""
-            id, quantity, min_stock,
+            id, quantity, min_stock, unit,
             products ( id, name, sku, is_active )
         """) \
         .eq("business_id", business_id) \
@@ -540,7 +549,58 @@ def list_low_stock(business_id: str) -> list:
                 "sku": product.get("sku"),
                 "current_stock": float(qty),
                 "min_stock": float(min_s),
+                "unit": row.get("unit"),
                 "deficit": float(min_s - Decimal(str(qty))),
             })
 
     return sorted(alerts, key=lambda x: x["deficit"], reverse=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONFIGURACIÓN INTERNA DE INVENTARIO (business_inventory_config)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+INVENTORY_CONFIG_FLAGS = [
+    "control_peso", "caducidad", "mermas", "recetas", "produccion", "escaner", "stock_predictivo"
+]
+
+
+def get_inventory_config(business_id: str) -> dict:
+    """Devuelve los flags de configuración de inventario del negocio.
+
+    Negocios registrados antes de esta migración pueden no tener fila propia
+    todavía — en ese caso se devuelven todos los flags en False en vez de 404,
+    ya que "sin configurar" equivale a "nada activado".
+    """
+    result = supabase_admin.table("business_inventory_config") \
+        .select("business_id, " + ", ".join(INVENTORY_CONFIG_FLAGS)) \
+        .eq("business_id", business_id) \
+        .execute()
+
+    if result.data:
+        return result.data[0]
+
+    return {"business_id": business_id, **{flag: False for flag in INVENTORY_CONFIG_FLAGS}}
+
+
+def update_inventory_config(business_id: str, data) -> dict:
+    """Actualiza parcialmente los flags de configuración de inventario.
+
+    Solo se envían los campos que cambian (patch semántico, mismo patrón que
+    update_assistant en assistants_service.py). Usa upsert porque negocios
+    registrados antes de esta migración pueden no tener fila todavía.
+    """
+    update_fields = {
+        flag: getattr(data, flag)
+        for flag in INVENTORY_CONFIG_FLAGS
+        if getattr(data, flag) is not None
+    }
+
+    if not update_fields:
+        raise ValueError("No se proporcionaron campos para actualizar")
+
+    supabase_admin.table("business_inventory_config") \
+        .upsert({"business_id": business_id, **update_fields}, on_conflict="business_id") \
+        .execute()
+
+    return get_inventory_config(business_id)

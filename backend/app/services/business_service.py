@@ -2,15 +2,22 @@
 # business_service.py
 # -------------------
 # Lógica de negocio para el módulo /businesses.
-# Consulta y actualiza las tablas `businesses` y `business_configs` en Supabase.
+# Consulta y actualiza las tablas `businesses`, `business_configs` y `features`
+# en Supabase.
 # =============================================================================
+from datetime import datetime
+
 from app.database import supabase_admin
+from app.services.auth_service import ALL_VALID_MODULES, normalize_modules
 
 
 def get_business(business_id: str):
     """Obtiene la información del negocio incluyendo su categoría."""
     result = supabase_admin.table("businesses")\
-        .select("id, name, category_id, industry_template_id, ui_mode, plan, phone, address, tax_id, created_at, categories(name)")\
+        .select(
+            "id, name, category_id, industry_template_id, ui_mode, plan, phone, address, tax_id, created_at, "
+            "categories(name), industry_templates(category_group)"
+        )\
         .eq("id", business_id)\
         .execute()
 
@@ -18,12 +25,24 @@ def get_business(business_id: str):
         raise ValueError("Negocio no encontrado")
 
     row = result.data[0]
+
+    # industry_templates viene embebido por el FK industry_template_id — puede
+    # ser None si el negocio no tiene plantilla asignada.
+    industry_template = row.get("industry_templates") or {}
+    if isinstance(industry_template, list):
+        industry_template = industry_template[0] if industry_template else {}
+
     return {
         "id": row["id"],
         "name": row["name"],
         "category_id": row.get("category_id"),
         "category_name": row.get("categories", {}).get("name") if row.get("categories") else None,
         "industry_template_id": row.get("industry_template_id"),
+        # category_group agrupa las plantillas de industria en las 5 categorías
+        # del onboarding adaptativo (alimentos, servicios, comercio,
+        # comida_preparada, general) — usado por el frontend para decidir qué
+        # flags de configuración de inventario mostrar (ver /inventory/config).
+        "category_group": industry_template.get("category_group"),
         "ui_mode": row.get("ui_mode", "simple"),
         "plan": row.get("plan", "free"),
         "phone": row.get("phone"),
@@ -150,3 +169,59 @@ def update_business_config(business_id: str, data):
             .execute()
 
     return get_business_config(business_id)
+
+
+def get_enabled_modules(business_id: str) -> list:
+    """Lista de módulos habilitados (BASE_MODULES + features activos), misma
+    lógica que normalize_modules usa al construir el contexto de login."""
+    features = supabase_admin.table("features")\
+        .select("module, is_active")\
+        .eq("business_id", business_id)\
+        .execute()
+    return normalize_modules(features.data or [])
+
+
+def set_module_active(business_id: str, module: str, enabled: bool) -> dict:
+    """
+    Activa/desactiva un módulo opcional del negocio (tabla `features`).
+
+    No hay UNIQUE(business_id, module) en el esquema, así que se busca la fila
+    existente antes de decidir entre update/insert. Rechaza módulos fuera de
+    ALL_VALID_MODULES (misma lista blanca que usa el registro) y operaciones
+    redundantes (activar lo ya activo, desactivar lo ya inactivo).
+    """
+    if module not in ALL_VALID_MODULES:
+        raise ValueError(f"Módulo inválido. Opciones: {', '.join(sorted(ALL_VALID_MODULES))}")
+
+    existing = supabase_admin.table("features")\
+        .select("id, is_active")\
+        .eq("business_id", business_id)\
+        .eq("module", module)\
+        .execute()
+
+    if existing.data:
+        row = existing.data[0]
+        if bool(row.get("is_active")) == enabled:
+            estado = "activo" if enabled else "inactivo"
+            raise ValueError(f"El módulo '{module}' ya está {estado}.")
+
+        update_payload = {"is_active": enabled}
+        if enabled:
+            update_payload["activated_at"] = datetime.utcnow().isoformat()
+
+        supabase_admin.table("features")\
+            .update(update_payload)\
+            .eq("id", row["id"])\
+            .execute()
+    else:
+        if not enabled:
+            raise ValueError(f"El módulo '{module}' ya está inactivo.")
+
+        supabase_admin.table("features").insert({
+            "business_id": business_id,
+            "module": module,
+            "is_active": True,
+            "activated_at": datetime.utcnow().isoformat(),
+        }).execute()
+
+    return {"enabled_modules": get_enabled_modules(business_id)}

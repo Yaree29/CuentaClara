@@ -492,19 +492,20 @@ def list_movements(business_id: str, limit: int = 50) -> list:
         return []
 
     product_ids = list({r["product_id"] for r in rows if r.get("product_id")})
-    name_by_id = {}
+    prod_data_by_id = {}
     if product_ids:
         prod_result = supabase_admin.table("products") \
-            .select("id, name") \
+            .select("id, name, price") \
             .in_("id", product_ids) \
             .execute()
-        name_by_id = {p["id"]: p.get("name", "") for p in (prod_result.data or [])}
+        prod_data_by_id = {p["id"]: {"name": p.get("name", ""), "price": p.get("price", 0)} for p in (prod_result.data or [])}
 
     return [
         {
             "id": r["id"],
             "product_id": r["product_id"],
-            "product_name": name_by_id.get(r["product_id"], "Producto eliminado"),
+            "product_name": prod_data_by_id.get(r["product_id"], {}).get("name", "Producto eliminado"),
+            "product_price": float(prod_data_by_id.get(r["product_id"], {}).get("price", 0)),
             "type": r["type"],
             "quantity": float(r["quantity"]) if r["quantity"] is not None else 0,
             "reason": r["reason"],

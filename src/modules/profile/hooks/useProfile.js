@@ -24,6 +24,20 @@ const useProfile = () => {
     fetchProfile();
   }, [user]);
 
+  const reloadProfile = async () => {
+    setLoading(true);
+    try {
+      const session = await authService.getCurrentSession();
+      if (session?.user) {
+        useAuthStore.getState().setLogin(session.user, session.token);
+      }
+    } catch (error) {
+      console.error('Error reloading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       // Logout explícito (el usuario sale a propósito): borra el refresh token
@@ -49,6 +63,7 @@ const useProfile = () => {
     profile,
     loading,
     logout,
+    reloadProfile,
   };
 };
 

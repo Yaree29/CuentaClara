@@ -106,6 +106,13 @@ const authService = {
       return false;
     }
   },
+
+  updateProfile: async (data) => {
+    return await apiRequest('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 export default authService;

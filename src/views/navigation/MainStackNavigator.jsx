@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MainNavigator from './MainNavigator';
 import CreateTransactionScreen from '../../modules/transactions/screens/CreateTransactionScreen';
 import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
+import EditProfileScreen from '../../modules/profile/screens/EditProfileScreen';
 import SettingsScreen from '../../modules/profile/screens/SettingsScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
@@ -31,6 +32,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="MainTabs" component={MainNavigator} />
       <Stack.Screen name="CreateTransaction" component={CreateTransactionScreen} />
       <Stack.Screen name="profile" component={ProfileScreen} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="settings" component={SettingsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
       <Stack.Screen name="Token2FA" component={Token2FA} />

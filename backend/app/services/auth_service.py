@@ -346,3 +346,80 @@ def get_user_context(user_id: str) -> dict:
 # (supabase.auth.mfa.*). Las funciones generate_mfa_qr/verify_mfa basadas en
 # pyotp/qrcode se eliminaron por quedar sin uso; los factores viven ahora en el
 # esquema auth de Supabase, no en las columnas users.mfa_secret/mfa_enabled.
+
+import base64
+
+def update_profile(user_id: str, business_id: str, data):
+    """
+    Actualiza el perfil del usuario (nombre, teléfono, avatar) y/o
+    el nombre del negocio. Si se incluye avatar_base64, lo sube al
+    bucket 'avatars' de Supabase y obtiene la URL pública.
+    """
+    avatar_url = None
+
+    if data.avatar_base64:
+        try:
+            b64_str = data.avatar_base64
+            if "," in b64_str:
+                b64_str = b64_str.split(",")[1]
+            
+            image_data = base64.b64decode(b64_str)
+            
+            # Comprimir con Pillow
+            from io import BytesIO
+            from PIL import Image
+            
+            img = Image.open(BytesIO(image_data))
+            # Convertir a RGB (por si es RGBA/PNG)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            
+            # Redimensionar si es muy grande (máximo 512x512 para avatares)
+            img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+            
+            out_io = BytesIO()
+            # Guardar con compresión alta (quality=60 suele bajar a <50kb)
+            img.save(out_io, format="JPEG", quality=60, optimize=True)
+            compressed_image_data = out_io.getvalue()
+            
+            # Usamos siempre el mismo nombre para sobrescribir y ahorrar espacio
+            file_path = f"{user_id}.jpg"
+            timestamp = int(datetime.utcnow().timestamp())
+            
+            supabase_admin.storage.from_("avatars").upload(
+                path=file_path,
+                file=compressed_image_data,
+                file_options={"content-type": "image/jpeg", "upsert": "true"}
+            )
+            
+            # Obtener URL pública (asumiendo que el bucket es público)
+            public_url = supabase_admin.storage.from_("avatars").get_public_url(file_path)
+            # En la versión actual del SDK de python, get_public_url puede no ser un método directo, 
+            # es mejor construirla manualmente o asegurar el método
+            if not isinstance(public_url, str):
+                # Workaround si get_public_url no retorna string directo
+                public_url = f"{settings.supabase_url}/storage/v1/object/public/avatars/{file_path}"
+                
+            # Agregamos el timestamp como parámetro de consulta para forzar 
+            # al frontend a limpiar la caché sin llenar el bucket de Supabase
+            avatar_url = f"{public_url}?t={timestamp}"
+        except Exception as e:
+            raise ValueError(f"Error al subir el avatar: {str(e)}")
+
+    user_payload = {}
+    if data.name:
+        user_payload["name"] = data.name.strip()
+    if data.phone is not None:
+        user_payload["phone"] = data.phone
+    if avatar_url:
+        user_payload["avatar_url"] = avatar_url
+        
+    if user_payload:
+        supabase_admin.table("users").update(user_payload).eq("id", user_id).execute()
+
+    if data.business_name:
+        business_payload = {"name": data.business_name.strip()}
+        supabase_admin.table("businesses").update(business_payload).eq("id", business_id).execute()
+
+    return {"status": "success", "avatar_url": avatar_url}
+

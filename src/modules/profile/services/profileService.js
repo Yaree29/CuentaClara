@@ -19,6 +19,8 @@ const profileService = {
       email: user.email,
       role: user.role,
       userType: user.userType,
+      phone: user.phone,
+      avatar_url: user.avatar_url,
       businessName: user.business?.name || 'Sin negocio',
       joinedDate: formatDate(user.created_at || user.business?.created_at),
       preferences: {

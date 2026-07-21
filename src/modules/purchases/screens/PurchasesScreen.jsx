@@ -165,7 +165,7 @@ const PurchasesScreen = () => {
 
   return (
     <MainLayout>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Compras</Text>
 
         <View style={styles.tabsContainer}>

@@ -6,8 +6,10 @@ export default StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  // 120: estándar del proyecto para que el contenido (ej. Equipo, con lista
+  // de asistentes variable) no quede tapado por el tab bar.
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   centerContainer: {
     flex: 1,

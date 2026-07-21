@@ -2,6 +2,11 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
 export default StyleSheet.create({
+  // 120: estándar del proyecto — la lista de órdenes de compra no tenía
+  // ningún padding inferior (ScrollView sin contentContainerStyle).
+  scrollContent: {
+    paddingBottom: 120,
+  },
   title: {
     textAlign: 'center',
     padding: 30,

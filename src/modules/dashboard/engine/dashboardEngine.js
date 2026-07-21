@@ -1,4 +1,6 @@
-import {buildHeader,buildSummaryCards,buildDashboardAlerts,buildGoal,buildQuickActions,buildFinance,buildModules,buildActivity,buildBusiness,buildStatus,} from './summaryRules';
+import {buildHeader,buildSummaryCards,buildGoal,buildFinance,buildActivity,buildBusiness,buildStatus,} from './summaryRules';
+import { buildQuickActions } from './quickActions';
+import { buildAlertRules } from './alertRules';
 import { moduleConfig } from './moduleConfig';
 import { getRolePermissions } from './permissions';
 
@@ -9,6 +11,17 @@ export const buildDashboard = ({
   dailySales = [],
   expenses = [],
   generalMovements = [],
+  // Totales reales del día (GET /sales/profits), cuando ya se hidrataron —
+  // ver useSaleStore.dailyTotals. Si viene null, se cae a sumar los arrays
+  // de sesión como antes (comportamiento previo, sin romper nada).
+  dailyTotals = null,
+  // Alertas reales de inventario (GET /inventory/stock/low). recipes/services
+  // no tienen fuente de datos real todavía — se pasan en 0 explícitamente
+  // para que buildAlertRules no falle por undefined, no porque ya estén
+  // conectadas (ver auditoría: sin endpoint agregado para recetas/servicios).
+  inventory = { lowStock: 0, outStock: 0 },
+  recipes = { missingIngredients: 0, limitedProduction: 0 },
+  services = { pending: 0, late: 0 },
 }) => {
 
   const role =
@@ -67,21 +80,24 @@ export const buildDashboard = ({
       rawSettings.transformsRawMaterial === 'Sí',
   };
 
-  const totalSales = dailySales.reduce(
-    (total, sale) => total + Number(sale.total || 0),
-    0
-  );
+  // Preferir los totales reales hidratados desde el backend; si todavía no
+  // llegaron (recién montado, sin conexión, rol sin permiso a /sales/profits),
+  // caer de vuelta a sumar lo registrado en esta sesión.
+  const totalSales = dailyTotals
+    ? Number(dailyTotals.income) || 0
+    : dailySales.reduce((total, sale) => total + Number(sale.total || 0), 0);
 
-  const totalExpenses = expenses.reduce(
-    (total, expense) => total + Number(expense.amount || 0),
-    0
-  );
+  const totalExpenses = dailyTotals
+    ? Number(dailyTotals.expenses) || 0
+    : expenses.reduce((total, expense) => total + Number(expense.amount || 0), 0);
 
   const cashAvailable = totalSales - totalExpenses;
 
   const totalTransactions = generalMovements.length;
 
-  const totalOrders = dailySales.length;
+  const totalOrders = dailyTotals
+    ? Number(dailyTotals.invoicesCount) || 0
+    : dailySales.length;
 
   const dashboardContext = {
     user,
@@ -95,6 +111,9 @@ export const buildDashboard = ({
     dailySales,
     expenses,
     generalMovements,
+    inventory,
+    recipes,
+    services,
     totalSales,
     totalExpenses,
     cashAvailable,
@@ -120,17 +139,6 @@ export const buildDashboard = ({
       businessData?.plan || 'free',
   };
 
-  console.log('========== DASHBOARD ==========');
-  console.log('Usuario:', user);
-  console.log('Negocio:', businessData);
-  console.log('Settings:', settings);
-  console.log('Módulos:', activeModules);
-  console.log('Ventas:', totalSales);
-  console.log('Gastos:', totalExpenses);
-  console.log('Caja:', cashAvailable);
-  console.log('Transacciones:', totalTransactions);
-  console.log('===============================');
-
   return {
 
     header:
@@ -140,19 +148,16 @@ export const buildDashboard = ({
       buildSummaryCards(dashboardContext),
 
     alerts:
-      buildDashboardAlerts(dashboardContext),
+      buildAlertRules(dashboardContext),
 
     goals:
       buildGoal(dashboardContext),
 
-    // quickActions:
-    // buildQuickActions(dashboardContext),
+    quickActions:
+      buildQuickActions(dashboardContext),
 
     finance:
       buildFinance(dashboardContext),
-
-    modules:
-      buildModules(dashboardContext),
 
     activity:
       buildActivity(dashboardContext),

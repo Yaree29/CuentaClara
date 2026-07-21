@@ -15,6 +15,11 @@ const createAlert = ({
   icon: ExclamationTriangleIcon,
 });
 
+// El backend solo distingue un módulo 'inventory' (ver ALL_VALID_MODULES en
+// auth_service.py) — no hay 'basic_inventory'/'advanced_inventory' reales.
+// expiringProducts/waste/predictiveStock no tienen fuente de datos conectada
+// todavía (no hay endpoint agregado); se dejan aquí listas para cuando se
+// audite ese dato, pero hoy siempre llegan en 0 desde dashboardEngine.js.
 const inventoryAlerts = ({ inventory = {} }) => {
   const alerts = [];
 
@@ -22,7 +27,7 @@ const inventoryAlerts = ({ inventory = {} }) => {
     alerts.push(
       createAlert({
         id: 'low_stock',
-        module: 'basic_inventory',
+        module: 'inventory',
         title: 'Stock crítico',
         description: `${inventory.lowStock} productos con stock mínimo.`,
         severity: 'warning',
@@ -34,7 +39,7 @@ const inventoryAlerts = ({ inventory = {} }) => {
     alerts.push(
       createAlert({
         id: 'out_stock',
-        module: 'basic_inventory',
+        module: 'inventory',
         title: 'Productos agotados',
         description: `${inventory.outStock} productos agotados.`,
         severity: 'danger',
@@ -42,17 +47,11 @@ const inventoryAlerts = ({ inventory = {} }) => {
     );
   }
 
-  return alerts;
-};
-
-const advancedInventoryAlerts = ({ inventory = {} }) => {
-  const alerts = [];
-
   if (inventory.expiringProducts > 0) {
     alerts.push(
       createAlert({
         id: 'expiry_products',
-        module: 'advanced_inventory',
+        module: 'inventory',
         title: 'Productos próximos a vencer',
         description: `${inventory.expiringProducts} productos próximos a vencer.`,
       })
@@ -63,7 +62,7 @@ const advancedInventoryAlerts = ({ inventory = {} }) => {
     alerts.push(
       createAlert({
         id: 'registered_waste',
-        module: 'advanced_inventory',
+        module: 'inventory',
         title: 'Mermas registradas',
         description: `${inventory.waste} mermas registradas.`,
       })
@@ -74,7 +73,7 @@ const advancedInventoryAlerts = ({ inventory = {} }) => {
     alerts.push(
       createAlert({
         id: 'predictive_stock',
-        module: 'advanced_inventory',
+        module: 'inventory',
         title: 'Reposición recomendada',
         description: `${inventory.predictiveStock} productos requieren reposición.`,
       })
@@ -180,15 +179,8 @@ export const buildAlertRules = ({
 }) => {
   const alerts = [];
 
-  if (
-    activeModules.includes('basic_inventory') ||
-    activeModules.includes('inventory')
-  ) {
+  if (activeModules.includes('inventory')) {
     alerts.push(...inventoryAlerts({ inventory }));
-  }
-
-  if (activeModules.includes('advanced_inventory')) {
-    alerts.push(...advancedInventoryAlerts({ inventory }));
   }
 
   if (activeModules.includes('recipes')) {

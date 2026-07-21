@@ -22,6 +22,7 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 import DashboardCard from "./DashboardCard";
 
@@ -31,6 +32,25 @@ const QuickActions = ({
   title = "Acciones rápidas",
   actions = [],
 }) => {
+  const navigation = useNavigation();
+
+  // Mismo patrón defensivo que goToTab() en InformalDashboard.jsx: si la
+  // acción no trae onPress propio, navega por su `route` (+`params` si
+  // trae); si esa route no existe todavía en ningún navigator (ver
+  // engine/quickActions.js), se captura el error en vez de romper la app.
+  const handlePress = (action) => {
+    if (action.onPress) {
+      action.onPress();
+      return;
+    }
+    if (!action.route) return;
+    try {
+      navigation.navigate(action.route, action.params);
+    } catch (e) {
+      console.warn(`[QuickActions] ruta "${action.route}" no disponible:`, e?.message);
+    }
+  };
+
   return (
     <DashboardCard title={title}>
       <View style={styles.container}>
@@ -42,7 +62,7 @@ const QuickActions = ({
               key={action.id}
               style={styles.action}
               activeOpacity={0.7}
-              onPress={action.onPress}
+              onPress={() => handlePress(action)}
             >
               <View style={styles.iconContainer}>
                 {Icon && (

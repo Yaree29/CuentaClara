@@ -7,8 +7,7 @@
  * - SummaryCard
  * - AlertCard
  * - GoalProgressCard
- * - FinanceSection
- * - ActivitySection
+ * - QuickActions
  *
  * Este componente NO maneja lógica de negocio.
  * Solo controla estructura visual.

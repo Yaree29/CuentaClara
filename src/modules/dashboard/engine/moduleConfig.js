@@ -4,11 +4,24 @@ import {BanknotesIcon,CubeIcon,
   ChartBarIcon,
   GiftIcon,
   CurrencyDollarIcon,
-  QrCodeIcon,
-  ArchiveBoxIcon,
+  UserGroupIcon,
+  CalculatorIcon,
+  ShoppingCartIcon,
   BuildingStorefrontIcon,
 } from 'react-native-heroicons/outline';
 
+// Fuente única de verdad: backend `ALL_VALID_MODULES` (auth_service.py).
+// Cada entrada aquí debe corresponder 1:1 a una clave real de enabled_modules
+// — no se inventan sub-claves que el backend nunca produce (ver auditoría:
+// 'basic_inventory'/'advanced_inventory' no existían en el backend, que solo
+// maneja 'inventory').
+//
+// `optional`: aparece en la "Biblioteca de Módulos" de ModulesScreen.jsx
+//   (módulos que no son tabs fijos). Ausente/false = módulo core, no se lista ahí.
+// `toggleable`: además de navegar, ModulesScreen ofrece activarlo/desactivarlo
+//   vía PUT /businesses/me/modules (módulos sin activación automática por
+//   category_group — ver DASHBOARD_PYMES.md "Biblioteca de Módulos").
+// `route`: nombre de Stack.Screen en MainStackNavigator.jsx.
 const moduleConfig = {
 
   sales: {
@@ -25,20 +38,15 @@ const moduleConfig = {
       activity: true,
     },
 
-    alerts: [
-      'cash_pending',
-      'pending_expenses',
-    ],
-
     quickActions: [
       'new_sale',
       'register_expense',
     ],
   },
 
-  basic_inventory: {
-    id: 'basic_inventory',
-    name: 'Inventario Básico',
+  inventory: {
+    id: 'inventory',
+    name: 'Inventario',
     icon: CubeIcon,
     enabled: true,
 
@@ -50,51 +58,9 @@ const moduleConfig = {
       activity: false,
     },
 
-    alerts: [
-      'low_stock',
-      'out_stock',
-    ],
-
     quickActions: [
       'new_product',
       'inventory_entry',
-    ],
-  },
-
-  advanced_inventory: {
-    id: 'advanced_inventory',
-    name: 'Inventario Avanzado',
-    icon: ArchiveBoxIcon,
-    enabled: true,
-
-    dashboard: {
-      summary: false,
-      alerts: true,
-      quickActions: true,
-      finance: false,
-      activity: false,
-    },
-
-    features: [
-      'scanner',
-      'expiry',
-      'waste',
-      'predictive_stock',
-      'weight_control',
-    ],
-
-    alerts: [
-      'low_stock',
-      'out_stock',
-      'expiry_products',
-      'registered_waste',
-      'predictive_stock',
-    ],
-
-    quickActions: [
-      'scan_product',
-      'inventory_entry',
-      'inventory_adjustment',
     ],
   },
 
@@ -103,17 +69,15 @@ const moduleConfig = {
     name: 'Recetas',
     icon: ClipboardDocumentListIcon,
     enabled: true,
+    optional: true,
+    route: 'recipes',
+    subLabel: 'Fichas técnicas de productos',
 
     dashboard: {
       summary: false,
       alerts: true,
       quickActions: true,
     },
-
-    alerts: [
-      'missing_ingredients',
-      'limited_production',
-    ],
 
     quickActions: [
       'new_recipe',
@@ -126,6 +90,11 @@ const moduleConfig = {
     name: 'Servicios',
     icon: WrenchScrewdriverIcon,
     enabled: true,
+    // Pendiente de auditoría propia: no está en ALL_VALID_MODULES del backend
+    // todavía, así que aunque quede listado aquí, nunca aparecerá activo.
+    optional: true,
+    route: 'services',
+    subLabel: 'Catálogo de servicios',
 
     dashboard: {
       summary: true,
@@ -133,11 +102,6 @@ const moduleConfig = {
       quickActions: true,
       activity: true,
     },
-
-    alerts: [
-      'pending_services',
-      'late_services',
-    ],
 
     quickActions: [
       'new_service',
@@ -150,6 +114,10 @@ const moduleConfig = {
     name: 'Comisiones',
     icon: ChartBarIcon,
     enabled: true,
+    optional: true,
+    toggleable: true,
+    route: 'commissions',
+    subLabel: 'Cálculo de comisiones',
 
     dashboard: {
       summary: false,
@@ -167,6 +135,10 @@ const moduleConfig = {
     name: 'Propinas',
     icon: CurrencyDollarIcon,
     enabled: true,
+    optional: true,
+    toggleable: true,
+    route: 'tips',
+    subLabel: 'Registro de propinas',
 
     dashboard: {
       summary: true,
@@ -184,6 +156,10 @@ const moduleConfig = {
     name: 'Gestor de Ofertas',
     icon: GiftIcon,
     enabled: true,
+    optional: true,
+    toggleable: true,
+    route: 'offers',
+    subLabel: 'Promociones y descuentos',
 
     dashboard: {
       summary: false,
@@ -196,6 +172,41 @@ const moduleConfig = {
     ],
   },
 
+  staff: {
+    id: 'staff',
+    name: 'Personal',
+    icon: UserGroupIcon,
+    enabled: true,
+    optional: true,
+    route: 'staff',
+    subLabel: 'Empleados y roles',
+
+    dashboard: {
+      summary: false,
+      alerts: false,
+      quickActions: false,
+    },
+  },
+
+  cash: {
+    id: 'cash',
+    name: 'Caja',
+    icon: CalculatorIcon,
+    enabled: true,
+    optional: true,
+    route: 'cash',
+    subLabel: 'Flujo de caja y arqueos',
+
+    dashboard: {
+      summary: false,
+      alerts: false,
+      quickActions: false,
+    },
+  },
+
+  // Pendiente de auditoría propia (ver punto 6): no está en ALL_VALID_MODULES
+  // del backend — se deja fuera de `optional` a propósito para que no
+  // aparezca en la Biblioteca de Módulos hasta decidir su alcance.
   providers: {
     id: 'providers',
     name: 'Proveedores',
@@ -216,8 +227,11 @@ const moduleConfig = {
   purchases: {
     id: 'purchases',
     name: 'Compras',
-    icon: QrCodeIcon,
+    icon: ShoppingCartIcon,
     enabled: true,
+    optional: true,
+    route: 'purchases',
+    subLabel: 'Órdenes y proveedores',
 
     dashboard: {
       summary: true,

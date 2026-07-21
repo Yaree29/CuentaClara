@@ -24,6 +24,15 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
 
+  // paddingBottom para que "Actividad del Día" (último bloque) no quede
+  // tapado por el tab bar inferior (height: 72 en MainNavigator.jsx) — mismo
+  // valor que usan otras pantallas PYME con scroll bajo el tab bar (ver
+  // salesPyme.style.js / closeDay.style.js). El proyecto no usa
+  // useSafeAreaInsets en ninguna pantalla existente.
+  contentContainer: {
+    paddingBottom: 120,
+  },
+
   // ===============================
   // REFRESH CONTROL
   // ===============================
@@ -36,8 +45,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 8,
+    marginTop: 20,
+    marginBottom: 24,
   },
   greeting: {
     fontSize: 14,
@@ -90,8 +99,63 @@ const styles = StyleSheet.create({
   },
 
   // ===============================
-  // BLOQUE 1: RESUMEN (GRID)
+  // BLOQUE 1: RESUMEN — hero (Ventas del Día) + fila secundaria
   // ===============================
+  // Mismo lenguaje visual que el hero "Ventas del Día" de
+  // InformalDashboard.styles.js (mainCard): mismos tokens de color
+  // (salesDisplayBackground/Text/Subtext), mismo borderRadius/padding/sombra.
+  heroCard: {
+    backgroundColor: colors.salesDisplayBackground,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  heroTitle: {
+    color: colors.salesDisplaySubtext,
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  heroAmount: {
+    color: colors.salesDisplayText,
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  heroSubtext: {
+    color: colors.salesDisplaySubtext,
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  // Rendimiento vs. meta integrado al hero (no como tarjeta aparte). Riel
+  // translúcido sobre el fondo oscuro del hero + relleno en colors.secondary
+  // (mismo azul claro que salesDisplaySubtext, buen contraste sobre navy).
+  heroProgressTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+  },
+  heroProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  heroProgressLabel: {
+    color: colors.salesDisplaySubtext,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -109,6 +173,12 @@ const styles = StyleSheet.create({
   // ===============================
   // BLOQUE 2: ALERTAS / EMPTY
   // ===============================
+  // Envuelve todo el bloque de Alertas (encabezado + lista/estado vacío) para
+  // separarlo de "Acciones Rápidas" justo debajo — antes quedaban pegados
+  // (sin margen alguno entre el fin de la lista de alertas y QuickActions).
+  alertsBlock: {
+    marginBottom: 20,
+  },
   emptyCard: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -140,142 +210,58 @@ const styles = StyleSheet.create({
   },
 
   // ===============================
-  // BLOQUE 5: INFORMACIÓN GENERAL
+  // BLOQUE 4: ACTIVIDAD DEL DÍA
   // ===============================
-  infoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: colors.infocard || colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.infoBorder || colors.border,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  infoValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginVertical: 4,
-  },
-  infoSubtitle: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-
-  // ===============================
-  // BLOQUE 6: MÓDULOS ACTIVOS
-  // ===============================
-  modulesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 12,
-  },
-  moduleCard: {
-    width: '31%',
+  // dashboard.activity es el array de eventos que arma buildActivity()
+  // (ventas/gastos/movimientos de la sesión) — se lista, no se cuenta.
+  activityListContainer: {
     backgroundColor: colors.card,
     borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
-  moduleIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.reportHighlight || colors.cardSecondary,
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  activityRowLast: {
+    borderBottomWidth: 0,
+  },
+  activityIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.cardSecondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginRight: 12,
   },
-  moduleTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
+  activityIconText: {
+    fontSize: 16,
   },
-
-  // ===============================
-  // BLOQUE 7: RESUMEN FINANCIERO
-  // ===============================
-  financesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  },
-  financeCard: {
-    alignItems: 'center',
+  activityInfo: {
     flex: 1,
   },
-  financeLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
+  activityItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
-  financeValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  financeValueSuccess: {
-    color: colors.success,
-  },
-  financeValueDanger: {
-    color: colors.danger,
-  },
-
-  // ===============================
-  // BLOQUE 8: ACTIVIDAD DEL DÍA
-  // ===============================
-  activityContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  },
-  activityItem: {
-    alignItems: 'center',
-  },
-  activityNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  activityLabel: {
+  activityItemDescription: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  activityDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: colors.border,
+  activityEmptyText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
 });
 

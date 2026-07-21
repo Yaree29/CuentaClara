@@ -1,51 +1,95 @@
 // Pyme Dashboard
 import React, {useState,useCallback,useMemo,useEffect,} from "react";
 import {View,Text,ScrollView,RefreshControl,TouchableOpacity,} from "react-native";
-import {ExclamationTriangleIcon,TrophyIcon,BoltIcon,ChartBarIcon,} from "react-native-heroicons/outline";
+import { useFocusEffect } from "@react-navigation/native";
+import {ExclamationTriangleIcon,TrophyIcon,ArrowTrendingDownIcon,} from "react-native-heroicons/outline";
 import styles from "./styles/PymeDashboards.styles";
 import colors from "../../../theme/colors";
 import useAuthStore from "../../../store/useAuthStore";
 import useBlueprintStore from "../../../store/useBlueprintStore";
 import useSalesStore from "../../../store/useSaleStore";
 import useDashboardData from "../hooks/useDashboardData";
+import salesService from "../../sales/services/salesService";
 import SummaryCard from "./shared/SummaryCard";
 import AlertCard from "./shared/AlertCard";
 import GoalProgressCard from "./shared/GoalProgressCard";
 import QuickActions from "./shared/QuickActions";
 import DashboardGreeting from "./shared/DashboardGreeting";
 import { buildDashboard } from "../engine/dashboardEngine";
+import { formatMoney } from "../helpers/currency";
+
+// Íconos por tipo de evento en "Actividad del Día" (mismo criterio que el
+// ActivitySection huérfano, sin traer el componente completo).
+const ACTIVITY_ICONS = {
+  sale: "🛒",
+  expense: "💸",
+  movement: "📊",
+};
+
+const todayISO = () => new Date().toISOString().split("T")[0];
+
+// Tarjetas secundarias del Resumen cuyo valor es moneda (Órdenes, si aparece,
+// se muestra como número — igual que antes en buildSummaryCards).
+const SECONDARY_CURRENCY_IDS = ["cash", "expenses"];
 
 const PymeDashboard = () => {
 
   const user = useAuthStore((state) => state.user);
   const preferences = useAuthStore((state) => state.preferences) || {};
-  const {business,config,loading,reload,} = useDashboardData();
+  const {business,config,inventoryAlerts,loading,reload,} = useDashboardData();
   const businessData = business || {};
   const enabledModules = useBlueprintStore((state) => state.modules );
   const dailySales = useSalesStore( (state) => state.dailySales );
   const expenses = useSalesStore((state) => state.expenses );
   const generalMovements = useSalesStore((state) => state.generalMovements );
+  const dailyTotals = useSalesStore((state) => state.dailyTotals);
+  const setDailyTotals = useSalesStore((state) => state.setDailyTotals);
   const currency = config?.currency || "USD";
   const [refreshing, setRefreshing] = useState(false);
+
+  // Totales reales del día (agregados, no lista de eventos — ver
+  // useSaleStore.js) desde GET /sales/profits. Se pide al montar Home y cada
+  // vez que Home gana foco (mismo patrón que AssistantDashboard.jsx).
+  const fetchDailyTotals = useCallback(async () => {
+    const today = todayISO();
+    try {
+      const data = await salesService.getProfitsAndExpenses(today, today);
+      setDailyTotals(data);
+    } catch {
+      // Sin conexión, o rol sin permiso (require_role owner/admin en
+      // /sales/profits) — se mantiene el último total conocido y
+      // dashboardEngine cae de vuelta a sumar la sesión local.
+    }
+  }, [setDailyTotals]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchDailyTotals();
+    }, [fetchDailyTotals])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await reload();
+      await Promise.all([reload(), fetchDailyTotals()]);
     } finally {
       setRefreshing(false);
     }
-  }, [reload]);
+  }, [reload, fetchDailyTotals]);
 
   const [todayIncome, setTodayIncome] = useState(0);
 
   useEffect(() => {
+    if (dailyTotals) {
+      setTodayIncome(dailyTotals.income);
+      return;
+    }
     const income = dailySales.reduce(
       (total, sale) => total + (Number(sale.total) || 0),
       0
     );
     setTodayIncome(income);
-  }, [dailySales]);
+  }, [dailySales, dailyTotals]);
 
   const dashboard = useMemo(() => {
 
@@ -60,14 +104,50 @@ const PymeDashboard = () => {
       dailySales,
       expenses,
       generalMovements,
+      dailyTotals,
+      inventory: inventoryAlerts,
+      // recipes/services: sin fuente de datos real conectada todavía (ver
+      // auditoría — no hay endpoint agregado de "recetas sin insumos" ni de
+      // servicios pendientes/atrasados). Se pasan en 0 explícito para que
+      // buildAlertRules no falle por undefined, no porque ya estén conectadas.
+      recipes: { missingIngredients: 0, limitedProduction: 0 },
+      services: { pending: 0, late: 0 },
     });
-  }, [user,businessData,enabledModules,currency,preferences,dailySales,expenses,generalMovements,]);
+  }, [user,businessData,enabledModules,currency,preferences,dailySales,expenses,generalMovements,dailyTotals,inventoryAlerts,]);
 
-  const {header,summary,alerts,goals,quickActions,finance,modules,activity,business: businessInfo,status,} = dashboard;
+  const {header,summary,alerts,goals,quickActions,finance,activity,} = dashboard;
+
+  // Resumen: hero oscuro (Ventas del día, mismo lenguaje visual que el hero
+  // "Ventas del Día" de InformalDashboard.styles.js) con el % de meta como
+  // barra integrada, + fila secundaria (Caja Disponible, Gastos, y Órdenes
+  // si aplica). "Movimientos" ya no se repite aquí: es un conteo de sesión
+  // (generalMovements.length) y "Actividad del Día" (más abajo) ya lista esos
+  // mismos eventos uno por uno — mostrar además el total sería redundante.
+  const salesCard = summary.find((card) => card.id === "sales");
+  const cashCard = summary.find((card) => card.id === "cash");
+  const ordersCard = summary.find((card) => card.id === "orders");
+
+  const goalPercentage = Math.min(Math.max(Number(goals.percentage) || 0, 0), 100);
+
+  const secondaryCards = useMemo(() => {
+    const cards = [];
+    if (cashCard) cards.push(cashCard);
+    cards.push({
+      id: "expenses",
+      title: "Gastos",
+      value: Number(finance.expenses) || 0,
+      subtitle: "Registrados hoy",
+      icon: ArrowTrendingDownIcon,
+    });
+    if (ordersCard) cards.push(ordersCard);
+    return cards;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cashCard, ordersCard, finance]);
 
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -78,108 +158,109 @@ const PymeDashboard = () => {
         />
       }
     >
-      <View style={styles.header}>
+      {/* BIENVENIDA */}
         <DashboardGreeting todayIncome={todayIncome} />
 
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>
-            {header.role === "administrator"
-              ? "Administrador"
-              : "Asistente"}
-          </Text>
+      {/*Banner resumen*/}
+      <View style={styles.heroCard}>
+        <Text style={styles.heroTitle}>Ventas del Día</Text>
+        <Text style={styles.heroAmount}>
+          {formatMoney(salesCard?.value || 0, currency)}
+        </Text>
+        <Text style={styles.heroSubtext}>
+          {salesCard?.subtitle || "Ventas del día"}
+        </Text>
+
+        <View style={styles.heroProgressTrack}>
+          <View
+            style={[
+              styles.heroProgressFill,
+              { width: `${goalPercentage}%` },
+            ]}
+          />
         </View>
+        <Text style={styles.heroProgressLabel}>
+          {Math.round(goalPercentage)}% de la meta mensual
+        </Text>
       </View>
-
-      {/*separacion*/}
-
-      <Text style={styles.sectionTitle}>
-        Resumen del Negocio
-      </Text>
 
       <View style={styles.summaryGrid}>
-        {summary.map((card, index) => {
-          const isOdd = summary.length % 2 !== 0;
-          const isLast = index === summary.length - 1;
-          const isSingleLast = isOdd && isLast;
-
-          return (
-            <View
-              key={card.id}
-              style={[
-                styles.cardWrapper,
-                isSingleLast && styles.cardWrapperCentered,
-              ]}
-            >
-              <SummaryCard
-                title={card.title}
-                value={card.value}
-                subtitle={card.subtitle}
-                icon={card.icon}
-                color={card.color}
-                type={
-                  typeof card.value === "number" &&
-                  (card.id === "sales" || card.id === "cash")
-                    ? "currency"
-                    : "number"
-                }
-              />
-            </View>
-          );
-        })}
+        {secondaryCards.map((card) => (
+          <View key={card.id} style={styles.cardWrapper}>
+            <SummaryCard
+              title={card.title}
+              value={card.value}
+              subtitle={card.subtitle}
+              icon={card.icon}
+              type={SECONDARY_CURRENCY_IDS.includes(card.id) ? "currency" : "number"}
+            />
+          </View>
+        ))}
       </View>
 
       {/*separacion*/}
 
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleContainer}>
-          <ExclamationTriangleIcon
-            size={20}
-            color={colors.warning}
-          />
+      {/* 3. Alertas Operativas */}
+      <View style={styles.alertsBlock}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <ExclamationTriangleIcon
+              size={20}
+              color={colors.warning}
+            />
 
-          <Text style={styles.sectionTitle}>
-            Alertas Operativas
-          </Text>
+            <Text style={styles.sectionTitle}>
+              Alertas Operativas
+            </Text>
+          </View>
+
+          <TouchableOpacity>
+            <Text style={styles.seeMoreText}>
+              Ver todas
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity>
-          <Text style={styles.seeMoreText}>
-            Ver todas
-          </Text>
-        </TouchableOpacity>
+        {alerts.length > 0 ? (
+          alerts.map((alert) => (
+            <AlertCard
+              key={alert.id}
+              title={alert.title}
+              description={alert.description}
+              severity={alert.severity}
+              module={alert.module}
+              icon={alert.icon}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyCard}>
+            <ExclamationTriangleIcon
+              size={35}
+              color={colors.success}
+            />
+
+            <Text style={styles.emptyTitle}>
+              No existen alertas
+            </Text>
+
+            <Text style={styles.emptySubtitle}>
+              Todos los módulos activos se
+              encuentran funcionando correctamente.
+            </Text>
+          </View>
+        )}
       </View>
 
-      {alerts.length > 0 ? (
-        alerts.map((alert) => (
-          <AlertCard
-            key={alert.id}
-            title={alert.title}
-            description={alert.description}
-            severity={alert.severity}
-            module={alert.module}
-            icon={alert.icon}
-          />
-        ))
-      ) : (
-        <View style={styles.emptyCard}>
-          <ExclamationTriangleIcon
-            size={35}
-            color={colors.success}
-          />
-
-          <Text style={styles.emptyTitle}>
-            No existen alertas
-          </Text>
-
-          <Text style={styles.emptySubtitle}>
-            Todos los módulos activos se
-            encuentran funcionando correctamente.
-          </Text>
-        </View>
-      )}
+      {/* 4. Acciones Rápidas — inmediatamente accionable tras ver cifras/alertas.
+          Encabezado único: QuickActions ya envuelve esto en DashboardCard con
+          su propio título "Acciones rápidas". */}
+      <QuickActions actions={quickActions} />
 
       {/*separacion*/}
 
+      {/* 5. Meta Mensual — motivacional, no urgente ni accionable a diario.
+          Referencia el mismo % que la tarjeta "Rendimiento" del Resumen,
+          aquí con la barra de progreso completa (actual/meta). */}
       <View style={styles.goalContainer}>
         <View style={styles.sectionTitleContainer}>
           <TrophyIcon
@@ -201,197 +282,44 @@ const PymeDashboard = () => {
 
       {/*separacion*/}
 
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleContainer}>
-          <BoltIcon
-            size={20}
-            color={colors.primary}
-          />
-
-          <Text style={styles.sectionTitle}>
-            Acciones Rápidas
-          </Text>
-        </View>
-      </View>
-      <QuickActions actions={quickActions} />
-
-      {/*separacion*/}
-
-      <Text style={styles.sectionTitle}>Estado General</Text>
-      <View style={styles.infoContainer}>
-        <View style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <ChartBarIcon
-              size={22}
-              color={colors.primary}
-            />
-
-            <Text style={styles.infoTitle}>
-              Rendimiento
-            </Text>
-          </View>
-
-          <Text style={styles.infoValue}>
-            {(Number(goals.percentage) || 0).toFixed(0)}%
-          </Text>
-
-          <Text style={styles.infoSubtitle}>
-            Avance respecto a la meta mensual.
-          </Text>
-        </View>
-
-        <View style={styles.infoCard}>
-          <View style={styles.infoHeader}>
-            <ChartBarIcon
-              size={22}
-              color={colors.success}
-            />
-
-            <Text style={styles.infoTitle}>
-              Caja Disponible
-            </Text>
-          </View>
-
-          <Text style={styles.infoValue}>
-            ${(Number(finance.balance) || 0).toFixed(2)}
-          </Text>
-
-          <Text style={styles.infoSubtitle}>
-            Balance actualizado de la jornada.
-          </Text>
-        </View>
-      </View>
-
-      {/*separacion*/}
-
-      <Text style={styles.sectionTitle}>
-        Módulos Activos
-      </Text>   
-      <View style={styles.modulesContainer}>
-        {modules.map((module) => {
-          const Icon = module.icon;
-
-          return (
-            <View
-              key={module.id}
-              style={styles.moduleCard}
-            >
-              <View
-                style={styles.moduleIconContainer}
-              >
-                <Icon
-                  size={26}
-                  color={colors.primary}
-                />
-              </View>
-
-              <Text
-                style={styles.moduleTitle}
-                numberOfLines={2}
-              >
-                {module.title}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-
-      {/*separacion*/}
-
-      <Text style={styles.sectionTitle}>
-        Resumen Financiero
-      </Text>
-      <View style={styles.financesContainer}>
-        <View style={styles.financeCard}>
-          <Text style={styles.financeLabel}>
-            Ventas
-          </Text>
-
-          <Text
-            style={[
-              styles.financeValue,
-              { color: colors.success },
-            ]}
-          >
-            ${(Number(finance.sales) || 0).toFixed(2)}
-          </Text>
-        </View>
-
-        <View style={styles.financeCard}>
-          <Text style={styles.financeLabel}>
-            Gastos
-          </Text>
-
-          <Text
-            style={[
-              styles.financeValue,
-              { color: colors.danger },
-            ]}
-          >
-            ${(Number(finance.expenses) || 0).toFixed(2)}
-          </Text>
-        </View>
-
-        <View style={styles.financeCard}>
-          <Text style={styles.financeLabel}>
-            Balance
-          </Text>
-
-          <Text
-            style={[
-              styles.financeValue,
-              {
-                color:
-                  (Number(finance.balance) || 0) >= 0
-                    ? colors.success
-                    : colors.danger,
-              },
-            ]}
-          >
-            ${(Number(finance.balance) || 0).toFixed(2)}
-          </Text>
-        </View>
-      </View>
-
-      {/*separacion*/}
-
+      {/* 6. Actividad del Día */}
       <Text style={styles.sectionTitle}>
         Actividad del Día
       </Text>
-      <View style={styles.activityContainer}>
-        <View style={styles.activityItem}>
-          <Text style={styles.activityNumber}>
-            {activity.sales}
+      <View style={styles.activityListContainer}>
+        {/* activity es el array de eventos {id,type,title,description,...}
+            que arma buildActivity() — antes se leía como si fuera un objeto
+            con .sales/.expenses/.movements, que siempre era undefined. */}
+        {activity.length > 0 ? (
+          activity.slice(0, 5).map((item, index) => (
+            <View
+              key={item.id}
+              style={[
+                styles.activityRow,
+                index === Math.min(activity.length, 5) - 1 && styles.activityRowLast,
+              ]}
+            >
+              <View style={styles.activityIconWrap}>
+                <Text style={styles.activityIconText}>
+                  {ACTIVITY_ICONS[item.type] || "📌"}
+                </Text>
+              </View>
+
+              <View style={styles.activityInfo}>
+                <Text style={styles.activityItemTitle}>{item.title}</Text>
+                {!!item.description && (
+                  <Text style={styles.activityItemDescription}>
+                    {item.description}
+                  </Text>
+                )}
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.activityEmptyText}>
+            Sin actividad registrada en esta sesión.
           </Text>
-
-          <Text style={styles.activityLabel}>
-            Ventas realizadas
-          </Text>
-        </View>
-
-        <View style={styles.activityDivider} />
-
-        <View style={styles.activityItem}>
-          <Text style={styles.activityNumber}>
-            {activity.expenses}
-          </Text>
-
-          <Text style={styles.activityLabel}>
-            Gastos registrados
-          </Text>
-        </View>
-
-        <View style={styles.activityDivider} />
-
-        <View style={styles.activityItem}>
-          <Text style={styles.activityNumber}>
-            {activity.movements}
-          </Text>
-
-          <Text style={styles.activityLabel}>
-            Movimientos
-          </Text>
-        </View>
+        )}
       </View>
 
     </ScrollView>

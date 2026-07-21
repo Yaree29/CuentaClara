@@ -15,18 +15,29 @@ import styles from '../styles/InformalDashboard.styles';
 // una sola vez por montaje (no en cada render) para que el subtítulo no
 // cambie solo porque el dashboard refrescó datos.
 const buildSubtitle = (hasSalesToday, businessName, useAltPhrase) => {
+  const isLongName = businessName ? businessName.length > 16 : false;
+
   if (hasSalesToday) {
     if (businessName) {
+      if (isLongName) {
+        return useAltPhrase
+          ? `${businessName} está creciendo\u00A0🎉`
+          : `${businessName} va muy bien hoy\u00A0📈`;
+      }
       return useAltPhrase
-        ? `Tu ${businessName} está creciendo hoy 🎉`
-        : `Tu ${businessName} está teniendo un buen día 📈`;
+        ? `Tu ${businessName} está creciendo hoy\u00A0🎉`
+        : `Tu ${businessName} está teniendo un buen día\u00A0📈`;
     }
-    return useAltPhrase ? '¡Vamos por más hoy! 🎉' : '¡Vamos por un buen día! 📈';
+    return useAltPhrase ? '¡Vamos por más hoy!\u00A0🎉' : '¡Vamos por un buen día!\u00A0📈';
   }
 
-  return businessName
-    ? `Aún no acaba el día, ¡vamos por más con ${businessName}! 💪`
-    : 'Aún no acaba el día, ¡vamos por más! 💪';
+  if (businessName) {
+    return isLongName
+      ? `¡Vamos por más con ${businessName}!\u00A0💪`
+      : `Aún no acaba el día, ¡vamos por más con ${businessName}!\u00A0💪`;
+  }
+
+  return 'Aún no acaba el día, ¡vamos por más!\u00A0💪';
 };
 
 const DashboardGreeting = ({ todayIncome = 0 }) => {

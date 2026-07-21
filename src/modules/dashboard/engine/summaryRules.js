@@ -1,6 +1,5 @@
 import colors from '../../../theme/colors';
-import {BanknotesIcon,ChartBarIcon,ArrowTrendingUpIcon,ExclamationTriangleIcon,TrophyIcon,BuildingStorefrontIcon,} from 'react-native-heroicons/outline';
-import moduleConfig from './moduleConfig';
+import {BanknotesIcon,ChartBarIcon,ArrowTrendingUpIcon,TrophyIcon,BuildingStorefrontIcon,} from 'react-native-heroicons/outline';
 
 export const buildHeader = ({
   user = {},
@@ -100,58 +99,6 @@ export const buildSummaryCards = ({
   return cards;
 };
 
-export const buildDashboardAlerts = ({
-  activeModules = [],
-  settings = {},
-}) => {
-  const alerts = [];
-  activeModules.forEach((moduleId) => {
-    const config = moduleConfig[moduleId];
-    if (!config?.alerts) return;
-    config.alerts.forEach((alert) => {
-      alerts.push({
-        id: `${moduleId}_${alert}`,
-        type: moduleId,
-        title: alert,
-        message: 'Requiere atención',
-        severity: 'warning',
-        icon: ExclamationTriangleIcon,
-      });
-    });
-  });
-  if (settings.useDigitalScale) {
-    alerts.push({
-      id: 'digital_scale',
-      type: 'configuration',
-      title: 'Báscula digital',
-      message: 'El negocio utiliza peso como parte de las ventas.',
-      severity: 'info',
-      icon: ExclamationTriangleIcon,
-    });
-  }
-  if (settings.useBarcodes) {
-    alerts.push({
-      id: 'barcode',
-      type: 'configuration',
-      title: 'Código de barras',
-      message: 'Inventario preparado para lectura de códigos.',
-      severity: 'info',
-      icon: ExclamationTriangleIcon,
-    });
-  }
-  if (settings.transformsRawMaterial) {
-    alerts.push({
-      id: 'recipes',
-      type: 'configuration',
-      title: 'Producción',
-      message: 'Este negocio transforma materia prima.',
-      severity: 'info',
-      icon: ExclamationTriangleIcon,
-    });
-  }
-  return alerts;
-};
-
 export const buildGoal = ({
   businessData = {},
   totalSales = 0,
@@ -215,45 +162,6 @@ export const buildFinance = ({
     simplifiedInventory:
       settings.simplifiedInventory,
   };
-};
-
-export const buildModules = ({
-  activeModules = [],
-  settings = {},
-}) => {
-  return activeModules
-    .map((moduleId) => {
-      const config = moduleConfig[moduleId];
-      if (!config) return null;
-      return {
-        id: config.id,
-        name: config.name,
-        title: config.name,
-        enabled: true,
-        icon: config.icon,
-        settings: {
-          useBarcodes:
-            settings.useBarcodes,
-          manageTips:
-            settings.manageTips,
-          simplifiedInventory:
-            settings.simplifiedInventory,
-          sellPhysicalProducts:
-            settings.sellPhysicalProducts,
-          transformsRawMaterial:
-            settings.transformsRawMaterial,
-          employeeCommission:
-            settings.employeeCommission,
-          useDigitalScale:
-            settings.useDigitalScale,
-          unitOfMeasure:
-            settings.unitOfMeasure,
-          salesFormat:
-            settings.salesFormat,
-        },
-      };
-    })
-    .filter(Boolean);
 };
 
 export const buildActivity = ({

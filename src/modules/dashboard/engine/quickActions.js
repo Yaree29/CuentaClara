@@ -11,6 +11,14 @@ import {
   ChartBarIcon,
 } from 'react-native-heroicons/outline';
 
+// `route` debe ser el nombre real registrado en MainNavigator.jsx (tabs) o
+// MainStackNavigator.jsx (stack) — antes tenían nombres en PascalCase
+// inventados ('Sales', 'Inventory', 'Recipes'...) que no correspondían a
+// ninguna screen real, así que navigation.navigate() nunca hacía nada.
+// scan_product / new_appointment / new_provider quedan SIN pantalla real
+// todavía (no existe Scanner/Appointments/Providers en ningún navigator) —
+// se dejan en el catálogo por si el módulo correspondiente se activa, pero
+// QuickActions.jsx captura el error de navegación en vez de romper.
 const actionCatalog = {
 
   new_sale: {
@@ -19,7 +27,7 @@ const actionCatalog = {
     subtitle: 'Registrar una venta',
     icon: BanknotesIcon,
     color: '#2563EB',
-    route: 'Sales',
+    route: 'sales',
   },
 
   register_expense: {
@@ -28,7 +36,8 @@ const actionCatalog = {
     subtitle: 'Agregar un egreso',
     icon: CurrencyDollarIcon,
     color: '#DC2626',
-    route: 'Accounting',
+    route: 'CreateTransaction',
+    params: { type: 'expense' },
   },
 
   new_product: {
@@ -37,7 +46,7 @@ const actionCatalog = {
     subtitle: 'Agregar inventario',
     icon: CubeIcon,
     color: '#059669',
-    route: 'Inventory',
+    route: 'PymeInventory',
   },
 
   inventory_entry: {
@@ -46,7 +55,7 @@ const actionCatalog = {
     subtitle: 'Registrar ingreso',
     icon: ArchiveBoxIcon,
     color: '#0891B2',
-    route: 'Inventory',
+    route: 'PymeInventory',
   },
 
   inventory_adjustment: {
@@ -55,7 +64,7 @@ const actionCatalog = {
     subtitle: 'Modificar existencias',
     icon: ArchiveBoxIcon,
     color: '#0EA5E9',
-    route: 'Inventory',
+    route: 'PymeInventory',
   },
 
   scan_product: {
@@ -64,7 +73,7 @@ const actionCatalog = {
     subtitle: 'Código de barras',
     icon: QrCodeIcon,
     color: '#7C3AED',
-    route: 'Scanner',
+    route: 'Scanner', // sin pantalla real todavía — ver comentario arriba
   },
 
   new_recipe: {
@@ -73,7 +82,7 @@ const actionCatalog = {
     subtitle: 'Crear receta',
     icon: ClipboardDocumentListIcon,
     color: '#EA580C',
-    route: 'Recipes',
+    route: 'recipes',
   },
 
   register_production: {
@@ -82,7 +91,7 @@ const actionCatalog = {
     subtitle: 'Registrar producción',
     icon: ClipboardDocumentListIcon,
     color: '#D97706',
-    route: 'Recipes',
+    route: 'recipes',
   },
 
   new_service: {
@@ -91,7 +100,7 @@ const actionCatalog = {
     subtitle: 'Registrar servicio',
     icon: WrenchScrewdriverIcon,
     color: '#0284C7',
-    route: 'Services',
+    route: 'services',
   },
 
   new_appointment: {
@@ -100,7 +109,7 @@ const actionCatalog = {
     subtitle: 'Agendar servicio',
     icon: WrenchScrewdriverIcon,
     color: '#2563EB',
-    route: 'Appointments',
+    route: 'Appointments', // sin pantalla real todavía — ver comentario arriba
   },
 
   view_commissions: {
@@ -109,7 +118,7 @@ const actionCatalog = {
     subtitle: 'Consultar comisiones',
     icon: ChartBarIcon,
     color: '#7C3AED',
-    route: 'Commissions',
+    route: 'commissions',
   },
 
   register_tip: {
@@ -118,7 +127,7 @@ const actionCatalog = {
     subtitle: 'Agregar propina',
     icon: CurrencyDollarIcon,
     color: '#16A34A',
-    route: 'Tips',
+    route: 'tips',
   },
 
   new_offer: {
@@ -127,7 +136,7 @@ const actionCatalog = {
     subtitle: 'Crear promoción',
     icon: GiftIcon,
     color: '#EC4899',
-    route: 'Offers',
+    route: 'offers',
   },
 
   new_provider: {
@@ -136,7 +145,7 @@ const actionCatalog = {
     subtitle: 'Agregar proveedor',
     icon: BuildingStorefrontIcon,
     color: '#6366F1',
-    route: 'Providers',
+    route: 'Providers', // sin pantalla real todavía — ver comentario arriba
   },
 
   new_purchase: {
@@ -145,7 +154,7 @@ const actionCatalog = {
     subtitle: 'Registrar compra',
     icon: ArchiveBoxIcon,
     color: '#0F766E',
-    route: 'Purchases',
+    route: 'purchases',
   },
 
 };

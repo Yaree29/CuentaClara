@@ -10,9 +10,11 @@ export default StyleSheet.create({
   },
 
   // === BOTÓN DE ACCIÓN ===
+  // width fijo (no flex:1) para que, con un número impar de acciones, la
+  // última tarjeta de la fila mantenga el mismo tamaño que las demás en vez
+  // de estirarse a todo el ancho por quedar sola en su fila.
   action: {
-    flex: 1,
-    minWidth: "45%", // Garantiza 2 columnas responsivas por fila
+    width: "48%",
     backgroundColor: colors.quickButtonBackground,
     borderWidth: 1,
     borderColor: colors.quickButtonBorder,

@@ -14,7 +14,6 @@ import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
 import useAuthStore from '../../../../store/useAuthStore';
 import useAssistantModeStore from '../../../../store/useAssistantModeStore';
-import ExitAssistantModeModal from '../../../assistants/components/ExitAssistantModeModal';
 
 // Alineado al mismo margen izquierdo que usa headerContainer (paddingHorizontal: 16).
 const MENU_LEFT = 16;
@@ -28,12 +27,6 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
 
   const userType = useAuthStore((state) => state.user?.userType);
   const enableAssistantMode = useAssistantModeStore((state) => state.enableMode);
-  const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
-
-
-  // extraído a ExitAssistantModeModal.jsx para reutilizarlo también en
-  // AssistantSelectScreen.jsx.
-  const [exitModalVisible, setExitModalVisible] = useState(false);
 
   const openMenu = () => {
     if (kebabRef.current) {
@@ -74,38 +67,14 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
     navigation.navigate('AssistantSelect');
   };
 
-  const openExitModal = () => setExitModalVisible(true);
-  const closeExitModal = () => setExitModalVisible(false);
-
-  const handleExitSuccess = () => {
-    setExitModalVisible(false);
-    navigation.navigate('MainTabs', { screen: 'dashboard' });
-  };
-
   if (variant === 'home') {
-    // Modo Asistente activo: en vez del kebab normal, un único botón de
-    // salida (candado). El avatar/Perfil sigue oculto — no es información
-    // del asistente.
-    if (activeAssistant) {
-      return (
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.kebabContainer}
-            onPress={openExitModal}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="lock-closed-outline" size={22} color={colors.primary} />
-          </TouchableOpacity>
-
-          <ExitAssistantModeModal
-            visible={exitModalVisible}
-            onClose={closeExitModal}
-            onSuccess={handleExitSuccess}
-          />
-        </View>
-      );
-    }
-
+    // El botón de salida de Modo Asistente ("candado") vivía aquí, pero esta
+    // rama es inalcanzable: DashboardHeader variant="home" solo lo monta
+    // HomeScreen.jsx (tab "dashboard"), y ese tab ya no existe durante Modo
+    // Asistente (ver MainNavigator.jsx/ASSISTANT_TABS) — ahora hay un botón
+    // "Salir" directo en el navbar de tabs. ExitAssistantModeModal.jsx no se
+    // tocó: AssistantSelectScreen.jsx lo sigue usando para que el dueño pueda
+    // salir sin PIN si entró por error.
     return (
       <View style={styles.headerContainer}>
         <TouchableOpacity

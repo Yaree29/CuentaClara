@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../../../theme/colors';
 import useAuthStore from '../../../store/useAuthStore';
 import useAssistantModeStore from '../../../store/useAssistantModeStore';
-import useAssistantSession from '../../assistants/hooks/useAssistantSession';
 
 import DashboardHeader from '../components/shared/DashboardHeader';
 import InformalDashboard from '../components/InformalDashboard';
@@ -16,10 +15,12 @@ const HomeScreen = () => {
   const userType = user?.userType; // 'pyme' | 'informal'
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
 
-  // Montado siempre que Home esté visible — revisa si el dueño bloqueó al
-  // asistente activo, sin importar qué access_type tenga (Fase D).
-  useAssistantSession();
-
+  // Este tab ("dashboard") ya no existe en Modo Asistente (ver
+  // MainNavigator.jsx/ASSISTANT_TABS) — la rama de abajo queda sin poder
+  // alcanzarse en la práctica, pero se deja tal cual (no se borra
+  // AssistantDashboard.jsx del proyecto) por si se reintroduce más adelante.
+  // El polling de bloqueo (useAssistantSession) se movió a MainNavigator.jsx,
+  // que persiste durante toda la sesión de tabs sin depender de este tab.
   const renderDashboard = () => {
     if (activeAssistant) {
       return <AssistantDashboard />;

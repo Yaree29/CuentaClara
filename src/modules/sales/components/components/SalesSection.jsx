@@ -15,6 +15,7 @@ const SalesPyme = () => {
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productsLoadError, setProductsLoadError] = useState(false);
   const [savingSale, setSavingSale] = useState(false);
 
   const addSaleToAccounting = useSalesStore((state) => state.addSale);
@@ -35,12 +36,19 @@ const SalesPyme = () => {
     const loadProducts = async () => {
       try {
         setLoadingProducts(true);
+        setProductsLoadError(false);
 
         const data = await inventoryService.getProducts();
         setProducts(data || []);
       } catch (error) {
         console.error('Error cargando productos:', error);
         setProducts([]);
+        setProductsLoadError(true);
+        Toast.show({
+          type: 'error',
+          text1: 'No se pudieron cargar los productos',
+          text2: error?.message || 'Revisa tu conexión e intenta de nuevo.',
+        });
       } finally {
         setLoadingProducts(false);
       }
@@ -296,9 +304,11 @@ const SalesPyme = () => {
             ? 'Venta guardada'
             : loadingProducts
               ? 'Cargando productos...'
-              : products.length === 0
-                ? 'No existen productos registrados'
-                : 'Buscar producto...'
+              : productsLoadError
+                ? 'No se pudieron cargar los productos'
+                : products.length === 0
+                  ? 'No existen productos registrados'
+                  : 'Buscar producto...'
         }
         searchPlaceholder="Escriba el nombre..."
         onChange={(item) => {
@@ -331,15 +341,19 @@ const SalesPyme = () => {
                 <Text style={styles.emptyProductsText}>
                 {loadingProducts
                   ? 'Cargando productos...'
-                  : products.length === 0
-                    ? 'No existen productos registrados'
-                    : 'No hay productos agregados'}
+                  : productsLoadError
+                    ? 'No se pudieron cargar los productos'
+                    : products.length === 0
+                      ? 'No existen productos registrados'
+                      : 'No hay productos agregados'}
               </Text>
 
               <Text style={styles.emptyProductsSubText}>
                 {loadingProducts
                   ? 'Espere un momento...'
-                  : products.length === 0
+                  : productsLoadError
+                    ? 'Verifica tu conexión y vuelve a intentar.'
+                    : products.length === 0
                     ? 'Primero debe crear productos en Inventario.'
                     : 'Utilice el buscador para agregar productos'}
               </Text>

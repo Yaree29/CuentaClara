@@ -53,7 +53,9 @@ export default StyleSheet.create({
 
   content: {
     padding: 16,
-    paddingBottom: 40,
+    // 120: estándar del proyecto para que el contenido no quede tapado por
+    // el tab bar.
+    paddingBottom: 120,
   },
 
   /* =========================

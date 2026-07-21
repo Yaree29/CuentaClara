@@ -133,6 +133,11 @@ export default StyleSheet.create({
     textAlign: 'center',
   },
 
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+
   /* =====================
       TARJETAS DE VENTA (DENTRO DEL MODAL)
   ===================== */

@@ -14,8 +14,9 @@
 //   { id, customerId, clientName, phone, totalDebt, originalAmount, items,
 //     paidAmount, status, notes, lastUpdate }
 // =============================================================================
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import debtService from '../services/debtService';
 import inventoryService from '../../inventory/services/inventoryService';
@@ -94,9 +95,14 @@ export const useInformalCredit = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  // Recargar la libreta cada vez que la pestaña Fiado toma el foco, para que
+  // los cambios hechos en otras pantallas (o el borrado de datos desde Perfil)
+  // se reflejen al volver, sin tener que reabrir la app.
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+    }, [fetchAll])
+  );
 
   // Construir el shape plano que espera la UI a partir de debts + customers
   const credits = useMemo(() => {

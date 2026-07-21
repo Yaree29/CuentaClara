@@ -15,7 +15,8 @@
 //   - Se exponen helpers ya formateados (totalIncome, totalDebt, etc.) para
 //     que el componente no haga lógica extra de cálculo.
 // =============================================================================
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import salesService from '../../sales/services/salesService';
 import debtService from '../../credit/services/debtService';
@@ -68,16 +69,28 @@ export const useInformalDashboard = () => {
     setLowStockProducts(Array.isArray(lowStockData) ? lowStockData.slice(0, 4) : []);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        await fetchAll();
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [fetchAll]);
+  // Recargar el resumen cada vez que el Inicio toma el foco. Así, tras
+  // registrar una venta/fiado o borrar los datos desde Perfil, al volver al
+  // dashboard las cifras ya aparecen actualizadas. La primera vez muestra el
+  // spinner; las siguientes son silenciosas (sin parpadeo).
+  const hasLoadedRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        if (!hasLoadedRef.current) setLoading(true);
+        try {
+          await fetchAll();
+        } finally {
+          if (active) {
+            setLoading(false);
+            hasLoadedRef.current = true;
+          }
+        }
+      })();
+      return () => { active = false; };
+    }, [fetchAll])
+  );
 
   const refresh = useCallback(async () => {
     setRefreshing(true);

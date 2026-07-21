@@ -10,6 +10,10 @@ const useBlueprintStore = create((set) => ({
         modules: blueprint.enabled_modules || []
     }),
 
+    // Actualiza solo la lista de módulos activos (ej. tras activar uno nuevo
+    // vía PUT /businesses/me/modules), sin reconstruir todo el blueprint.
+    setModules: (modules) => set({ modules: modules || [] }),
+
     isModuleEnabled: (moduleName) => (state) => {
         return state.modules.includes(moduleName);
     },

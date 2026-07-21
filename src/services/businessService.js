@@ -50,6 +50,20 @@ const businessService = {
       body: JSON.stringify(config),
     });
   },
+
+  /**
+   * Activar/desactivar un módulo opcional (ej. 'commissions', 'tips', 'offers').
+   * Devuelve { enabled_modules } actualizado para refrescar el blueprint local
+   * sin necesitar un nuevo login.
+   * @param {string} module
+   * @param {boolean} enabled
+   */
+  setModuleActive: async (module, enabled = true) => {
+    return apiRequest('/businesses/me/modules', {
+      method: 'PUT',
+      body: JSON.stringify({ module, enabled }),
+    });
+  },
 };
 
 export default businessService;

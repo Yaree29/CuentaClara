@@ -11,6 +11,7 @@
 #   PUT    /businesses/me         — actualizar datos del negocio
 #   GET    /businesses/me/config  — configuración del negocio
 #   PUT    /businesses/me/config  — actualizar configuración del negocio
+#   PUT    /businesses/me/modules — activar/desactivar un módulo opcional
 #
 # Nota: Usa /me en lugar de /{business_id} para que el business_id se extraiga
 #       del JWT, evitando que el frontend pase IDs manualmente y previniendo
@@ -19,7 +20,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.routers.auth import get_current_user
 from app.services import business_service
-from app.models.business import BusinessUpdate, BusinessConfigUpdate
+from app.models.business import BusinessUpdate, BusinessConfigUpdate, ModuleToggleRequest
 
 router = APIRouter()
 
@@ -87,6 +88,29 @@ def update_business_config(
         return business_service.update_business_config(
             business_id=current_user["business_id"],
             data=data,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/me/modules", summary="Activar o desactivar un módulo opcional del negocio")
+def update_business_modules(
+    data: ModuleToggleRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Activa (o desactiva) un módulo opcional (ej. 'commissions', 'tips', 'offers')
+    agregando/actualizando su fila en `features`. Devuelve la lista actualizada
+    de `enabled_modules` para que el frontend refresque su blueprint sin
+    necesitar un nuevo login.
+    """
+    try:
+        return business_service.set_module_active(
+            business_id=current_user["business_id"],
+            module=data.module,
+            enabled=data.enabled,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

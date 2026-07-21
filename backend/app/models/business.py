@@ -25,3 +25,9 @@ class BusinessConfigUpdate(BaseModel):
     primary_color: Optional[str] = None
     language: Optional[str] = None
     settings: Optional[dict] = None
+
+
+class ModuleToggleRequest(BaseModel):
+    """Activar/desactivar un módulo opcional del negocio (tabla `features`)."""
+    module: str
+    enabled: bool = True

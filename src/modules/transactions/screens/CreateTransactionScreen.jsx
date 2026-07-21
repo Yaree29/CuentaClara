@@ -17,7 +17,12 @@ const CreateTransactionScreen = ({ route }) => {
   const [extraData, setExtraData] = useState({});
 
   const renderPymeFields = () => {
-    if (businessType === 'butcher') {
+    // Vocabulario correcto: category_group (no 'butcher') — ver auditoría.
+    // Nota: user.businessType no existe hoy en el contexto de sesión
+    // (GET /auth/me + /auth/context no lo exponen), así que esta condición
+    // sigue sin activarse hasta que se exponga category_group ahí — fuera de
+    // alcance de este cambio mínimo (solo corrige el string comparado).
+    if (businessType === 'alimentos') {
       return (
         <>
           <TextInput

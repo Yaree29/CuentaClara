@@ -7,8 +7,9 @@
 // del Modo Asistente (exitAssistant — vuelve al selector de nombres, sin
 // tocar isActive del modo general) y muestra el aviso.
 //
-// Se monta directamente en HomeScreen.jsx (tab "dashboard"), que siempre está
-// presente sin importar el access_type — no hace falta un wrapper por pantalla.
+// Se monta directamente en MainNavigator.jsx (persiste durante toda la
+// sesión de tabs, sin importar cuál esté enfocado) — antes vivía en
+// HomeScreen.jsx/tab "Inicio", pero ese tab ya no existe en Modo Asistente.
 // No hace nada si no hay activeAssistant (isActive=true sin asistente
 // seleccionado, o modo apagado por completo).
 // =============================================================================

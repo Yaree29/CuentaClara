@@ -13,15 +13,39 @@
 from app.database import supabase, supabase_admin
 from app.config import settings
 from datetime import datetime
+from typing import Optional
 
 # Módulos fijos para usuarios informales: inicio, ventas, fiado, inventario
 DEFAULT_INFORMAL_MODULES = ['sales', 'credit', 'inventory']
 # Siempre presentes independientemente del tipo de negocio
 BASE_MODULES = ['dashboard', 'profile']
-# Lista blanca para evitar que features con nombres inválidos lleguen al frontend
+# Lista blanca para evitar que features con nombres inválidos lleguen al frontend.
+# 'commissions'/'tips'/'offers' no se activan automáticamente por category_group
+# (ningún grupo del onboarding los menciona) — quedan disponibles solo para
+# activación manual vía PUT /businesses/me/modules (pantalla "Módulos").
 ALL_VALID_MODULES = {
-    'inventory', 'sales', 'credit', 'billing', 'cash', 'staff', 'purchases', 'recipes'
+    'inventory', 'sales', 'credit', 'billing', 'cash', 'staff', 'purchases', 'recipes',
+    'commissions', 'tips', 'offers',
 }
+
+# Flags de configuración interna de inventario que se activan por defecto según
+# el category_group de la plantilla de industria elegida en el registro
+# (industry_templates.category_group). Grupos no listados aquí (servicios,
+# general, o sin plantilla) quedan con todos los flags en False.
+INVENTORY_CONFIG_FLAGS = [
+    'control_peso', 'caducidad', 'mermas', 'recetas', 'produccion', 'escaner', 'stock_predictivo'
+]
+INVENTORY_CONFIG_DEFAULTS_BY_GROUP = {
+    'alimentos': {'control_peso': True, 'caducidad': True, 'mermas': True},
+    'comida_preparada': {'recetas': True, 'mermas': True, 'produccion': True},
+    'comercio': {'escaner': True, 'stock_predictivo': True},
+}
+
+
+def _build_inventory_config_flags(category_group: Optional[str]) -> dict:
+    flags = {flag: False for flag in INVENTORY_CONFIG_FLAGS}
+    flags.update(INVENTORY_CONFIG_DEFAULTS_BY_GROUP.get(category_group, {}))
+    return flags
 
 
 def normalize_modules(features: list) -> list:
@@ -81,6 +105,26 @@ def register_business(data):
 
     business_id = business.data[0]["id"]
 
+    # 4.1 Obtener category_group de la plantilla de industria elegida (si hay)
+    #     — reemplaza los rangos de ID hardcodeados que antes decidían el
+    #     grupo de categoría directamente en el bloque de activación de
+    #     módulos (ver 15_category_group_and_inventory_config.sql).
+    category_group = None
+    if industry_template_id:
+        template_group = supabase_admin.table("industry_templates")\
+            .select("category_group")\
+            .eq("id", industry_template_id)\
+            .execute()
+        if template_group.data:
+            category_group = template_group.data[0]["category_group"]
+
+    # 4.2 Configuración interna de inventario, inicializada según category_group.
+    #     Queda editable libremente después vía PATCH /inventory/config.
+    supabase_admin.table("business_inventory_config").insert({
+        "business_id": business_id,
+        **_build_inventory_config_flags(category_group),
+    }).execute()
+
     # 5. Crear configuración por defecto del negocio
     # tax_rate real según el modo: PYME usa la tasa capturada en el registro
     # (settings.taxRate), informal usa el toggle "Impuesto 7%" (desactivado
@@ -111,25 +155,19 @@ def register_business(data):
     #    Los features son la fuente de verdad para qué tabs ve el usuario en la app
     modules_to_activate = DEFAULT_INFORMAL_MODULES
     if (data.ui_mode or "simple") == "advanced":
-        # Es PYME - determinar módulos basados en la categoría seleccionada y respuestas operativas
-        category_id = data.category_id
-
-        # Mapear de forma flexible (por ID o por template)
-        # 1 o 9 = Alimentos (Carnes, Mariscos, Verduras)
-        # 2 o 3 = Servicios (Estilista, Barbería, Técnicos)
-        # 4, 5, 6, 7, 11 = Comercio (MiniSuper, Tiendas, Ferreterías)
-        # 8 o 10 = Alimentos Preparados (Cafeterías, Fondas, Repostería)
-        if category_id in [1, 9] or industry_template_id in [1, 9]:
+        # Es PYME - determinar módulos basados en el category_group de la
+        # plantilla de industria elegida (ver 4.1) y respuestas operativas.
+        if category_group == 'alimentos':
             modules_to_activate = ['inventory', 'sales', 'purchases', 'cash', 'staff', 'credit']
-        elif category_id in [2, 3] or industry_template_id in [2, 3]:
+        elif category_group == 'servicios':
             modules_to_activate = ['sales', 'cash', 'staff', 'credit']
             # Vende productos físicos -> activar inventario y compras
             if settings_dict.get('sell_physical_products') in [True, 'Sí', 'si', 'SÍ', 'SI']:
                 modules_to_activate.append('inventory')
                 modules_to_activate.append('purchases')
-        elif category_id in [4, 5, 6, 7, 11] or industry_template_id in [4, 5, 6, 7, 11]:
+        elif category_group == 'comercio':
             modules_to_activate = ['inventory', 'sales', 'purchases', 'cash', 'credit']
-        elif category_id in [8, 10] or industry_template_id in [8, 10]:
+        elif category_group == 'comida_preparada':
             modules_to_activate = ['inventory', 'sales', 'cash', 'staff', 'credit']
             # Transforma materia prima -> activar recetas
             if settings_dict.get('transforms_raw_material') in [True, 'Sí', 'si', 'SÍ', 'SI']:

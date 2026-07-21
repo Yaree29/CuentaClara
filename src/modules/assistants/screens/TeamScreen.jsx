@@ -40,7 +40,9 @@ const MAX_ASSISTANTS = 3;
 const ACCESS_OPTIONS = [
   { key: 'sales', label: 'Ventas' },
   { key: 'inventory', label: 'Inventario' },
-  { key: 'both', label: 'Ambos' },
+  // Solo cambia la etiqueta visible — el valor almacenado sigue siendo
+  // 'both' (backend ACCESS_TYPES, ver auditoría: no hace falta migrar la DB).
+  { key: 'both', label: 'Supervisor' },
 ];
 
 const accessLabel = (key) => ACCESS_OPTIONS.find((o) => o.key === key)?.label || key;
@@ -49,6 +51,16 @@ const accessLabel = (key) => ACCESS_OPTIONS.find((o) => o.key === key)?.label ||
 // el PIN en texto plano (solo lo hashea) — esta es la única oportunidad de
 // conocerlo para poder compartirlo.
 const generatePin = () => String(Math.floor(100000 + Math.random() * 900000));
+
+// Rol obligatorio: trim, colapsa espacios internos múltiples a uno solo y
+// capitaliza cada palabra (title case) antes de enviarlo al backend.
+const normalizeRole = (value) =>
+  value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 
 const MenuSection = ({ title, children }) => (
   <View style={profileStyles.menuSection}>
@@ -68,7 +80,9 @@ const AssistantRow = ({ assistant, onPress, isLast }) => (
     </View>
     <View style={profileStyles.menuTextContainer}>
       <Text style={profileStyles.menuLabel}>{assistant.name}</Text>
-      <Text style={profileStyles.menuSubLabel}>{accessLabel(assistant.access_type)}</Text>
+      <Text style={profileStyles.menuSubLabel}>
+        {assistant.role ? `${assistant.role} · ` : ''}{accessLabel(assistant.access_type)}
+      </Text>
     </View>
     <View style={styles.rowRight}>
       <View style={[styles.badge, assistant.is_blocked ? styles.badgeBlocked : styles.badgeActive]}>
@@ -109,6 +123,7 @@ const TeamScreen = () => {
   // Modal: crear asistente
   const [createVisible, setCreateVisible] = useState(false);
   const [createName, setCreateName] = useState('');
+  const [createRole, setCreateRole] = useState('');
   const [createAccessType, setCreateAccessType] = useState('sales');
   const [createConfirmed, setCreateConfirmed] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
@@ -118,6 +133,7 @@ const TeamScreen = () => {
   const [manageVisible, setManageVisible] = useState(false);
   const [selected, setSelected] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
   const [editAccessType, setEditAccessType] = useState('sales');
   const [savingEdit, setSavingEdit] = useState(false);
   const [togglingBlock, setTogglingBlock] = useState(false);
@@ -161,6 +177,7 @@ const TeamScreen = () => {
 
   const resetCreateForm = () => {
     setCreateName('');
+    setCreateRole('');
     setCreateAccessType('sales');
     setCreateConfirmed(false);
     setCreateError(null);
@@ -172,7 +189,9 @@ const TeamScreen = () => {
   };
 
   const createNameValid = createName.trim().length >= 2;
-  const canSubmitCreate = createNameValid && createAccessType && createConfirmed && !createSubmitting;
+  const createRoleValid = normalizeRole(createRole).length > 0;
+  const canSubmitCreate =
+    createNameValid && createRoleValid && createAccessType && createConfirmed && !createSubmitting;
 
   const handleCreate = async () => {
     if (!canSubmitCreate) return;
@@ -181,12 +200,14 @@ const TeamScreen = () => {
     setCreateError(null);
     const pin = generatePin();
     const name = createName.trim();
+    const role = normalizeRole(createRole);
 
     try {
       await assistantsService.createAssistant({
         name,
         pin,
         access_type: createAccessType,
+        role,
       });
       setCreateVisible(false);
       resetCreateForm();
@@ -204,20 +225,23 @@ const TeamScreen = () => {
   const openManageModal = (assistant) => {
     setSelected(assistant);
     setEditName(assistant.name);
+    setEditRole(assistant.role || '');
     setEditAccessType(assistant.access_type);
     setManageVisible(true);
   };
 
   const editNameValid = editName.trim().length >= 2;
+  const editRoleValid = normalizeRole(editRole).length > 0;
 
   const handleSaveEdit = async () => {
-    if (!editNameValid || !selected) return;
+    if (!editNameValid || !editRoleValid || !selected) return;
 
     setSavingEdit(true);
     try {
       const updated = await assistantsService.updateAssistant(selected.id, {
         name: editName.trim(),
         access_type: editAccessType,
+        role: normalizeRole(editRole),
       });
       setAssistants((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       setSelected(updated);
@@ -424,6 +448,18 @@ const TeamScreen = () => {
                 placeholderTextColor={colors.placeholder}
               />
 
+              <Text style={styles.fieldLabel}>Rol *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={createRole}
+                onChangeText={(v) => {
+                  setCreateRole(v);
+                  setCreateConfirmed(false);
+                }}
+                placeholder="Ej. Barbero, Mesero"
+                placeholderTextColor={colors.placeholder}
+              />
+
               <Text style={styles.fieldLabel}>Tipo de acceso</Text>
               <AccessTypeSelector
                 value={createAccessType}
@@ -433,7 +469,7 @@ const TeamScreen = () => {
                 }}
               />
 
-              {createNameValid && (
+              {createNameValid && createRoleValid && (
                 <>
                   <View style={styles.summaryBox}>
                     <View style={styles.summaryRow}>
@@ -507,13 +543,22 @@ const TeamScreen = () => {
                 placeholderTextColor={colors.placeholder}
               />
 
+              <Text style={styles.fieldLabel}>Rol *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editRole}
+                onChangeText={setEditRole}
+                placeholder="Ej. Barbero, Mesero"
+                placeholderTextColor={colors.placeholder}
+              />
+
               <Text style={styles.fieldLabel}>Tipo de acceso</Text>
               <AccessTypeSelector value={editAccessType} onChange={setEditAccessType} />
 
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonPrimary, { marginTop: 16 }]}
                 onPress={handleSaveEdit}
-                disabled={!editNameValid || savingEdit}
+                disabled={!editNameValid || !editRoleValid || savingEdit}
               >
                 {savingEdit ? (
                   <ActivityIndicator size="small" color={colors.textButton} />

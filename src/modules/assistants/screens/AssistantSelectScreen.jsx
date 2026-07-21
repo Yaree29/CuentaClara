@@ -36,7 +36,17 @@ import styles from '../styles/assistantSelect.styles';
 const ACCESS_LABELS = {
   sales: 'Ventas',
   inventory: 'Inventario',
-  both: 'Ventas e Inventario',
+  // Solo la etiqueta visible cambia — el valor almacenado sigue 'both'.
+  both: 'Supervisor',
+};
+
+// Pantalla inicial según el acceso del asistente (ya no existe tab "Inicio"
+// en Modo Asistente — ver MainNavigator.jsx). Debe coincidir con el primer
+// elemento de ASSISTANT_TABS[access_type] ahí.
+const FIRST_TAB_BY_ACCESS = {
+  sales: 'sales',
+  inventory: 'assistantInventory',
+  both: 'sales',
 };
 
 const KEYPAD_ROWS = [
@@ -104,7 +114,11 @@ const AssistantSelectScreen = () => {
       const result = await assistantsService.verifyPin(pinTarget.id, pin);
       selectAssistant(result);
       closePinPad();
-      navigation.navigate('MainTabs', { screen: 'dashboard' });
+      // El tab "Inicio" ya no existe en Modo Asistente — navega directo a la
+      // primera pantalla real según su acceso (ver MainNavigator.jsx).
+      navigation.navigate('MainTabs', {
+        screen: FIRST_TAB_BY_ACCESS[result.access_type] || 'sales',
+      });
     } catch (error) {
       // Extraemos el código de estado HTTP
       const statusCode = error?.status || error?.response?.status;

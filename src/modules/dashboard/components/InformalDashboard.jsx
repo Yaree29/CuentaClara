@@ -78,6 +78,7 @@ const InformalDashboard = () => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.primary]} tintColor={colors.primary} />
@@ -227,8 +228,6 @@ const InformalDashboard = () => {
           </View>
         </View>
       )}
-
-      <View style={{ height: 40 }} />
     </ScrollView>
   );
 };

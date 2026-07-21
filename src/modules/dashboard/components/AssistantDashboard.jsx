@@ -21,7 +21,7 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 const ACCESS_LABELS = {
   sales: 'Ventas',
   inventory: 'Inventario',
-  both: 'Ventas e Inventario',
+  both: 'Supervisor',
 };
 
 const AssistantDashboard = () => {

@@ -17,6 +17,14 @@ export default StyleSheet.create({
     paddingHorizontal: 16,
   },
 
+  // paddingBottom en contentContainerStyle (no en `container`, que va en
+  // `style` y no crea espacio de scroll real) — 120 es el estándar del
+  // proyecto. Reemplaza el spacer manual <View style={{height:40}}/> que
+  // había antes al final del ScrollView.
+  contentContainer: {
+    paddingBottom: 120,
+  },
+
   /* --- WELCOME --- */
   welcomeContainer: {
     flexDirection: 'row',
@@ -27,7 +35,7 @@ export default StyleSheet.create({
   },
   welcomeTitle: {
     color: colors.greeting,
-    fontSize: 34,
+    fontSize: 38,
   },
   welcomeTitleRegular: {
     fontWeight: '400',

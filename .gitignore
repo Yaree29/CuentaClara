@@ -60,3 +60,4 @@ __pycache__/
 
 .agents
 .skills-lock.json
+.vscode/settings.json

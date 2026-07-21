@@ -41,6 +41,7 @@ const SalesInformal = () => {
 
   const [salesHistory, setSalesHistory] = useState([]);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
+  const [totalExpenses, setTotalExpenses] = useState(0);
 
   const [linkedCustomer, setLinkedCustomer] = useState(null); // {id, name} | null — null = venta al contado
   const [linkModalVisible, setLinkModalVisible] = useState(false);
@@ -74,18 +75,22 @@ const SalesInformal = () => {
 
   useEffect(() => {
     if (activeTab !== 'history') return;
-    const loadSalesHistory = async () => {
+    const loadReportData = async () => {
       setSalesHistoryLoading(true);
       try {
-        const data = await billingService.getInvoices(null, { limit: 30 });
-        setSalesHistory(Array.isArray(data) ? data : []);
+        const [invoices, profits] = await Promise.all([
+          billingService.getInvoices(null, { limit: 30 }),
+          fetchProfitsAndExpenses(dateFrom, dateTo),
+        ]);
+        setSalesHistory(Array.isArray(invoices) ? invoices : []);
+        setTotalExpenses(Number(profits?.expenses) || 0);
       } catch (err) {
-        console.error('Error al cargar historial de ventas:', err);
+        console.error('Error al cargar datos de reportes:', err);
       } finally {
         setSalesHistoryLoading(false);
       }
     };
-    loadSalesHistory();
+    loadReportData();
   }, [activeTab]);
 
     {/* aumentar cantidad en el carrito */}
@@ -166,7 +171,7 @@ const SalesInformal = () => {
             onPress={() => setActiveTab('history')}
           >
             <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
-              Historial
+              Reportes
             </Text>
           </TouchableOpacity>
       </View>
@@ -643,13 +648,11 @@ const SalesInformal = () => {
           };
           const salesCount = salesHistory.length;
           const fiadoCount = salesHistory.filter((inv) => inv.status === 'pending').length;
+          const salesTotal = salesHistory.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.total), 0);
+          const fiadoTotal = salesHistory.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + Number(inv.total), 0);
 
           return (
             <>
-              <Text style={styles.reportTitle}>
-                Historial de Ventas
-              </Text>
-
               {/* RESUMEN */}
               <View style={styles.historySummary}>
                 <View style={styles.summaryCardIncome}>
@@ -661,6 +664,27 @@ const SalesInformal = () => {
                   <Text style={styles.summaryExpense}>{fiadoCount}</Text>
                 </View>
               </View>
+
+              {/* EVALUACIÓN DE VENTAS */}
+              <View style={styles.evaluationCard}>
+                <Text style={styles.evaluationTitle}>Evaluación de Ventas</Text>
+                <View style={styles.evaluationRow}>
+                  <Text style={styles.evaluationLabel}>Total Ventas:</Text>
+                  <Text style={styles.evaluationValue}>${salesTotal.toFixed(2)}</Text>
+                </View>
+                <View style={styles.evaluationRow}>
+                  <Text style={styles.evaluationLabel}>Total Gastos:</Text>
+                  <Text style={[styles.evaluationValue, { color: '#DC2626' }]}>${totalExpenses.toFixed(2)}</Text>
+                </View>
+                <View style={styles.evaluationRow}>
+                  <Text style={styles.evaluationLabel}>Total Fiado:</Text>
+                  <Text style={[styles.evaluationValue, { color: '#EF4444' }]}>${fiadoTotal.toFixed(2)}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.reportTitle}>
+                Historial de Ventas
+              </Text>
 
               {/* LISTA */}
               <View style={styles.historyContainer}>

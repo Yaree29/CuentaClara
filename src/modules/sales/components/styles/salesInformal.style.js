@@ -685,17 +685,55 @@ showMoreText: {
   fontSize: 14,
 },
 
+  /* =========================
+      EVALUACIÓN DE VENTAS
+   ========================== */
+
+  evaluationCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  evaluationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F2747',
+    marginBottom: 12,
+  },
+
+  evaluationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+
+  evaluationLabel: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+
+  evaluationValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F2747',
+  },
+
 // =========================
 //     History
 // ==========================
 
-reportTitle: {
-  fontSize: 24,
-  fontWeight: '700',
-  color: colors.primary,
-  marginBottom: 20,
-  textAlign: 'center',
-},
+  reportTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 20,
+    marginTop: 20,
+    textAlign: 'left',
+  },
 
 historySummary: {
   flexDirection: 'row',

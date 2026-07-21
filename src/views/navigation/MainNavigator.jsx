@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, BackHandler } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../../store/useAuthStore';
 import useAssistantModeStore from '../../store/useAssistantModeStore';
+import useAssistantSession from '../../modules/assistants/hooks/useAssistantSession';
 
 // Iconos Heroicons Solid
 import {
@@ -13,6 +15,7 @@ import {
   ArchiveBoxIcon,
   DocumentTextIcon,
   Squares2X2Icon,
+  ArrowRightOnRectangleIcon,
 } from 'react-native-heroicons/solid';
 
 // Pantallas
@@ -52,10 +55,13 @@ const PYME_TABS = ['dashboard', 'sales', 'billing', 'modules'];
 // Tabs por access_type cuando hay un asistente activo (Modo Asistente).
 // Reemplaza por completo a INFORMAL_TABS/PYME_TABS mientras dure la sesión
 // del asistente — ignora userType, el asistente nunca ve más que su acceso.
+// Sin tab "Inicio" (AssistantDashboard.jsx queda sin usar, no se borró el
+// archivo por si se reintroduce) — el primer elemento de cada arreglo es la
+// pantalla inicial tras verificar el PIN (ver AssistantSelectScreen.jsx).
 const ASSISTANT_TABS = {
-  sales: ['dashboard', 'sales'],
-  inventory: ['dashboard', 'assistantInventory'],
-  both: ['dashboard', 'sales', 'assistantInventory'],
+  sales: ['sales'],
+  inventory: ['assistantInventory'],
+  both: ['sales', 'assistantInventory'],
 };
 
 const resolveTabOrder = (userType, activeAssistant) => {
@@ -64,6 +70,11 @@ const resolveTabOrder = (userType, activeAssistant) => {
   }
   return userType === 'informal' ? INFORMAL_TABS : PYME_TABS;
 };
+
+// Tab "Salir" (solo Modo Asistente): nunca renderiza pantalla propia — el
+// tabPress se intercepta en el listener de abajo antes de que React
+// Navigation llegue a montar este componente.
+const ExitAssistantScreen = () => null;
 
 // Componente animado personalizado para los iconos del Tab Bar
 const AnimatedTabBarIcon = ({ focused, children }) => {
@@ -143,9 +154,57 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 };
 
 const MainNavigator = () => {
+  const navigation = useNavigation();
   const userType = useAuthStore((state) => state.user?.userType);
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
+  const exitAssistant = useAssistantModeStore((state) => state.exitAssistant);
   const visibleTabs = resolveTabOrder(userType, activeAssistant);
+
+  // Polling de bloqueo del asistente activo — antes vivía en HomeScreen.jsx
+  // (tab "Inicio"), pero ese tab ya no existe en Modo Asistente. Se monta
+  // aquí porque MainNavigator persiste durante toda la sesión de tabs, sin
+  // importar cuál esté enfocado (a diferencia de un tab individual).
+  useAssistantSession();
+
+  // Bloquea el back físico de Android mientras haya un asistente activo —
+  // no debe poder salir del stack de Modo Asistente ni cerrar la app.
+  // Mismo patrón que AssistantSelectScreen.jsx / ExitAssistantModeModal.jsx
+  // (BackHandler.addEventListener('hardwareBackPress', () => true)), pero
+  // aquí sin useFocusEffect: MainNavigator no gana/pierde foco por sí mismo
+  // mientras dura la sesión de tabs, así que reacciona directo a
+  // activeAssistant en vez de al foco de pantalla.
+  useEffect(() => {
+    if (!activeAssistant) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [activeAssistant]);
+
+  // Botón "Salir" del navbar (Modo Asistente): sin modal ni contraseña —
+  // vuelve directo al selector de nombres (exitAssistant conserva
+  // isActive=true, solo limpia activeAssistant). Nunca navega al Home del
+  // dueño.
+  //
+  // reset() en vez de navigate(): navigate() apilaba "AssistantSelect" sobre
+  // "MainTabs" sin desmontarlo, y como exitAssistant() limpia activeAssistant
+  // de forma síncrona, MainNavigator (todavía montado detrás) podía
+  // recalcular PYME_TABS/INFORMAL_TABS (con Home) antes de que la transición
+  // terminara — flash del dashboard del dueño. reset() reemplaza el stack
+  // completo por ["AssistantSelect"], desmontando MainTabs de una vez.
+  //
+  // Orden: reset() primero, exitAssistant() después. Si el orden fuera al
+  // revés y MainNavigator llegara a re-renderizar antes de que la
+  // navegación surta efecto, todavía vería activeAssistant=null y mostraría
+  // los tabs del dueño (el mismo flash); en este orden, si llega a
+  // re-renderizar de todos modos, activeAssistant sigue activo y muestra
+  // los mismos tabs de asistente que ya estaban en pantalla (sin cambio
+  // visible) mientras AssistantSelect toma el control.
+  const handleExitAssistant = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'AssistantSelect' }],
+    });
+    exitAssistant();
+  };
 
   return (
     <Tab.Navigator 
@@ -207,6 +266,29 @@ const MainNavigator = () => {
           />
         );
       })}
+
+      {activeAssistant && (
+        <Tab.Screen
+          name="exitAssistant"
+          component={ExitAssistantScreen}
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleExitAssistant();
+            },
+          }}
+          options={{
+            tabBarLabel: ({ color }) => (
+              <Text style={[styles.tabLabel, { fontWeight: '500', color }]}>Salir</Text>
+            ),
+            tabBarIcon: ({ color, size }) => (
+              <AnimatedTabBarIcon focused={false}>
+                <ArrowRightOnRectangleIcon size={size || 24} color={color} />
+              </AnimatedTabBarIcon>
+            ),
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 };

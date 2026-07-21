@@ -4,6 +4,7 @@ import MainNavigator from './MainNavigator';
 import CreateTransactionScreen from '../../modules/transactions/screens/CreateTransactionScreen';
 import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 import SettingsScreen from '../../modules/profile/screens/SettingsScreen';
+import AppSettingsScreen from '../../modules/profile/screens/AppSettingsScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
 import TeamScreen from '../../modules/assistants/screens/TeamScreen';
@@ -16,7 +17,7 @@ import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
 import StaffScreen from '../../modules/staff/screens/StaffScreen';
 import CashScreen from '../../modules/cash/screens/CashScreen';
 import ServicesScreen from '../../modules/business_services/screens/ServicesScreen';
-import CreateRecipeScreen from '../../modules/recipes/screens/CreateRecipeScreen';
+import RecipesScreen from '../../modules/recipes/screens/RecipesScreen';
 import CommissionsScreen from '../../modules/commissions/screens/CommissionsScreen';
 import TipsScreen from '../../modules/tips/screens/TipsScreen';
 import OffersScreen from '../../modules/offers/screens/OffersScreen';
@@ -32,6 +33,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="CreateTransaction" component={CreateTransactionScreen} />
       <Stack.Screen name="profile" component={ProfileScreen} />
       <Stack.Screen name="settings" component={SettingsScreen} />
+      <Stack.Screen name="AppSettingsScreen" component={AppSettingsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
       <Stack.Screen name="Token2FA" component={Token2FA} />
       <Stack.Screen name="TeamScreen" component={TeamScreen} />
@@ -50,7 +52,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="staff" component={StaffScreen} />
       <Stack.Screen name="cash" component={CashScreen} />
       <Stack.Screen name="services" component={ServicesScreen} />
-      <Stack.Screen name="recipes" component={CreateRecipeScreen} />
+      <Stack.Screen name="recipes" component={RecipesScreen} />
       <Stack.Screen name="commissions" component={CommissionsScreen} />
       <Stack.Screen name="tips" component={TipsScreen} />
       <Stack.Screen name="offers" component={OffersScreen} />

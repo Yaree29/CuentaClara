@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Linking, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../services/inventoryService';
 
 export const useInformalInventory = () => {
@@ -39,7 +39,7 @@ export const useInformalInventory = () => {
   // pero se mantiene la lectura de las stores por compatibilidad con el hook
   // anterior (algunas integraciones futuras pueden requerirlo).
   const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
+  const businessData = 'informal';
 
   // ─── Carga de categorías del negocio ───────────────────────────────────────
   const loadCategories = useCallback(async () => {

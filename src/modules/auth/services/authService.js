@@ -11,7 +11,7 @@
 // la dependencia circular negocio↔usuario.
 // =============================================================================
 import { supabase } from '../../../services/supabaseClient';
-import { apiRequestPublic } from '../../../services/apiClient';
+import { apiRequest, apiRequestPublic } from '../../../services/apiClient';
 
 // Traduce los mensajes en inglés del SDK a los que ya espera la UI.
 const mapAuthError = (error) => {
@@ -90,6 +90,21 @@ const authService = {
     );
     if (error) throw new Error(error.message || 'No se pudo enviar el correo de recuperación');
     return true;
+  },
+
+  // Confirma la contraseña de la cuenta sin crear una sesión nueva (el JWT
+  // activo del dueño no cambia). Usado como "confirma que eres tú" antes de
+  // revelar un PIN de asistente regenerado.
+  verifyPassword: async (password) => {
+    try {
+      await apiRequest('/auth/verify-password', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 };
 

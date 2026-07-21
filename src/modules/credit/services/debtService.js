@@ -78,6 +78,10 @@ const debtService = {
       body: JSON.stringify({ amount, method, notes }),
     });
   },
+
+  getPayments: async (debtId) => {
+    return apiRequest(`/credit/debts/${debtId}/payments`);
+  },
 };
 
 export default debtService;

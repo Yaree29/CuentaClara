@@ -1,18 +1,18 @@
 // =============================================================================
-// CREADO: 2026-05-26
+// MODIFICADO: 2026-07-21
 // Propósito: Hook para el componente InformalCredit. Integrado desde la rama
 //            Fronted pero conectado a la API real (debtService) en lugar de
 //            datos mock. Internamente orquesta customers + debts + payments.
 //
+// Cambios v2:
+//   - Categorías de ordenamiento (más deuda, menos deuda, más abono, etc.)
+//   - Modal de detalle al tocar un fiado
+//   - Soporte para notas en el cliente
+//   - Menú de tres puntos por tarjeta (notificar, editar, añadir nota)
+//
 // Modelo de "credit" expuesto al componente (forma plana para la UI):
-//   { id, customerId, clientName, phone, totalDebt, items, lastUpdate }
-//   - id           → debt.id (string)
-//   - customerId   → debt.customer_id (necesario para edit)
-//   - clientName   → customer.name
-//   - phone        → customer.phone (incluye prefijo +507)
-//   - totalDebt    → debt.remaining_amount (número)
-//   - items        → debt.description
-//   - lastUpdate   → debt.created_at (ISO date)
+//   { id, customerId, clientName, phone, totalDebt, originalAmount, items,
+//     paidAmount, status, notes, lastUpdate }
 // =============================================================================
 import { useState, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
@@ -21,12 +21,26 @@ import { useFocusEffect } from '@react-navigation/native';
 import debtService from '../services/debtService';
 import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+
+// Categorías de ordenamiento disponibles
+export const SORT_CATEGORIES = [
+  { key: 'recent',     label: 'Recientes' },
+  { key: 'most_debt',  label: 'Mayor deuda' },
+  { key: 'least_debt', label: 'Menor deuda' },
+  { key: 'most_paid',  label: 'Más abono' },
+  { key: 'least_paid', label: 'Menos abono' },
+];
 
 export const useInformalCredit = () => {
   const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
-  const senderName = businessData?.name || user?.name || 'mi negocio';
+
+  // Información del negocio obtenida desde el contexto del usuario autenticado
+  const businessData = user?.business || {};
+
+  const senderName =
+    businessData?.name ||
+    user?.name ||
+    'Mi negocio';
 
   // Datos crudos de la API
   const [customers, setCustomers] = useState([]);
@@ -35,6 +49,7 @@ export const useInformalCredit = () => {
 
   // UI
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortCategory, setSortCategory] = useState('recent');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -44,10 +59,21 @@ export const useInformalCredit = () => {
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
+  // Modal de detalle
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [detailCredit, setDetailCredit] = useState(null);
+  const [detailPayments, setDetailPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  // Modal de nota
+  const [isNoteModalVisible, setIsNoteModalVisible] = useState(false);
+  const [noteCredit, setNoteCredit] = useState(null);
+
   // Carga inicial: customers + debts + inventario en paralelo
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       const [customersData, debtsData, inventoryData] = await Promise.all([
         debtService.getCustomers(),
@@ -57,6 +83,7 @@ export const useInformalCredit = () => {
           return [];
         }),
       ]);
+
       setCustomers(customersData || []);
       setDebts(debtsData || []);
       setInventoryProducts(inventoryData || []);
@@ -80,28 +107,64 @@ export const useInformalCredit = () => {
   // Construir el shape plano que espera la UI a partir de debts + customers
   const credits = useMemo(() => {
     const customersById = new Map(customers.map((c) => [c.id, c]));
+
     return debts.map((d) => {
       const customer = customersById.get(d.customer_id);
+      const originalAmount = Number(d.original_amount) || 0;
+      const remainingAmount = Number(d.remaining_amount) || 0;
+
       return {
         id: String(d.id),
         customerId: d.customer_id,
         clientName: d.customer_name || customer?.name || 'Sin nombre',
-        phone: customer?.phone || '',
-        totalDebt: Number(d.remaining_amount) || 0,
+        phone: d.customer_phone || customer?.phone || '',
+        totalDebt: remainingAmount,
+        originalAmount,
+        paidAmount: originalAmount - remainingAmount,
         items: d.description || '',
+        status: d.status || 'pending',
+        notes: d.customer_notes || customer?.notes || '',
         lastUpdate: d.created_at,
       };
     });
   }, [debts, customers]);
 
-  const filteredCredits = useMemo(() => {
-    if (!searchQuery) return credits;
-    const q = searchQuery.toLowerCase();
-    return credits.filter((c) => c.clientName.toLowerCase().includes(q));
-  }, [credits, searchQuery]);
+  // Ordenamiento por categoría
+  const sortedCredits = useMemo(() => {
+    const sorted = [...credits];
+    switch (sortCategory) {
+      case 'most_debt':
+        sorted.sort((a, b) => b.totalDebt - a.totalDebt);
+        break;
+      case 'least_debt':
+        sorted.sort((a, b) => a.totalDebt - b.totalDebt);
+        break;
+      case 'most_paid':
+        sorted.sort((a, b) => b.paidAmount - a.paidAmount);
+        break;
+      case 'least_paid':
+        sorted.sort((a, b) => a.paidAmount - b.paidAmount);
+        break;
+      case 'recent':
+      default:
+        // Ya viene ordenado por created_at desc desde la API
+        break;
+    }
+    return sorted;
+  }, [credits, sortCategory]);
 
-  // Busca cliente existente por nombre (case insensitive). El backend no expone
-  // búsqueda por nombre, así que filtramos localmente sobre los ya cargados.
+  const filteredCredits = useMemo(() => {
+    if (!searchQuery) return sortedCredits;
+
+    const q = searchQuery.toLowerCase();
+
+    return sortedCredits.filter((c) =>
+      c.clientName.toLowerCase().includes(q) ||
+      c.items.toLowerCase().includes(q)
+    );
+  }, [sortedCredits, searchQuery]);
+
+  // Busca cliente existente por nombre (case insensitive).
   const findCustomerByName = (name) => {
     const target = name.trim().toLowerCase();
     return customers.find((c) => c.name.toLowerCase() === target) || null;
@@ -113,6 +176,7 @@ export const useInformalCredit = () => {
       creditData.phone && creditData.phone.trim() !== '+507'
         ? creditData.phone
         : '';
+
     const clientName = creditData.clientName.trim();
     const amount = Number(creditData.totalDebt) || 0;
     const items = creditData.items?.trim() || '';
@@ -124,20 +188,18 @@ export const useInformalCredit = () => {
 
     try {
       if (editingCredit) {
-        // Editar: actualizar cliente (nombre + phone) y solo la descripción de la deuda.
-        // NO se envía amount porque el monto original no cambia al editar; los abonos
-        // se registran por separado y el backend recalcula remaining_amount desde
-        // original_amount, por lo que enviar remaining_amount aquí lo reduciría de nuevo.
         await debtService.updateCustomer(editingCredit.customerId, {
           name: clientName,
           phone: cleanPhone || null,
         });
+
         await debtService.updateDebt(editingCredit.id, {
+          amount,
           description: items || null,
         });
       } else {
-        // Crear: si el cliente ya existe, lo reutilizamos; si no, lo creamos
         let customer = findCustomerByName(clientName);
+
         if (!customer) {
           customer = await debtService.createCustomer({
             name: clientName,
@@ -145,9 +207,11 @@ export const useInformalCredit = () => {
             notes: null,
           });
         } else if (cleanPhone && !customer.phone) {
-          // Si el cliente existía sin teléfono y ahora se proveyó uno, lo actualizamos
-          await debtService.updateCustomer(customer.id, { phone: cleanPhone });
+          await debtService.updateCustomer(customer.id, {
+            phone: cleanPhone,
+          });
         }
+
         await debtService.createDebt({
           customer_id: customer.id,
           amount,
@@ -157,6 +221,7 @@ export const useInformalCredit = () => {
 
       setIsFormModalVisible(false);
       setEditingCredit(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al guardar fiado:', err);
@@ -168,8 +233,10 @@ export const useInformalCredit = () => {
   const deleteCredit = async (creditId) => {
     try {
       await debtService.cancelDebt(creditId);
+
       setIsFormModalVisible(false);
       setEditingCredit(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al eliminar fiado:', err);
@@ -180,6 +247,7 @@ export const useInformalCredit = () => {
   // Registrar abono / pago
   const registerPayment = async (creditId, paymentAmount) => {
     const amount = Number(paymentAmount) || 0;
+
     if (amount <= 0) {
       Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero.');
       return;
@@ -190,8 +258,10 @@ export const useInformalCredit = () => {
         amount,
         method: 'cash',
       });
+
       setIsPaymentModalVisible(false);
       setSelectedClient(null);
+
       await fetchAll();
     } catch (err) {
       console.error('Error al registrar abono:', err);
@@ -199,43 +269,117 @@ export const useInformalCredit = () => {
     }
   };
 
-  // WhatsApp reminder (lógica intacta de Fronted)
+  // WhatsApp reminder
   const sendWhatsAppReminder = (clientName, phone, amount) => {
     if (!phone || phone === '+507') {
-      Alert.alert('Sin número', `No tienes registrado un número válido para ${clientName}.`);
+      Alert.alert(
+        'Sin número',
+        `No tienes registrado un número válido para ${clientName}.`
+      );
       return;
     }
-    const text = `¡Hola *${clientName}*! 👋\nTe escribo de *${senderName}* para recordarte que tienes un saldo pendiente de *$${amount.toFixed(2)}* por tus compras.\n\nPor favor, confírmame cuándo podrías pasar a cancelarlo o abonar. ¡Gracias!`;
-    const url = `whatsapp://send?phone=${phone.replace('+', '')}&text=${encodeURIComponent(text)}`;
+
+    const text = `¡Hola *${clientName}*! 👋
+    Te escribo de *${senderName}* para recordarte que tienes un saldo pendiente de *$${amount.toFixed(2)}* por tus compras.
+
+    Por favor, confírmame cuándo podrías pasar a cancelarlo o abonar. ¡Gracias!`;
+
+    const url = `whatsapp://send?phone=${phone.replace(
+      '+',
+      ''
+    )}&text=${encodeURIComponent(text)}`;
+
     Linking.openURL(url).catch((err) => {
       console.error('Error al abrir WA', err);
-      Alert.alert('Error', 'No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.');
+      Alert.alert(
+        'Error',
+        'No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.'
+      );
     });
+  };
+
+  // Guardar nota del cliente
+  const saveNote = async (customerId, noteText) => {
+    try {
+      await debtService.updateCustomer(customerId, {
+        notes: noteText.trim() || null,
+      });
+      setIsNoteModalVisible(false);
+      setNoteCredit(null);
+      await fetchAll();
+    } catch (err) {
+      console.error('Error al guardar nota:', err);
+      Alert.alert('Error', err.message || 'No se pudo guardar la nota');
+    }
   };
 
   const openAddModal = () => {
     setEditingCredit(null);
     setIsFormModalVisible(true);
   };
+
   const openEditModal = (credit) => {
     setEditingCredit(credit);
     setIsFormModalVisible(true);
   };
+
   const openPaymentModal = (client) => {
     setSelectedClient(client);
     setIsPaymentModalVisible(true);
   };
 
+  // Abrir detalle: carga pagos del fiado
+  const openDetailModal = async (credit) => {
+    setDetailCredit(credit);
+    setIsDetailModalVisible(true);
+    setLoadingPayments(true);
+    try {
+      const payments = await debtService.getPayments(credit.id);
+      setDetailPayments(payments || []);
+    } catch (err) {
+      console.error('Error al cargar pagos:', err);
+      setDetailPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalVisible(false);
+    setDetailCredit(null);
+    setDetailPayments([]);
+  };
+
+  const openNoteModal = (credit) => {
+    setNoteCredit(credit);
+    setIsNoteModalVisible(true);
+  };
+
+  const closeNoteModal = () => {
+    setIsNoteModalVisible(false);
+    setNoteCredit(null);
+  };
+
   return {
-    // datos
-    searchQuery, setSearchQuery, filteredCredits, senderName,
-    loading, error, refresh: fetchAll,
+    // Datos
+    searchQuery, setSearchQuery, filteredCredits, senderName, loading, error, refresh: fetchAll,
     inventoryProducts,
-    // modales
-    isFormModalVisible, setIsFormModalVisible, editingCredit,
-    isPaymentModalVisible, setIsPaymentModalVisible, selectedClient,
-    openAddModal, openEditModal, openPaymentModal,
-    // acciones
+
+    // Categorías
+    sortCategory, setSortCategory,
+
+    // Modales
+    isFormModalVisible, setIsFormModalVisible, editingCredit, isPaymentModalVisible,
+    setIsPaymentModalVisible, selectedClient, openAddModal, openEditModal, openPaymentModal,
+
+    // Detalle
+    isDetailModalVisible, detailCredit, detailPayments, loadingPayments,
+    openDetailModal, closeDetailModal,
+
+    // Notas
+    isNoteModalVisible, noteCredit, openNoteModal, closeNoteModal, saveNote,
+
+    // Acciones
     saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
   };
 };

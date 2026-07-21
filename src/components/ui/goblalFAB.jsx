@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../../store/useAuthStore';
+import colors from '../../theme/colors';
 
 const GlobalFAB = () => {
   const [open, setOpen] = useState(false);
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     
   },
   fabText: {
-    color: '#fff',
+    color: colors.textButton,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   optionText: {
-    color: '#fff',
+    color: colors.textButton,
     fontSize: 14,
   },
 });

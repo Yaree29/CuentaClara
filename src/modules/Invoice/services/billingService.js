@@ -37,6 +37,27 @@ const billingService = {
   getInvoiceDetail: async (invoiceId) => {
     return apiRequest(`/invoices/${invoiceId}`);
   },
+
+  /**
+   * Crear una factura fiscal (PYME): vinculada a un cliente real de
+   * /credit/customers y con numeración secuencial (ej. FAC-0001).
+   * @param {object} payload — { items, payment_method, invoice_type_id, customer_id, notes }
+   */
+  createInvoice: async (payload) => {
+    return apiRequest('/invoices/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Genera (o regenera) el PDF de una factura y devuelve una URL firmada
+   * (válida por 1 hora) lista para compartir, ej. por WhatsApp.
+   * @param {number} invoiceId — ID de la factura
+   */
+  getInvoicePdfUrl: async (invoiceId) => {
+    return apiRequest(`/invoices/${invoiceId}/pdf`);
+  },
 };
 
 export default billingService;

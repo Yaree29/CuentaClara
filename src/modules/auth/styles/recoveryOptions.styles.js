@@ -33,7 +33,7 @@ export default StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: colors.textPrimary,
-    backgroundColor: colors.surface || '#fff',
+    backgroundColor: colors.inputBackground,
     marginBottom: 16,
   },
   button: {
@@ -46,7 +46,7 @@ export default StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.buttonPrimaryText,
     fontSize: 16,
     fontWeight: '600',
   },

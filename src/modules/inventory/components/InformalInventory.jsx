@@ -8,6 +8,8 @@ import {
   FlatList,
   ActivityIndicator,
   Modal,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import {
   MagnifyingGlassIcon,
@@ -39,6 +41,44 @@ const InformalInventory = () => {
     isAddCategoryModalVisible, setIsAddCategoryModalVisible,
     categoriesLoading,
   } = useInformalInventory();
+
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
+  const fabAnimation = React.useRef(new Animated.Value(0)).current;
+
+  const toggleFabMenu = () => {
+    if (!isFabMenuOpen) {
+      Animated.spring(fabAnimation, {
+        toValue: 1,
+        friction: 6,
+        tension: 60,
+        useNativeDriver: true,
+      }).start();
+      setIsFabMenuOpen(true);
+    } else {
+      Animated.spring(fabAnimation, {
+        toValue: 0,
+        friction: 6,
+        tension: 60,
+        useNativeDriver: true,
+      }).start();
+      setIsFabMenuOpen(false);
+    }
+  };
+
+  const fabRotation = fabAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg']
+  });
+
+  const fabMenuTranslateY = fabAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [60, 0]
+  });
+
+  const fabMenuOpacity = fabAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 0.5, 1]
+  });
 
 
   // Estado local solo para el input del modal de nueva categoría
@@ -108,7 +148,13 @@ const InformalInventory = () => {
       >
         {/* Indicador visual de selección para publicidad */}
         {isSelectionMode && (
-          <CheckCircleIcon size={24} color={isSelected ? colors.primary : colors.border} />
+          <View style={{ marginRight: 12, justifyContent: 'center' }}>
+            {isSelected ? (
+              <CheckCircleIcon size={26} color={colors.primary} />
+            ) : (
+              <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.border }} />
+            )}
+          </View>
         )}
 
         <View style={styles.productInfo}>
@@ -135,11 +181,7 @@ const InformalInventory = () => {
 
         {/* Botón de editar (solo fuera del modo selección) */}
         {!isSelectionMode && (
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => openEditForm(item)}
-            accessibilityLabel={`Editar ${item.name}`}
-          >
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditForm(item)}>
             <PencilIcon size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
@@ -187,17 +229,6 @@ const InformalInventory = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-
-          {/* Botón modo selección para publicidad */}
-          <TouchableOpacity
-            style={[styles.promoBtn, isSelectionMode && styles.promoBtnActive]}
-            onPress={() => {
-              setIsSelectionMode(!isSelectionMode);
-              if (isSelectionMode) setSelectedProductsForPromo([]);
-            }}
-          >
-            <MegaphoneIcon size={20} color={isSelectionMode ? '#FFF' : colors.primary} />
-          </TouchableOpacity>
         </View>
 
         {/* Scroll horizontal de categorías + botón para agregar nueva */}
@@ -241,30 +272,106 @@ const InformalInventory = () => {
         onRefresh={refreshInventory}
       />
 
-      {/* FAB: Modo selección → botón generar promo */}
-      {isSelectionMode && selectedProductsForPromo.length > 0 && (
-        <View style={styles.bottomFloatContainer}>
+      {/* Botones inferiores: Modo Selección */}
+      {isSelectionMode && (
+        <View style={[styles.bottomFloatContainer, { flexDirection: 'row', gap: 12 }]}>
           <TouchableOpacity
-            style={styles.generatePromoBtn}
-            onPress={() => setIsPromoModalVisible(true)}
+            style={[styles.generatePromoBtn, { flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}
+            onPress={() => {
+              setIsSelectionMode(false);
+              setSelectedProductsForPromo([]);
+            }}
+            activeOpacity={0.8}
           >
-            <MegaphoneIcon size={20} color="#FFF" />
-            <Text style={styles.generatePromoBtnText}>
-              Crear Promo ({selectedProductsForPromo.length})
+            <Text style={[styles.generatePromoBtnText, { color: colors.textSecondary, marginLeft: 0 }]}>
+              Cancelar
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.generatePromoBtn, { flex: 1.5, opacity: selectedProductsForPromo.length > 0 ? 1 : 0.5 }]}
+            onPress={() => {
+              if (selectedProductsForPromo.length > 0) {
+                setIsPromoModalVisible(true);
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            {selectedProductsForPromo.length > 0 && (
+              <View style={styles.promoBadge}>
+                <Text style={styles.promoBadgeText}>{selectedProductsForPromo.length}</Text>
+              </View>
+            )}
+            <Text style={[styles.generatePromoBtnText, { marginLeft: selectedProductsForPromo.length > 0 ? 12 : 0 }]}>
+              Promocionar
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* FAB: Modo normal → agregar producto */}
+      {/* Backdrop for FAB Menu */}
+      <TouchableWithoutFeedback 
+        onPress={() => {
+          if (isFabMenuOpen) toggleFabMenu();
+        }}
+      >
+        <Animated.View 
+          style={[
+            styles.fabBackdrop, 
+            { 
+              opacity: fabMenuOpacity,
+              pointerEvents: isFabMenuOpen ? 'auto' : 'none'
+            }
+          ]} 
+        />
+      </TouchableWithoutFeedback>
+
+      {/* FAB: Menú para agregar / promocionar */}
       {!isSelectionMode && (
         <View style={styles.fabContainer}>
-          <TouchableOpacity
-            style={styles.fabButton}
-            onPress={openAddForm}
-            accessibilityLabel="Agregar producto"
+          <Animated.View 
+            style={[
+              styles.fabMenu, 
+              { 
+                opacity: fabMenuOpacity, 
+                transform: [{ translateY: fabMenuTranslateY }],
+                pointerEvents: isFabMenuOpen ? 'auto' : 'none'
+              }
+            ]}
           >
-            <PlusIcon size={28} color="#FFF" />
+            <TouchableOpacity
+              style={styles.fabMenuItem}
+              onPress={() => {
+                toggleFabMenu();
+                setIsSelectionMode(true);
+              }}
+            >
+              <Text style={styles.fabMenuLabel}>Promocionar productos</Text>
+              <View style={[styles.fabMenuButton, { backgroundColor: colors.primary }]}>
+                <MegaphoneIcon size={20} color="#FFF" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.fabMenuItem}
+              onPress={() => {
+                toggleFabMenu();
+                openAddForm();
+              }}
+            >
+              <Text style={styles.fabMenuLabel}>Agregar producto</Text>
+              <View style={[styles.fabMenuButton, { backgroundColor: colors.success || '#2ecc71' }]}>
+                <PlusIcon size={20} color="#FFF" />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+          <TouchableOpacity 
+            style={styles.fabButton} 
+            activeOpacity={0.8}
+            onPress={toggleFabMenu}
+          >
+            <Animated.View style={{ transform: [{ rotate: fabRotation }] }}>
+              <PlusIcon size={28} color="#FFF" />
+            </Animated.View>
           </TouchableOpacity>
         </View>
       )}

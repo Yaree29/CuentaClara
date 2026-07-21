@@ -229,7 +229,7 @@ const LoginScreen = ({ navigation }) => {
             disabled={loading || !email || !password}
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.textButton} />
             ) : (
               <Text style={styles.buttonText}>Entrar</Text>
             )}
@@ -243,7 +243,7 @@ const LoginScreen = ({ navigation }) => {
                 disabled={biometricLoading}
               >
                 {biometricLoading ? (
-                  <ActivityIndicator color="#0F2747" />
+                  <ActivityIndicator color={colors.primary} />
                 ) : (
                   <Text style={styles.biometricButtonText}>Iniciar con Huella</Text>
                 )}
@@ -281,7 +281,7 @@ const LoginScreen = ({ navigation }) => {
               onPress={handleMfaConfirm}
               disabled={mfaBusy || mfaCode.length !== 6}
             >
-              {mfaBusy ? <ActivityIndicator color="#fff" /> : <Text style={mfaModalStyles.buttonText}>Verificar</Text>}
+              {mfaBusy ? <ActivityIndicator color={colors.textButton} /> : <Text style={mfaModalStyles.buttonText}>Verificar</Text>}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setMfaVisible(false)} style={mfaModalStyles.cancel}>
               <Text style={mfaModalStyles.cancelText}>Cancelar</Text>
@@ -304,14 +304,14 @@ const mfaModalStyles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 24,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F2747',
+    color: colors.primary,
     marginBottom: 6,
     textAlign: 'center',
   },
@@ -329,7 +329,7 @@ const mfaModalStyles = StyleSheet.create({
     fontSize: 22,
     letterSpacing: 8,
     textAlign: 'center',
-    color: '#0F2747',
+    color: colors.primary,
   },
   error: {
     color: '#d9534f',
@@ -338,14 +338,14 @@ const mfaModalStyles = StyleSheet.create({
     marginTop: 8,
   },
   button: {
-    backgroundColor: '#0F2747',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 16,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.textButton,
     fontSize: 15,
     fontWeight: '600',
   },

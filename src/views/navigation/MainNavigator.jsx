@@ -1,15 +1,18 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import useAuthStore from '../../store/useAuthStore';
+import useAssistantModeStore from '../../store/useAssistantModeStore';
 
 // Iconos Heroicons Solid
-import { 
-  HomeIcon, 
-  BanknotesIcon, 
-  CreditCardIcon, 
-  ArchiveBoxIcon 
+import {
+  HomeIcon,
+  BanknotesIcon,
+  CreditCardIcon,
+  ArchiveBoxIcon,
+  DocumentTextIcon,
+  Squares2X2Icon,
 } from 'react-native-heroicons/solid';
 
 // Pantallas
@@ -17,19 +20,50 @@ import HomeScreen from '../../modules/dashboard/screens/HomeScreen';
 import InventoryScreen from '../../modules/inventory/screens/InventoryScreen';
 import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
-
-import useAuthStore from '../../store/useAuthStore';
+import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
+import ModulesScreen from '../../modules/modules/screens/ModulesScreen';
+import PymeInventory from '../../modules/inventory/components/PymeInventory';
 
 const Tab = createBottomTabNavigator();
 
+// Registro de los tabs fijos por tipo de usuario. Los módulos PYME que antes
+// eran tabs dinámicos (Compras, Personal, Caja, Servicios, Recetas,
+// Comisiones, Propinas, Ofertas) ahora viven como screens del stack,
+// navegables desde ModulesScreen (tab "modules").
 const TAB_CONFIG = {
-  dashboard: { component: HomeScreen,      label: 'Inicio',      icon: HomeIcon },
-  sales:     { component: SalesScreen,     label: 'Ventas',      icon: BanknotesIcon },
-  credit:    { component: DebtScreen,      label: 'Fiado',       icon: CreditCardIcon },
-  inventory: { component: InventoryScreen, label: 'Inventario',  icon: ArchiveBoxIcon },
+  dashboard: { component: HomeScreen,      label: 'Inicio',   icon: HomeIcon },
+  sales:     { component: SalesScreen,     label: 'Ventas',   icon: BanknotesIcon },
+  credit:    { component: DebtScreen,      label: 'Fiado',    icon: CreditCardIcon },
+  inventory: { component: InventoryScreen, label: 'Inventario', icon: ArchiveBoxIcon },
+  billing:   { component: BillingScreen,   label: 'MiRUC',    icon: DocumentTextIcon },
+  modules:   { component: ModulesScreen,   label: 'Módulos',  icon: Squares2X2Icon },
+  // Tab de Inventario para el Modo Asistente. Reutiliza el placeholder
+  // PymeInventory ("en construcción") — ver resolveInventoryScreen.js para el
+  // punto de extensión futuro (business.inventory_mode).
+  assistantInventory: { component: PymeInventory, label: 'Inventario', icon: ArchiveBoxIcon },
 };
 
-const TAB_ORDER = ['dashboard', 'sales', 'credit', 'inventory'];
+// Tabs fijos por tipo de usuario: Informal conserva el flujo rápido con
+// Fiado + Inventario propios; PYME usa Facturación (MiRUC) + Módulos como
+// punto de entrada al resto de funcionalidades del negocio.
+const INFORMAL_TABS = ['dashboard', 'sales', 'credit', 'inventory'];
+const PYME_TABS = ['dashboard', 'sales', 'billing', 'modules'];
+
+// Tabs por access_type cuando hay un asistente activo (Modo Asistente).
+// Reemplaza por completo a INFORMAL_TABS/PYME_TABS mientras dure la sesión
+// del asistente — ignora userType, el asistente nunca ve más que su acceso.
+const ASSISTANT_TABS = {
+  sales: ['dashboard', 'sales'],
+  inventory: ['dashboard', 'assistantInventory'],
+  both: ['dashboard', 'sales', 'assistantInventory'],
+};
+
+const resolveTabOrder = (userType, activeAssistant) => {
+  if (activeAssistant) {
+    return ASSISTANT_TABS[activeAssistant.access_type] || ASSISTANT_TABS.sales;
+  }
+  return userType === 'informal' ? INFORMAL_TABS : PYME_TABS;
+};
 
 // Componente animado personalizado para los iconos del Tab Bar
 const AnimatedTabBarIcon = ({ focused, children }) => {
@@ -109,16 +143,13 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 };
 
 const MainNavigator = () => {
-  const user = useAuthStore((state) => state.user);
-  const enabledModules = user?.enabled_modules || ['dashboard', 'sales', 'credit', 'inventory'];
-  const insets = useSafeAreaInsets();
-
-  // Filtrar los módulos que se mostrarán en la barra de navegación inferior
-  const visibleTabs = TAB_ORDER.filter((mod) => enabledModules.includes(mod));
+  const userType = useAuthStore((state) => state.user?.userType);
+  const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
+  const visibleTabs = resolveTabOrder(userType, activeAssistant);
 
   return (
-    <Tab.Navigator
-      screenOptions={{
+    <Tab.Navigator 
+      screenOptions={{ 
         headerShown: false,
 
         tabBarActiveTintColor: colors.tabIconActive,
@@ -130,12 +161,9 @@ const MainNavigator = () => {
           backgroundColor: colors.tabBackground,
           borderTopWidth: 0,
 
-          // Se suma insets.bottom para reservar el espacio de la barra de
-          // navegación del sistema (Android edge-to-edge) y evitar que los
-          // botones "atrás/inicio/recientes" se superpongan con la tab bar.
-          height: 72 + insets.bottom,
+          height: 72,
           paddingTop: 6,
-          paddingBottom: 8 + insets.bottom,
+          paddingBottom: 8,
 
           shadowColor: '#000',
           shadowOffset: {

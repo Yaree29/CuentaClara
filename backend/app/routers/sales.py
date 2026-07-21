@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.sales import QuickSaleRequest
 from app.services import sales_service
@@ -21,6 +22,10 @@ def quick_sale(data: QuickSaleRequest, current_user: dict = Depends(get_current_
 def get_profits(
     date_from: str,
     date_to: str,
+    # assistant_id: cuando viene, filtra el resumen a las ventas de ESE
+    # asistente (Modo Asistente) — el JWT sigue siendo el del dueño, no se
+    # relaja el require_role, solo se acota la data devuelta.
+    assistant_id: Optional[int] = None,
     # Solo dueño/admin ven ganancias y gastos; un 'staff' (cajero) recibe 403.
     current_user: dict = Depends(require_role("owner", "admin"))
 ):
@@ -28,7 +33,8 @@ def get_profits(
         return sales_service.get_profits_and_expenses(
             business_id=current_user["business_id"],
             date_from=date_from,
-            date_to=date_to
+            date_to=date_to,
+            assistant_id=assistant_id
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

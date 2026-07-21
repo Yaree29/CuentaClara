@@ -3,11 +3,49 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityInd
 import MainLayout from '../../../views/layouts/MainLayout';
 import { useBilling } from '../hooks/useBilling';
 import styles from '../styles/billing.styles';
+import colors from '../../../theme/colors';
 
 const BillingScreen = () => {
-  const [customer, setCustomer] = useState('');
   const [items, setItems] = useState([{ id: 1, desc: '', price: '', quantity: '1', productId: null }]);
-  const { createInvoice, loading, inventory, inventoryLoading, inventoryError, refreshInventory } = useBilling();
+  const [customerId, setCustomerId] = useState(null);
+  const [customerPicked, setCustomerPicked] = useState(false);
+  const [showCustomers, setShowCustomers] = useState(false);
+  const [newCustomerMode, setNewCustomerMode] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+
+  const {
+    createInvoice, sendInvoiceByWhatsApp, loading, inventory, inventoryLoading, inventoryError, refreshInventory,
+    customers, customersLoading, customersError, createCustomer,
+  } = useBilling();
+
+  const selectedCustomer = customers.find((c) => c.id === customerId) || null;
+
+  const pickCustomer = (id) => {
+    setCustomerId(id);
+    setCustomerPicked(true);
+    setShowCustomers(false);
+    setNewCustomerMode(false);
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomerName.trim()) {
+      Alert.alert('Nombre requerido', 'Ingresa el nombre del cliente.');
+      return;
+    }
+    setCreatingCustomer(true);
+    try {
+      const customer = await createCustomer({ name: newCustomerName, phone: newCustomerPhone });
+      pickCustomer(customer.id);
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo crear el cliente.');
+    } finally {
+      setCreatingCustomer(false);
+    }
+  };
 
   const addItem = () => {
     setItems([...items, { id: Date.now(), desc: '', price: '', quantity: '1', productId: null }]);
@@ -20,18 +58,38 @@ const BillingScreen = () => {
   };
 
   const handleGenerate = async () => {
-    if (!customer || items.some((i) => !i.desc || !i.price || !i.quantity)) {
-      Alert.alert("Campos incompletos", "Por favor llena los datos del cliente y al menos un producto.");
+    if (!customerPicked || items.some((i) => !i.desc || !i.price || !i.quantity)) {
+      Alert.alert("Campos incompletos", "Por favor selecciona un cliente y al menos un producto.");
       return;
     }
-    
+
     try {
-      const result = await createInvoice(customer, items);
-      Alert.alert("Factura Generada", `Número: ${result.invoiceNumber}\nFecha: ${result.date}`);
-      setCustomer('');
+      const result = await createInvoice(customerId, items);
+      const phone = selectedCustomer?.phone || null;
+
+      Alert.alert(
+        "Factura Generada",
+        `Número: ${result.invoiceNumber}\nFecha: ${result.date}`,
+        [
+          { text: "Cerrar", style: "cancel" },
+          {
+            text: "Enviar por WhatsApp",
+            onPress: async () => {
+              try {
+                await sendInvoiceByWhatsApp(result.invoiceId, result.invoiceNumber, phone);
+              } catch (waError) {
+                Alert.alert("Error", waError.message || "No se pudo enviar la factura por WhatsApp.");
+              }
+            },
+          },
+        ]
+      );
+
+      setCustomerId(null);
+      setCustomerPicked(false);
       setItems([{ id: 1, desc: '', price: '', quantity: '1', productId: null }]);
     } catch (error) {
-      Alert.alert("Error", "No se pudo procesar la factura.");
+      Alert.alert("Error", error.message || "No se pudo procesar la factura.");
     }
   };
 
@@ -61,13 +119,86 @@ const BillingScreen = () => {
         <Text style={styles.title}>Nueva Factura</Text>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Datos del Cliente</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre o Razón Social"
-            value={customer}
-            onChangeText={setCustomer}
-          />
+          <View style={styles.rowHeader}>
+            <Text style={styles.label}>Datos del Cliente</Text>
+            <TouchableOpacity onPress={() => setShowCustomers(!showCustomers)}>
+              <Text style={styles.addText}>{showCustomers ? 'Cerrar' : 'Cambiar'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.input} onPress={() => setShowCustomers(!showCustomers)}>
+            <Text style={{ color: customerPicked ? colors.textPrimary : colors.textMuted }}>
+              {customerPicked
+                ? (selectedCustomer ? selectedCustomer.name : 'Consumidor final')
+                : 'Seleccionar cliente'}
+            </Text>
+          </TouchableOpacity>
+
+          {showCustomers && (
+            <View style={[styles.inventoryList, { marginTop: 8 }]}>
+              {customersLoading && (
+                <ActivityIndicator color="#2563eb" style={{ marginVertical: 10 }} />
+              )}
+
+              {!customersLoading && customersError && (
+                <Text style={styles.errorText}>{customersError}</Text>
+              )}
+
+              {!customersLoading && (
+                <>
+                  <TouchableOpacity style={styles.inventoryItem} onPress={() => pickCustomer(null)}>
+                    <Text style={styles.inventoryName}>Consumidor final</Text>
+                  </TouchableOpacity>
+
+                  {customers.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.inventoryItem}
+                      onPress={() => pickCustomer(c.id)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.inventoryName}>{c.name}</Text>
+                        {!!c.phone && <Text style={styles.inventoryMeta}>{c.phone}</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                  {!newCustomerMode && (
+                    <TouchableOpacity style={styles.inventoryItem} onPress={() => setNewCustomerMode(true)}>
+                      <Text style={[styles.inventoryName, { color: '#2563eb' }]}>+ Nuevo cliente</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {newCustomerMode && (
+                    <View style={styles.inventoryItem}>
+                      <View style={{ flex: 1 }}>
+                        <TextInput
+                          style={[styles.input, { marginBottom: 8 }]}
+                          placeholder="Nombre del cliente"
+                          value={newCustomerName}
+                          onChangeText={setNewCustomerName}
+                        />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Teléfono (opcional)"
+                          keyboardType="phone-pad"
+                          value={newCustomerPhone}
+                          onChangeText={setNewCustomerPhone}
+                        />
+                      </View>
+                      <TouchableOpacity onPress={handleCreateCustomer} disabled={creatingCustomer}>
+                        {creatingCustomer ? (
+                          <ActivityIndicator color="#2563eb" />
+                        ) : (
+                          <Text style={styles.addText}>Guardar</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -175,7 +306,7 @@ const BillingScreen = () => {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textButton} />
           ) : (
             <Text style={styles.mainButtonText}>Generar Factura Fiscal</Text>
           )}

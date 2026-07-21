@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Linking } from 'react-native';
 import billingService from '../services/billingService';
 import useAuthStore from '../../../store/useAuthStore';
-import useUserStore from '../../../store/useUserStore';
+//import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../../inventory/services/inventoryService';
-import salesService from '../../sales/services/salesService';
+import debtService from '../../credit/services/debtService';
 
 export const useBilling = () => {
   const [loading, setLoading] = useState(false);
@@ -11,8 +12,11 @@ export const useBilling = () => {
   const [inventory, setInventory] = useState([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [inventoryError, setInventoryError] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(true);
+  const [customersError, setCustomersError] = useState(null);
   const user = useAuthStore((state) => state.user);
-  const businessData = useUserStore((state) => state.businessData);
+  const businessData = 'informal';
 
   const resolveBusinessId = () =>
     businessData?.id ||
@@ -47,59 +51,76 @@ export const useBilling = () => {
     fetchInventory();
   }, [businessData, user]);
 
+  const fetchCustomers = async () => {
+    setCustomersLoading(true);
+    setCustomersError(null);
+    try {
+      const data = await debtService.getCustomers();
+      setCustomers(data || []);
+    } catch (err) {
+      console.error('Error al cargar clientes:', err);
+      setCustomersError(err.message || 'No se pudieron cargar los clientes.');
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [businessData, user]);
+
+  const createCustomer = async ({ name, phone, notes }) => {
+    const customer = await debtService.createCustomer({ name, phone, notes });
+    setCustomers((prev) => [...prev, customer]);
+    return customer;
+  };
+
   // =========================================================================
-  // createInvoice — ahora delega al backend vía POST /sales/quick
+  // createInvoice — factura fiscal PYME vía POST /invoices
   // =========================================================================
-  // La creación de facturas SIEMPRE pasa por salesService.createSale() que
-  // ejecuta en el backend: validar stock → crear factura + items → registrar
-  // pago → descontar inventario → crear movimiento.  Esto garantiza atomicidad
-  // y evita facturas huérfanas.
+  // A diferencia de la venta rápida informal (POST /sales/quick, sin
+  // cliente), esta factura queda vinculada a un customer_id real de
+  // /credit/customers y recibe numeración secuencial (ej. FAC-0001) generada
+  // en el backend.
   // =========================================================================
-  const createInvoice = async (customer, items, taxRate = 0.07) => {
+  const createInvoice = async (customerId, items, { paymentMethod = 'cash', notes = null } = {}) => {
     setLoading(true);
     try {
-      const businessId = resolveBusinessId();
-
-      if (!businessId) {
-        throw new Error('No se encontró el negocio activo para registrar la factura.');
-      }
-
-      // Mapear items al formato que espera POST /sales/quick
       const saleItems = items.map((item) => {
         const unitPrice = Number(item.price);
         const quantity = Number(item.quantity ?? 1);
 
+        if (!item.productId) {
+          throw new Error('Cada línea debe corresponder a un producto del inventario.');
+        }
         if (Number.isNaN(unitPrice)) {
           throw new Error('El precio debe ser numérico.');
         }
-
         if (Number.isNaN(quantity) || quantity <= 0) {
           throw new Error('La cantidad debe ser numérica y mayor a cero.');
         }
 
         return {
-          product_id: item.productId ?? null,
+          product_id: item.productId,
           quantity,
           unit_price: unitPrice,
         };
       });
 
-      // Crear la venta (y factura) a través de la API
-      const result = await salesService.createSale(saleItems, 'cash');
-
-      // Normalizar respuesta para mantener compatibilidad con BillingScreen
-      const subtotal = saleItems.reduce(
-        (acc, it) => acc + it.quantity * it.unit_price,
-        0
-      );
+      const result = await billingService.createInvoice({
+        items: saleItems,
+        payment_method: paymentMethod,
+        customer_id: customerId ?? null,
+        notes,
+      });
 
       return {
         success: true,
         invoiceId: result.invoice_id,
-        invoiceNumber: `FAC-${result.invoice_id}`,
+        invoiceNumber: result.invoice_number,
+        customerName: result.customer_name,
         date: result.created_at,
-        subtotal,
-        tax: result.tax ?? subtotal * taxRate,
+        tax: result.tax,
         total: result.total,
       };
     } catch (error) {
@@ -110,14 +131,40 @@ export const useBilling = () => {
     }
   };
 
+  // =========================================================================
+  // sendInvoiceByWhatsApp — reutiliza el mismo patrón whatsapp://send?text=
+  // del módulo Informal (useInformalInventory.generateWhatsAppPromo): abre
+  // WhatsApp con un mensaje pre-cargado. Como whatsapp://send no soporta
+  // adjuntar archivos, se comparte el link firmado del PDF (generado en el
+  // backend y subido a Supabase Storage) en vez del PDF en sí.
+  // =========================================================================
+  const sendInvoiceByWhatsApp = async (invoiceId, invoiceNumber, phone = null) => {
+    const { url } = await billingService.getInvoicePdfUrl(invoiceId);
+    const text = `Aquí tu factura ${invoiceNumber}:\n${url}`;
+    const phoneParam = phone ? `phone=${encodeURIComponent(phone.replace(/\D/g, ''))}&` : '';
+    const waUrl = `whatsapp://send?${phoneParam}text=${encodeURIComponent(text)}`;
+
+    try {
+      await Linking.openURL(waUrl);
+    } catch (err) {
+      throw new Error('No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado en este dispositivo.');
+    }
+  };
+
   return {
     createInvoice,
+    sendInvoiceByWhatsApp,
     loading,
     invoices,
     inventory,
     inventoryLoading,
     inventoryError,
     refreshInventory: fetchInventory,
+    customers,
+    customersLoading,
+    customersError,
+    createCustomer,
+    refreshCustomers: fetchCustomers,
   };
 };
 

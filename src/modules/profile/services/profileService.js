@@ -20,6 +20,7 @@ const profileService = {
       name: user.name,
       email: user.email,
       role: user.role,
+      userType: user.userType,
       businessName: user.business?.name || 'Sin negocio',
       joinedDate: formatDate(user.created_at || user.business?.created_at),
       preferences: {

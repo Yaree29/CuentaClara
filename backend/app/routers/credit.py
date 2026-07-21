@@ -118,6 +118,21 @@ def cancel_debt(
 
 # ── Abonos ────────────────────────────────────────────────────────────────────
 
+@router.get("/debts/{debt_id}/payments", summary="Listar abonos de una deuda")
+def get_payments(
+    debt_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return credit_service.list_payments(
+            current_user["business_id"], debt_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/debts/{debt_id}/payments", summary="Registrar abono a una deuda")
 def register_payment(
     debt_id: int,

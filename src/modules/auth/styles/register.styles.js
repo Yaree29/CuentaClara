@@ -81,7 +81,7 @@ export default StyleSheet.create({
     fontSize: 14,
   },
   sectionCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -101,7 +101,7 @@ export default StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: colors.borderLight,
   },
   label: {
     fontSize: 14,
@@ -118,7 +118,7 @@ export default StyleSheet.create({
     borderRadius: 8,
     minWidth: 50,
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.cardSecondary,
   },
   smallBtnActive: {
     backgroundColor: colors.primary,

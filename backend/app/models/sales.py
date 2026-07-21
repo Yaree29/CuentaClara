@@ -15,6 +15,9 @@ class QuickSaleRequest(BaseModel):
     # Venta a fiado: la factura queda "pending" y no se crea payment. El
     # frontend crea la deuda aparte con POST /credit/debts (invoice_id).
     is_credit: bool = False
+    # Asistente activo (Modo Asistente) que registró la venta, si aplica.
+    # None = venta registrada directamente por el dueño.
+    assistant_id: Optional[int] = None
 
 class SaleResponse(BaseModel):
     invoice_id: int

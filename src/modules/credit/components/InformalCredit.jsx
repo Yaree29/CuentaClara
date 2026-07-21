@@ -30,12 +30,14 @@ const InformalCredit = () => {
   // --- Estados del Formulario ---
   const [formClientName, setFormClientName] = useState('');
   const [formAmount, setFormAmount] = useState('');
-  const [formItems, setFormItems] = useState('');
+  const [formNotes, setFormNotes] = useState(''); // Notas adicionales (items)
   const [formPhone, setFormPhone] = useState('');
+  
+  const [selectedProducts, setSelectedProducts] = useState({}); // { [id]: { product, qty } }
 
   // --- Menú contextual (tres puntos) ---
-  const [menuVisible, setMenuVisible] = useState(null); // id del crédito con menú abierto
-  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuCredit, setMenuCredit] = useState(null); // crédito seleccionado para el menú
 
   // --- Nota ---
   const [noteText, setNoteText] = useState('');
@@ -44,13 +46,72 @@ const InformalCredit = () => {
   useEffect(() => {
     if (editingCredit) {
       setFormClientName(editingCredit.clientName);
-      setFormAmount(editingCredit.totalDebt.toString());
-      setFormItems(editingCredit.items);
       setFormPhone(editingCredit.phone ? editingCredit.phone.replace('+507', '') : '');
+      
+      // Intentar parsear productos y notas desde el string 'items'
+      let rawItems = editingCredit.items || '';
+      let parsedNotes = rawItems;
+      let parsedProducts = {};
+      
+      if (rawItems.includes('| Nota: ')) {
+        const parts = rawItems.split('| Nota: ');
+        rawItems = parts[0].trim();
+        parsedNotes = parts[1].trim();
+      }
+
+      if (rawItems && inventoryProducts.length > 0) {
+        let matchedCount = 0;
+        const segments = rawItems.split(', ');
+        segments.forEach(segment => {
+          const match = segment.trim().match(/^(\d+)\s+(.+)$/); // Ej: "2 Empanada"
+          if (match) {
+            const qty = parseInt(match[1]);
+            const name = match[2];
+            const product = inventoryProducts.find(p => p.name === name);
+            if (product) {
+              parsedProducts[product.id] = { product, qty };
+              matchedCount++;
+            }
+          }
+        });
+        
+        // Si todo el string eran productos (no había "| Nota: "), la nota real está vacía
+        if (matchedCount > 0 && parsedNotes === rawItems) {
+          parsedNotes = '';
+        }
+      }
+
+      setFormNotes(parsedNotes);
+      setSelectedProducts(parsedProducts);
+      // formAmount se calculará automáticamente en el otro useEffect si hay productos
+      if (Object.keys(parsedProducts).length === 0) {
+        setFormAmount(editingCredit.totalDebt.toString());
+      }
     } else {
-      setFormClientName(''); setFormAmount(''); setFormItems(''); setFormPhone('');
+      setFormClientName(''); setFormAmount(''); setFormNotes(''); setFormPhone('');
+      setSelectedProducts({});
     }
-  }, [editingCredit, isFormModalVisible]);
+  }, [editingCredit, isFormModalVisible, inventoryProducts]);
+
+  // Recalcular monto e items seleccionados cuando cambian los productos
+  const computedItemsStr = Object.values(selectedProducts)
+    .map(({ product, qty }) => `${qty} ${product.name}`)
+    .join(', ');
+
+  useEffect(() => {
+    let total = 0;
+    Object.values(selectedProducts).forEach(({ product, qty }) => {
+      total += product.price * qty;
+    });
+    
+    // Si hay productos seleccionados, el total manda.
+    // Si no hay productos y estamos editando, mantenemos el monto original a menos que el usuario lo cambie (está deshabilitado pero por si acaso).
+    if (Object.keys(selectedProducts).length > 0) {
+      setFormAmount(total > 0 ? total.toFixed(2) : '0.00');
+    } else if (!editingCredit) {
+      setFormAmount('');
+    }
+  }, [selectedProducts, editingCredit]);
 
   // Precargar nota
   useEffect(() => {
@@ -60,19 +121,45 @@ const InformalCredit = () => {
   }, [noteCredit]);
 
   const handleFormSubmit = () => {
-    if (!formClientName || !formAmount) return;
+    if (!formClientName || (!formAmount && !editingCredit)) return;
+    
+    if (formPhone && formPhone.trim().length !== 8) {
+      Alert.alert('Número inválido', 'El número de teléfono debe tener exactamente 8 dígitos.');
+      return;
+    }
+    
+    // Concatenar productos seleccionados + notas
+    let finalItems = computedItemsStr;
+    if (formNotes.trim()) {
+      finalItems = finalItems ? `${finalItems} | Nota: ${formNotes.trim()}` : formNotes.trim();
+    }
+
     saveCredit({
       clientName: formClientName,
-      totalDebt: parseFloat(formAmount),
-      items: formItems,
+      totalDebt: parseFloat(formAmount || '0'),
+      items: finalItems,
       phone: formPhone ? `+507${formPhone}` : '+507'
     });
   };
 
   const handleQuickAddProduct = (product) => {
-    setFormItems(prev => prev ? `${prev}, ${product.name}` : product.name);
-    const currentAmount = parseFloat(formAmount || '0');
-    setFormAmount((currentAmount + product.price).toFixed(2));
+    setSelectedProducts(prev => {
+      const currentQty = prev[product.id] ? prev[product.id].qty : 0;
+      if (currentQty >= 99) return prev; // max 99 limit
+      return { ...prev, [product.id]: { product, qty: currentQty + 1 } };
+    });
+  };
+  
+  const handleRemoveProduct = (product) => {
+    setSelectedProducts(prev => {
+      const currentQty = prev[product.id] ? prev[product.id].qty : 0;
+      if (currentQty <= 1) {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      }
+      return { ...prev, [product.id]: { product, qty: currentQty - 1 } };
+    });
   };
 
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -96,18 +183,25 @@ const InformalCredit = () => {
   };
 
   // Menú de tres puntos
-  const toggleMenu = (creditId, event) => {
-    if (menuVisible === creditId) {
-      setMenuVisible(null);
+  const toggleMenu = (credit) => {
+    if (menuVisible && menuCredit?.id === credit.id) {
+      setMenuVisible(false);
+      setMenuCredit(null);
     } else {
-      setMenuVisible(creditId);
+      setMenuCredit(credit);
+      setMenuVisible(true);
     }
   };
 
-  const closeMenu = () => setMenuVisible(null);
+  const closeMenu = () => {
+    setMenuVisible(false);
+    setMenuCredit(null);
+  };
 
-  const handleMenuAction = (action, credit) => {
+  const handleMenuAction = (action) => {
+    const credit = menuCredit;
     closeMenu();
+    if (!credit) return;
     switch (action) {
       case 'notify':
         sendWhatsAppReminder(credit.clientName, credit.phone, credit.totalDebt);
@@ -115,8 +209,15 @@ const InformalCredit = () => {
       case 'edit':
         openEditModal(credit);
         break;
-      case 'note':
-        openNoteModal(credit);
+      case 'delete':
+        Alert.alert(
+          "Eliminar Fiado",
+          "¿Estás seguro que deseas eliminar este fiado?",
+          [
+            { text: "Cancelar", style: "cancel" },
+            { text: "Eliminar", style: "destructive", onPress: () => deleteCredit(credit.id) }
+          ]
+        );
         break;
       case 'pay':
         openPaymentModal(credit);
@@ -146,104 +247,77 @@ const InformalCredit = () => {
       : 0;
 
     return (
-      <TouchableOpacity
-        style={styles.creditCard}
-        onPress={() => openDetailModal(item)}
-        activeOpacity={0.7}
-      >
-        {/* Header: nombre + menú tres puntos */}
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>
-                {item.clientName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.cardHeaderInfo}>
-              <Text style={styles.clientName} numberOfLines={1}>{item.clientName}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-                <Text style={[styles.statusBadgeText, { color: badge.color }]}>{badge.label}</Text>
+      <View style={styles.creditCard}>
+        <TouchableOpacity
+          onPress={() => openDetailModal(item)}
+          activeOpacity={0.7}
+        >
+          {/* Header */}
+          <View style={[styles.cardHeader, { paddingRight: 30 }]}>
+            <View style={styles.cardHeaderLeft}>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>
+                  {item.clientName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.cardHeaderInfo}>
+                <Text style={styles.clientName} numberOfLines={1}>{item.clientName}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+                  <Text style={[styles.statusBadgeText, { color: badge.color }]}>{badge.label}</Text>
+                </View>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.menuBtn}
-            onPress={(e) => toggleMenu(item.id, e)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+          {/* Descripción */}
+          {item.items ? (
+            <Text style={styles.itemsText} numberOfLines={2}>{item.items}</Text>
+          ) : null}
 
-        {/* Menú contextual */}
-        {menuVisible === item.id && (
-          <View style={styles.contextMenu}>
-            <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('pay', item)}>
-              <Ionicons name="cash-outline" size={18} color={colors.success} />
-              <Text style={[styles.contextMenuText, { color: colors.success }]}>Abonar / Pagar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('notify', item)}>
-              <Ionicons name="notifications-outline" size={18} color={colors.info} />
-              <Text style={styles.contextMenuText}>Notificar fiado</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('edit', item)}>
-              <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.contextMenuText}>Editar fiado</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('note', item)}>
-              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.contextMenuText}>Añadir nota</Text>
-            </TouchableOpacity>
+          {/* Nota preview */}
+          {item.notes ? (
+            <View style={styles.notePreview}>
+              <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.notePreviewText} numberOfLines={1}>{item.notes}</Text>
+            </View>
+          ) : null}
+
+          {/* Monto + barra de progreso */}
+          <View style={styles.debtInfoRow}>
+            <View>
+              <Text style={styles.debtLabel}>Deuda pendiente</Text>
+              <Text style={styles.debtAmount}>${item.totalDebt.toFixed(2)}</Text>
+            </View>
+            {item.paidAmount > 0 && (
+              <View style={styles.paidInfo}>
+                <Text style={styles.paidLabel}>Abonado</Text>
+                <Text style={styles.paidAmount}>${item.paidAmount.toFixed(2)}</Text>
+              </View>
+            )}
           </View>
-        )}
 
-        {/* Descripción */}
-        {item.items ? (
-          <Text style={styles.itemsText} numberOfLines={2}>{item.items}</Text>
-        ) : null}
-
-        {/* Nota preview */}
-        {item.notes ? (
-          <View style={styles.notePreview}>
-            <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.notePreviewText} numberOfLines={1}>{item.notes}</Text>
-          </View>
-        ) : null}
-
-        {/* Monto + barra de progreso */}
-        <View style={styles.debtInfoRow}>
-          <View>
-            <Text style={styles.debtLabel}>Deuda pendiente</Text>
-            <Text style={styles.debtAmount}>${item.totalDebt.toFixed(2)}</Text>
-          </View>
+          {/* Barra de progreso */}
           {item.paidAmount > 0 && (
-            <View style={styles.paidInfo}>
-              <Text style={styles.paidLabel}>Abonado</Text>
-              <Text style={styles.paidAmount}>${item.paidAmount.toFixed(2)}</Text>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBar, { width: `${Math.min(progressPercent, 100)}%` }]} />
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {/* Barra de progreso */}
-        {item.paidAmount > 0 && (
-          <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: `${Math.min(progressPercent, 100)}%` }]} />
-          </View>
-        )}
-      </TouchableOpacity>
+        {/* Botón menú flotante */}
+        <TouchableOpacity
+          style={[styles.menuBtn, { position: 'absolute', top: 16, right: 16 }]}
+          onPress={() => toggleMenu(item)}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <View style={styles.container}>
-      {/* Cerrar menú al tocar fuera */}
-      {menuVisible && (
-        <TouchableWithoutFeedback onPress={closeMenu}>
-          <View style={styles.menuOverlay} />
-        </TouchableWithoutFeedback>
-      )}
-
       {/* BUSCADOR + CATEGORÍAS */}
       <View style={styles.headerWrapper}>
         <View style={styles.searchContainer}>
@@ -324,6 +398,37 @@ const InformalCredit = () => {
         </TouchableOpacity>
       </View>
 
+      {/* ========== MODAL: Menú Contextual ========== */}
+      <Modal visible={menuVisible} animationType="slide" transparent={true}>
+        <TouchableWithoutFeedback onPress={closeMenu}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 40, elevation: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+                  {menuCredit ? menuCredit.clientName : 'Opciones'}
+                </Text>
+                <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('pay')}>
+                  <Ionicons name="cash-outline" size={20} color={colors.success} />
+                  <Text style={[styles.contextMenuText, { color: colors.success, fontSize: 16 }]}>Pagar fiado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('notify')}>
+                  <Ionicons name="notifications-outline" size={20} color={colors.info} />
+                  <Text style={[styles.contextMenuText, { fontSize: 16 }]}>Notificar fiado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('edit')}>
+                  <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
+                  <Text style={[styles.contextMenuText, { fontSize: 16 }]}>Editar fiado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('delete')}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                  <Text style={[styles.contextMenuText, { color: colors.danger, fontSize: 16 }]}>Eliminar fiado</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
       {/* ========== MODAL: Crear / Editar Fiado ========== */}
       <Modal visible={isFormModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -347,10 +452,9 @@ const InformalCredit = () => {
                 <View style={[styles.formGroup, { flex: 1 }]}>
                   <Text style={styles.formLabel}>Monto ($) *</Text>
                   <TextInput
-                    style={[styles.formInput, !editingCredit && { backgroundColor: '#f0f0f0', color: '#888' }]}
+                    style={[styles.formInput, { backgroundColor: '#f0f0f0', color: '#888' }]}
                     value={formAmount}
-                    editable={!!editingCredit}
-                    onChangeText={editingCredit ? setFormAmount : undefined}
+                    editable={false}
                     keyboardType="numeric"
                     placeholder="0.00"
                   />
@@ -371,28 +475,54 @@ const InformalCredit = () => {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>¿Qué llevó?</Text>
-                {!editingCredit && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddScroll}>
-                    {inventoryProducts.length === 0 ? (
-                      <Text style={{ color: colors.textMuted, paddingVertical: 8, fontSize: 13 }}>
-                        Sin productos en inventario
-                      </Text>
-                    ) : (
-                      inventoryProducts.map(prod => (
-                        <TouchableOpacity key={prod.id} style={styles.quickAddPill} onPress={() => handleQuickAddProduct(prod)}>
-                          <Text style={styles.quickAddPillText}>+ {prod.name}</Text>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </ScrollView>
-                )}
+                <Text style={styles.formLabel}>Productos Seleccionados</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickAddScroll}>
+                  {inventoryProducts.length === 0 ? (
+                    <Text style={{ color: colors.textMuted, paddingVertical: 8, fontSize: 13 }}>
+                      Sin productos en inventario
+                    </Text>
+                  ) : (
+                    inventoryProducts.map(prod => {
+                      const isSelected = selectedProducts[prod.id];
+                      const qty = isSelected ? isSelected.qty : 0;
+                      return (
+                        <View 
+                          key={prod.id} 
+                          style={[
+                            styles.quickAddPill, 
+                            { paddingHorizontal: 0, paddingVertical: 0, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+                            isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+                          ]}
+                        >
+                          <TouchableOpacity 
+                            style={{ paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}
+                            onPress={() => handleQuickAddProduct(prod)}
+                          >
+                            <Text style={[styles.quickAddPillText, isSelected && { color: colors.textButton }]}>
+                              {prod.name} {qty > 0 && <Text style={{fontWeight: '900'}}>{qty}</Text>}
+                            </Text>
+                          </TouchableOpacity>
+                          
+                          {isSelected && (
+                            <TouchableOpacity 
+                              style={{ paddingHorizontal: 10, paddingVertical: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.3)', justifyContent: 'center' }}
+                              onPress={() => handleRemoveProduct(prod)}
+                            >
+                              <XMarkIcon size={14} color={colors.textButton} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+                </ScrollView>
+                
+                <Text style={[styles.formLabel, { marginTop: 12 }]}>Notas del fiado / Detalles</Text>
                 <TextInput
-                  style={editingCredit ? styles.formInput : [styles.formInput, { backgroundColor: '#f0f0f0', color: '#888' }]}
-                  value={formItems}
-                  onChangeText={editingCredit ? setFormItems : undefined}
-                  editable={!!editingCredit}
-                  placeholder={editingCredit ? 'Qué se llevó...' : 'Seleccione productos arriba...'}
+                  style={styles.formInput}
+                  value={formNotes}
+                  onChangeText={setFormNotes}
+                  placeholder={editingCredit ? 'Qué se llevó...' : 'Añade una nota adicional (opcional)...'}
                   multiline
                 />
               </View>

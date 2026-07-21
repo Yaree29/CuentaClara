@@ -188,6 +188,7 @@ export const useInformalCredit = () => {
         });
 
         await debtService.updateDebt(editingCredit.id, {
+          amount,
           description: items || null,
         });
       } else {

@@ -188,15 +188,17 @@ export default function Token2FA({ navigation, route }) {
       return;
     }
 
-    // Placeholder para verificación genérica de acciones críticas — nada la
-    // invoca hoy; se conecta a un backend real cuando exista ese gate.
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
-
-    Alert.alert('Acción autorizada', `La operación "${actionLabel}" ha sido validada correctamente.`, [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    try {
+      await onSuccess?.();
+      Alert.alert('Acción autorizada', `La operación "${actionLabel}" ha sido validada correctamente.`, [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (err) {
+      setError(err?.message || 'No se pudo completar la operación. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuthenticatorConfirm = () => {

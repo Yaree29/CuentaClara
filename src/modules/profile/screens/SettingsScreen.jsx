@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import authService from '../../auth/services/authService';
 import businessService from '../../../services/businessService';
 import colors from '../../../theme/colors';
 import styles from '../styles/profile.styles';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 
 const MenuItem = ({ icon, label, subLabel, onPress, isDanger, iconBgStyle, iconColor, isLast, hasChevron = true }) => (
   <TouchableOpacity style={[styles.menuItem, isLast && styles.menuItemLast]} onPress={onPress} activeOpacity={0.7}>
@@ -38,6 +39,14 @@ const SettingsScreen = () => {
   const userType = useAuthStore((state) => state.user?.userType) || 'informal';
   const setLogin = useAuthStore((state) => state.setLogin);
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteModalConfig, setDeleteModalConfig] = useState({ title: '', message: '', onConfirm: null });
+
+  const openDeleteModal = (title, message, onConfirm) => {
+    setDeleteModalConfig({ title, message, onConfirm });
+    setDeleteModalVisible(true);
+  };
+
   const handleGrowToPyme = () => {
     Alert.alert(
       'Crecer a PYME',
@@ -62,6 +71,50 @@ const SettingsScreen = () => {
           },
         },
       ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    openDeleteModal(
+      '¿Estás seguro?',
+      'Esta acción eliminará tu cuenta permanentemente junto con todos los datos del negocio. No se puede deshacer.',
+      async () => {
+        try {
+          await businessService.deleteAccount();
+          Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente.', [
+            { text: 'OK', onPress: () => logout() },
+          ]);
+        } catch (err) {
+          Alert.alert(
+            'No se pudo eliminar la cuenta',
+            err?.message || 'Ocurrió un error inesperado. Intenta de nuevo.'
+          );
+        }
+      }
+    );
+  };
+
+  const confirmDeleteData = () => {
+    openDeleteModal(
+      '¿Estás seguro?',
+      'Se eliminarán todas las transacciones, facturas, fiados y movimientos. Se conservarán tus productos, clientes y configuración.',
+      async () => {
+        try {
+          const result = await businessService.deleteData();
+          if (result?.has_data === false) {
+            Alert.alert('Sin datos', 'No hay datos para eliminar.');
+          } else {
+            Alert.alert('Datos eliminados exitosamente', 'Tu historial y transacciones han sido eliminados.', [
+              { text: 'OK', onPress: () => logout() },
+            ]);
+          }
+        } catch (err) {
+          Alert.alert(
+            'No se pudieron eliminar los datos',
+            err?.message || 'Ocurrió un error inesperado. Intenta de nuevo.'
+          );
+        }
+      }
     );
   };
 
@@ -151,7 +204,7 @@ const SettingsScreen = () => {
                 isDanger
                 iconBgStyle={styles.iconContainerDanger}
                 iconColor={colors.danger}
-                onPress={() => {}}
+                onPress={confirmDeleteAccount}
               />
               <MenuItem
                 icon="refresh-outline"
@@ -161,7 +214,7 @@ const SettingsScreen = () => {
                 iconBgStyle={styles.iconContainerDanger}
                 iconColor={colors.danger}
                 isLast={true}
-                onPress={() => {}}
+                onPress={confirmDeleteData}
               />
             </MenuSection>
 
@@ -176,6 +229,17 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        <ConfirmDeleteModal
+          visible={deleteModalVisible}
+          title={deleteModalConfig.title}
+          message={deleteModalConfig.message}
+          onConfirm={() => {
+            setDeleteModalVisible(false);
+            deleteModalConfig.onConfirm?.();
+          }}
+          onCancel={() => setDeleteModalVisible(false)}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );

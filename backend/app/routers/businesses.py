@@ -7,17 +7,19 @@
 # Autenticación: Bearer JWT validado por get_current_user.
 #
 # Rutas:
-#   GET    /businesses/me         — datos del negocio del usuario autenticado
-#   PUT    /businesses/me         — actualizar datos del negocio
-#   GET    /businesses/me/config  — configuración del negocio
-#   PUT    /businesses/me/config  — actualizar configuración del negocio
+#   GET    /businesses/me              — datos del negocio del usuario autenticado
+#   PUT    /businesses/me              — actualizar datos del negocio
+#   DELETE /businesses/me/account      — eliminar cuenta completa (solo owner)
+#   DELETE /businesses/me/data         — reiniciar historial y transacciones (solo owner)
+#   GET    /businesses/me/config       — configuración del negocio
+#   PUT    /businesses/me/config       — actualizar configuración del negocio
 #
 # Nota: Usa /me en lugar de /{business_id} para que el business_id se extraiga
 #       del JWT, evitando que el frontend pase IDs manualmente y previniendo
 #       accesos cross-tenant.
 # =============================================================================
 from fastapi import APIRouter, HTTPException, Depends
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, require_role
 from app.services import business_service
 from app.models.business import BusinessUpdate, BusinessConfigUpdate
 
@@ -31,11 +33,9 @@ def get_business(current_user: dict = Depends(get_current_user)):
     El business_id se extrae del JWT — no se pasa como parámetro.
     """
     try:
-        return business_service.get_business(
-            business_id=current_user["business_id"]
-        )
+        return business_service.get_business(business_id=current_user["business_id"])
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -90,5 +90,41 @@ def update_business_config(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/me/account", summary="Eliminar cuenta completa del usuario")
+def delete_account(
+    current_user: dict = Depends(require_role("owner")),
+):
+    """
+    Elimina la cuenta completa: negocio, todos los datos y usuario de auth.
+    Solo el propietario puede ejecutar esta acción.
+    """
+    try:
+        return business_service.delete_account(
+            user_id=current_user["sub"],
+            business_id=current_user["business_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/me/data", summary="Reiniciar historial y transacciones")
+def delete_data(
+    current_user: dict = Depends(require_role("owner")),
+):
+    """
+    Borra todas las transacciones e historial del negocio, conservando
+    el catálogo de productos, clientes, configuración y usuarios.
+    Solo el propietario puede ejecutar esta acción.
+    """
+    try:
+        return business_service.delete_data(
+            business_id=current_user["business_id"],
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

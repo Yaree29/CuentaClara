@@ -50,6 +50,23 @@ const businessService = {
       body: JSON.stringify(config),
     });
   },
+
+  /**
+   * Eliminar la cuenta completa del usuario (negocio + datos + auth).
+   * Acción irreversible — solo el propietario puede ejecutarla.
+   */
+  deleteAccount: async () => {
+    return apiRequest('/businesses/me/account', { method: 'DELETE' });
+  },
+
+  /**
+   * Reiniciar historial y transacciones del negocio.
+   * Conserva productos, clientes, configuración y usuarios.
+   * Acción irreversible — solo el propietario puede ejecutarla.
+   */
+  deleteData: async () => {
+    return apiRequest('/businesses/me/data', { method: 'DELETE' });
+  },
 };
 
 export default businessService;

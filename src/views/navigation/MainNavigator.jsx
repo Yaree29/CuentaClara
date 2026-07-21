@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import useAuthStore from '../../store/useAuthStore';
+import useAssistantModeStore from '../../store/useAssistantModeStore';
 
 // Iconos Heroicons Solid
 import {
@@ -21,6 +22,7 @@ import SalesScreen from '../../modules/sales/screens/SalesScreen';
 import DebtScreen from '../../modules/credit/screens/DebtScreen';
 import BillingScreen from '../../modules/Invoice/screens/BillingScreen';
 import ModulesScreen from '../../modules/modules/screens/ModulesScreen';
+import PymeInventory from '../../modules/inventory/components/PymeInventory';
 
 const Tab = createBottomTabNavigator();
 
@@ -35,6 +37,10 @@ const TAB_CONFIG = {
   inventory: { component: InventoryScreen, label: 'Inventario', icon: ArchiveBoxIcon },
   billing:   { component: BillingScreen,   label: 'MiRUC',    icon: DocumentTextIcon },
   modules:   { component: ModulesScreen,   label: 'Módulos',  icon: Squares2X2Icon },
+  // Tab de Inventario para el Modo Asistente. Reutiliza el placeholder
+  // PymeInventory ("en construcción") — ver resolveInventoryScreen.js para el
+  // punto de extensión futuro (business.inventory_mode).
+  assistantInventory: { component: PymeInventory, label: 'Inventario', icon: ArchiveBoxIcon },
 };
 
 // Tabs fijos por tipo de usuario: Informal conserva el flujo rápido con
@@ -43,8 +49,21 @@ const TAB_CONFIG = {
 const INFORMAL_TABS = ['dashboard', 'sales', 'credit', 'inventory'];
 const PYME_TABS = ['dashboard', 'sales', 'billing', 'modules'];
 
-const resolveTabOrder = (userType) =>
-  userType === 'informal' ? INFORMAL_TABS : PYME_TABS;
+// Tabs por access_type cuando hay un asistente activo (Modo Asistente).
+// Reemplaza por completo a INFORMAL_TABS/PYME_TABS mientras dure la sesión
+// del asistente — ignora userType, el asistente nunca ve más que su acceso.
+const ASSISTANT_TABS = {
+  sales: ['dashboard', 'sales'],
+  inventory: ['dashboard', 'assistantInventory'],
+  both: ['dashboard', 'sales', 'assistantInventory'],
+};
+
+const resolveTabOrder = (userType, activeAssistant) => {
+  if (activeAssistant) {
+    return ASSISTANT_TABS[activeAssistant.access_type] || ASSISTANT_TABS.sales;
+  }
+  return userType === 'informal' ? INFORMAL_TABS : PYME_TABS;
+};
 
 // Componente animado personalizado para los iconos del Tab Bar
 const AnimatedTabBarIcon = ({ focused, children }) => {
@@ -125,7 +144,8 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 
 const MainNavigator = () => {
   const userType = useAuthStore((state) => state.user?.userType);
-  const visibleTabs = resolveTabOrder(userType);
+  const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
+  const visibleTabs = resolveTabOrder(userType, activeAssistant);
 
   return (
     <Tab.Navigator 

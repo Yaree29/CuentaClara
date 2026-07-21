@@ -7,6 +7,7 @@ import styles from '../styles/salesPyme.style';
 import useAuthStore from '../../../../store/useAuthStore';
 import useSalesStore from '../../../../store/useSaleStore';
 import inventoryService from '../../../inventory/services/inventoryService';
+import salesService from '../../services/salesService';
 
 const SalesPyme = () => {
   const user = useAuthStore((state) => state.user);
@@ -14,6 +15,7 @@ const SalesPyme = () => {
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [savingSale, setSavingSale] = useState(false);
 
   const addSaleToAccounting = useSalesStore((state) => state.addSale);
   const sales = useSalesStore((state) => state.openSales);
@@ -144,7 +146,7 @@ const SalesPyme = () => {
     setSales(updatedSales);
   };
 
-  const saveSale = () => {
+  const saveSale = async () => {
     if (!currentSale.products || currentSale.products.length === 0) {
       Alert.alert(
         'Venta vacía',
@@ -160,6 +162,32 @@ const SalesPyme = () => {
       );
       return;
     }
+
+    if (savingSale) return;
+
+    const items = currentSale.products.map((item) => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: item.price,
+    }));
+
+    setSavingSale(true);
+
+    try {
+      // assistant_id: null hasta que exista el hook de sesión de asistente
+      // (Fase C). Cuando exista, reemplazar por el id del asistente activo.
+      await salesService.createSale(items, 'cash', 1, currentSale.note, false, null);
+    } catch (error) {
+      setSavingSale(false);
+      Toast.show({
+        type: 'error',
+        text1: 'No se pudo guardar la venta',
+        text2: error?.message || 'Intente de nuevo.',
+      });
+      return;
+    }
+
+    setSavingSale(false);
 
     const saleData = {
       id: currentSale.id,
@@ -388,10 +416,10 @@ const SalesPyme = () => {
 
       <TouchableOpacity
         onPress={saveSale}
-        disabled={currentSale.saved}
+        disabled={currentSale.saved || savingSale}
         style={[
           styles.saveButton,
-          currentSale.saved && {
+          (currentSale.saved || savingSale) && {
             opacity: 0.5,
           },
         ]}
@@ -399,7 +427,9 @@ const SalesPyme = () => {
         <Text style={styles.saveButtonText}>
           {currentSale.saved
             ? 'Venta Guardada'
-            : 'Guardar Venta'}
+            : savingSale
+              ? 'Guardando...'
+              : 'Guardar Venta'}
         </Text>
       </TouchableOpacity>
     </ScrollView>

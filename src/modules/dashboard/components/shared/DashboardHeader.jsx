@@ -12,6 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
+import useAuthStore from '../../../../store/useAuthStore';
+import useAssistantModeStore from '../../../../store/useAssistantModeStore';
+import ExitAssistantModeModal from '../../../assistants/components/ExitAssistantModeModal';
 
 // Alineado al mismo margen izquierdo que usa headerContainer (paddingHorizontal: 16).
 const MENU_LEFT = 16;
@@ -22,6 +25,15 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuTop, setMenuTop] = useState(0);
   const menuAnim = useRef(new Animated.Value(0)).current;
+
+  const userType = useAuthStore((state) => state.user?.userType);
+  const enableAssistantMode = useAssistantModeStore((state) => state.enableMode);
+  const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
+
+
+  // extraído a ExitAssistantModeModal.jsx para reutilizarlo también en
+  // AssistantSelectScreen.jsx.
+  const [exitModalVisible, setExitModalVisible] = useState(false);
 
   const openMenu = () => {
     if (kebabRef.current) {
@@ -53,7 +65,47 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
     navigation.navigate('settings');
   };
 
+  // Modo Asistente es exclusivo de PYME (igual que el resto de esta feature,
+  // ver diagnóstico de Fase A/B). El dueño sigue con su mismo JWT — enableMode
+  // solo marca la bandera local, no crea sesión nueva.
+  const goToAssistantMode = () => {
+    closeMenu();
+    enableAssistantMode();
+    navigation.navigate('AssistantSelect');
+  };
+
+  const openExitModal = () => setExitModalVisible(true);
+  const closeExitModal = () => setExitModalVisible(false);
+
+  const handleExitSuccess = () => {
+    setExitModalVisible(false);
+    navigation.navigate('MainTabs', { screen: 'dashboard' });
+  };
+
   if (variant === 'home') {
+    // Modo Asistente activo: en vez del kebab normal, un único botón de
+    // salida (candado). El avatar/Perfil sigue oculto — no es información
+    // del asistente.
+    if (activeAssistant) {
+      return (
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.kebabContainer}
+            onPress={openExitModal}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="lock-closed-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+
+          <ExitAssistantModeModal
+            visible={exitModalVisible}
+            onClose={closeExitModal}
+            onSuccess={handleExitSuccess}
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={styles.headerContainer}>
         <TouchableOpacity
@@ -99,6 +151,17 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
                 <Ionicons name="settings-outline" size={20} color={colors.primary} />
                 <Text style={styles.modalOptionText}>Ajustes</Text>
               </TouchableOpacity>
+
+              {userType === 'pyme' && (
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={goToAssistantMode}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="people-circle-outline" size={20} color={colors.primary} />
+                  <Text style={styles.modalOptionText}>Entrar a Modo Asistente</Text>
+                </TouchableOpacity>
+              )}
             </Animated.View>
           </TouchableOpacity>
         </Modal>

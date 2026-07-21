@@ -1,8 +1,10 @@
 // Sin suscripción a onAuthStateChange de Supabase — la sesión se gestiona
 // manualmente desde AsyncStorage a través de authService.
 import React, { createContext, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from '../../store/useAuthStore';
 import useBlueprintStore from '../../store/useBlueprintStore';
+import { ASSISTANT_MODE_ACTIVE_FLAG } from '../../store/useAssistantModeStore';
 import authService from '../../modules/auth/services/authService';
 
 const AuthContext = createContext({});
@@ -35,6 +37,20 @@ export const AuthProvider = ({ children }) => {
 
     const loadSession = async () => {
       try {
+        // Medida de seguridad del Modo Asistente (Fase E): si esta bandera
+        // sigue en 'true', la app se cerró por completo (force-quit o cierre
+        // manual) mientras un asistente estaba activo, sin pasar por
+        // disableMode() (la única salida que la borra). No se puede confiar
+        // en que quien reabrió el dispositivo sea el dueño — se cierra la
+        // sesión y se exige login nuevo en vez de restaurar cualquier Home.
+        const assistantModeFlag = await AsyncStorage.getItem(ASSISTANT_MODE_ACTIVE_FLAG);
+        if (assistantModeFlag === 'true') {
+          await AsyncStorage.removeItem(ASSISTANT_MODE_ACTIVE_FLAG);
+          await authService.logout();
+          if (isMounted) setLogout();
+          return;
+        }
+
         const currentSession = await authService.getCurrentSession();
 
         if (!isMounted) return;

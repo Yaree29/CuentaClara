@@ -8,8 +8,10 @@ const salesService = {
      * @param {number} invoiceTypeId - ID del tipo de factura (default: 1)
      * @param {string} notes - Notas opcionales de la venta
      * @param {boolean} isCredit - true = venta a fiado (factura queda "pending", sin payment)
+     * @param {number|null} assistantId - id del asistente activo (Modo Asistente), o null si
+     *   la registró el dueño directamente
      */
-    createSale: async (items = [], paymentMethod = 'cash', invoiceTypeId = 1, notes = '', isCredit = false) => {
+    createSale: async (items = [], paymentMethod = 'cash', invoiceTypeId = 1, notes = '', isCredit = false, assistantId = null) => {
         return apiRequest('/sales/quick', {
             method: 'POST',
             body: JSON.stringify({
@@ -18,6 +20,7 @@ const salesService = {
                 invoice_type_id: invoiceTypeId,
                 notes: notes || null,
                 is_credit: isCredit,
+                assistant_id: assistantId,
             }),
         });
     },
@@ -26,12 +29,17 @@ const salesService = {
      * Obtener reporte de ganancias y gastos
      * @param {string} dateFrom - Fecha inicial (YYYY-MM-DD)
      * @param {string} dateTo - Fecha final (YYYY-MM-DD)
+     * @param {number|null} assistantId - si viene, acota el resumen a las ventas de
+     *   ese asistente (Modo Asistente) en vez de todo el negocio
      */
-    getProfitsAndExpenses: async (dateFrom, dateTo) => {
+    getProfitsAndExpenses: async (dateFrom, dateTo, assistantId = null) => {
         const params = new URLSearchParams({
             date_from: dateFrom,
             date_to: dateTo,
         });
+        if (assistantId !== null && assistantId !== undefined) {
+            params.append('assistant_id', assistantId);
+        }
 
         return apiRequest(`/sales/profits?${params}`, {
             method: 'GET',

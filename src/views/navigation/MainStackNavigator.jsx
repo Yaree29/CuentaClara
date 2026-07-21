@@ -6,6 +6,8 @@ import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 import SettingsScreen from '../../modules/profile/screens/SettingsScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
+import TeamScreen from '../../modules/assistants/screens/TeamScreen';
+import AssistantSelectScreen from '../../modules/assistants/screens/AssistantSelectScreen';
 
 // Módulos PYME accesibles desde ModulesScreen (ya no son tabs, ver
 // MainNavigator.jsx). Se registran como screens de stack para poder
@@ -32,6 +34,16 @@ const MainStackNavigator = () => {
       <Stack.Screen name="settings" component={SettingsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
       <Stack.Screen name="Token2FA" component={Token2FA} />
+      <Stack.Screen name="TeamScreen" component={TeamScreen} />
+
+      {/* Modo Asistente — sin gesto de swipe-back: el asistente no debe poder
+          "regresar" a la sesión del dueño sin PIN (ver también el bloqueo del
+          back físico de Android dentro de la propia pantalla). */}
+      <Stack.Screen
+        name="AssistantSelect"
+        component={AssistantSelectScreen}
+        options={{ gestureEnabled: false }}
+      />
 
       {/* Módulos PYME, navegables desde ModulesScreen */}
       <Stack.Screen name="purchases" component={PurchasesScreen} />

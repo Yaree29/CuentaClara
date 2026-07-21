@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 // 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,36 +58,47 @@ const SalesScreen = () => {
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setProductsLoading(true);
-      try {
-        const data = await inventoryService.getProducts();
-        setProducts(data || []);
-      } catch (err) {
-        console.error('Error al cargar productos para venta:', err);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProducts();
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true);
+    try {
+      const data = await inventoryService.getProducts();
+      setProducts(data || []);
+    } catch (err) {
+      console.error('Error al cargar productos para venta:', err);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
+
+  const loadSalesHistory = useCallback(async () => {
+    setSalesHistoryLoading(true);
+    try {
+      const data = await billingService.getInvoices(null, { limit: 30 });
+      setSalesHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar historial de ventas:', err);
+    } finally {
+      setSalesHistoryLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (activeTab !== 'history') return;
-    const loadSalesHistory = async () => {
-      setSalesHistoryLoading(true);
-      try {
-        const data = await billingService.getInvoices(null, { limit: 30 });
-        setSalesHistory(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Error al cargar historial de ventas:', err);
-      } finally {
-        setSalesHistoryLoading(false);
-      }
-    };
-    loadSalesHistory();
-  }, [activeTab]);
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    if (activeTab === 'history') loadSalesHistory();
+  }, [activeTab, loadSalesHistory]);
+
+  // Al volver a enfocar la pestaña de Ventas (p.ej. tras borrar los datos desde
+  // Perfil), recargar el catálogo del dropdown y, si se está viendo, el
+  // historial, para no mostrar productos/ventas ya eliminados.
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts();
+      if (activeTab === 'history') loadSalesHistory();
+    }, [loadProducts, loadSalesHistory, activeTab])
+  );
 
     {/* aumentar cantidad en el carrito */}
   const handleQuickAdd = (amount) => {

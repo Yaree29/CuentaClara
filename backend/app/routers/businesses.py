@@ -24,6 +24,22 @@ from app.models.business import BusinessUpdate, BusinessConfigUpdate
 router = APIRouter()
 
 
+@router.delete("/me/data", summary="Borrar todos los datos del negocio (reset)")
+def delete_business_data(current_user: dict = Depends(get_current_user)):
+    """
+    Elimina TODOS los datos transaccionales del negocio (ventas, fiados,
+    inventario, gastos), dejando intacta la cuenta del usuario y su
+    configuración. Operación destructiva e irreversible.
+    El business_id se extrae del JWT — no se pasa como parámetro.
+    """
+    try:
+        return business_service.delete_business_data(
+            business_id=current_user["business_id"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/me", summary="Obtener datos del negocio actual")
 def get_business(current_user: dict = Depends(get_current_user)):
     """

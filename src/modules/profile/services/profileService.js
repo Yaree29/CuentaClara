@@ -1,3 +1,5 @@
+import { apiRequest } from '../../../services/apiClient';
+
 const formatDate = (value) => {
   if (!value) return 'No disponible';
 
@@ -24,6 +26,12 @@ const profileService = {
         currency: 'USD',
       },
     };
+  },
+
+  // Borra todos los datos transaccionales del negocio (ventas, fiados,
+  // inventario, gastos). La cuenta y su configuración quedan intactas.
+  deleteAllData: async () => {
+    return apiRequest('/businesses/me/data', { method: 'DELETE' });
   },
 };
 

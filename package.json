@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -37,5 +38,10 @@
   "overrides": {
     "expo-font": "~14.0.12"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/preset-env": "^7.29.7",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.7.0"
+  }
 }

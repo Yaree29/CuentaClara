@@ -6,8 +6,9 @@
 //
 // Mantiene la interfaz pública exacta que espera InformalInventory.jsx.
 // =============================================================================
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Linking, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import useAuthStore from '../../../store/useAuthStore';
 import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../services/inventoryService';
@@ -55,8 +56,11 @@ export const useInformalInventory = () => {
   }, []);
 
   // ─── Carga de productos del negocio ────────────────────────────────────────
-  const loadInventory = useCallback(async () => {
-    setLoading(true);
+  // silent=true evita mostrar el spinner de carga completa. Se usa al volver a
+  // la pestaña (p.ej. tras registrar una venta) para refrescar el stock sin
+  // parpadeo; la carga inicial sí muestra el spinner.
+  const loadInventory = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const data = await inventoryService.getProducts();
@@ -65,14 +69,25 @@ export const useInformalInventory = () => {
       console.error('Error loading inventory:', err);
       setError(err.message || 'No se pudo cargar el inventario.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadInventory();
     loadCategories();
   }, [user, businessData]);
+
+  // Recargar el inventario cada vez que la pestaña toma el foco. Así, tras
+  // registrar una venta en la pestaña de Ventas, al volver a Inventario el
+  // stock ya aparece descontado sin tener que deslizar para refrescar.
+  // La primera vez muestra el spinner; las siguientes son silenciosas.
+  const hasLoadedRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      loadInventory(hasLoadedRef.current);
+      hasLoadedRef.current = true;
+    }, [loadInventory])
+  );
 
   // Listado final de categorías para el filtro de cabecera: "Todas" + las del negocio
   const categories = ['Todas', ...userCategories.map((c) => c.name)];

@@ -183,7 +183,7 @@ const ProfileScreen = () => {
                 iconBgStyle={styles.iconContainerDanger}
                 iconColor={colors.danger}
                 isLast={true}
-                onPress={() => {}}
+                onPress={() => navigation.navigate('DataReset')}
               />
             </MenuSection>
 

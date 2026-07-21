@@ -131,3 +131,41 @@ def update_business_config(business_id: str, data):
             .execute()
 
     return get_business_config(business_id)
+
+
+def delete_business_data(business_id: str) -> dict:
+    """
+    Borra TODOS los datos transaccionales/registrados del negocio, dejando
+    intactos la cuenta del usuario, el negocio, su configuración y las
+    categorías. Pensado para reiniciar el historial (ventas, fiados,
+    inventario, gastos) sin tener que volver a registrarse.
+
+    El borrado se hace en orden seguro respecto a las llaves foráneas.
+    Los ON DELETE CASCADE del esquema se encargan de las tablas hijas:
+      - invoices  → CASCADE a invoice_items y payments
+      - debts     → CASCADE a debt_payments
+    """
+    admin = supabase_admin
+
+    # 1. Ventas (invoice_items y payments caen por CASCADE al borrar invoices).
+    admin.table("invoices").delete().eq("business_id", business_id).execute()
+
+    # 2. Fiado: debts primero (CASCADE a debt_payments), luego los clientes.
+    admin.table("debts").delete().eq("business_id", business_id).execute()
+    admin.table("customers").delete().eq("business_id", business_id).execute()
+
+    # 3. Inventario: movimientos → filas de stock → productos (por las FK).
+    admin.table("inventory_movements").delete().eq("business_id", business_id).execute()
+    admin.table("inventory").delete().eq("business_id", business_id).execute()
+    admin.table("products").delete().eq("business_id", business_id).execute()
+
+    # 4. Gastos del negocio.
+    admin.table("expenses").delete().eq("business_id", business_id).execute()
+
+    # 5. Notificaciones (best-effort: si la tabla no aplica, no interrumpe).
+    try:
+        admin.table("notifications").delete().eq("business_id", business_id).execute()
+    except Exception:
+        pass
+
+    return {"deleted": True}

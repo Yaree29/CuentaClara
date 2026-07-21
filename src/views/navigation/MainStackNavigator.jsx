@@ -4,6 +4,7 @@ import MainNavigator from './MainNavigator';
 import CreateTransactionScreen from '../../modules/transctions/screens/CreateTransactionScreen';
 import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
+import DataResetScreen from '../../modules/profile/screens/DataResetScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
 
 const Stack = createNativeStackNavigator();
@@ -15,6 +16,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="CreateTransaction" component={CreateTransactionScreen} />
       <Stack.Screen name="profile" component={ProfileScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
+      <Stack.Screen name="DataReset" component={DataResetScreen} />
       <Stack.Screen name="Token2FA" component={Token2FA} />
     </Stack.Navigator>
   );

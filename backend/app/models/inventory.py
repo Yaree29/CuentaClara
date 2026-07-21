@@ -46,12 +46,10 @@ class ProductCreateRequest(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def name_no_digits(cls, v: str) -> str:
+    def name_valid(cls, v: str) -> str:
         v = v.strip()
         if not v:
             raise ValueError("El nombre del producto no puede estar vacío.")
-        if re.search(r"\d", v):
-            raise ValueError("El nombre del producto no puede contener números.")
         if len(v) < 2:
             raise ValueError("El nombre debe tener al menos 2 caracteres.")
         return v
@@ -97,12 +95,12 @@ class ProductUpdateRequest(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def name_no_digits(cls, v: Optional[str]) -> Optional[str]:
+    def name_valid(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
         v = v.strip()
-        if re.search(r"\d", v):
-            raise ValueError("El nombre del producto no puede contener números.")
+        if v and len(v) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres.")
         return v
 
     @field_validator("price")

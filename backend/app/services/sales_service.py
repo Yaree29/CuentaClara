@@ -138,6 +138,10 @@ def create_quick_sale(business_id: str, user_id: str, data):
     }
 
 def get_profits_and_expenses(business_id: str, date_from: str, date_to: str, assistant_id: int = None):
+    # Asegurar que date_to incluya todo el día si solo viene en formato YYYY-MM-DD
+    if len(date_to) == 10:
+        date_to = f"{date_to}T23:59:59.999Z"
+
     # Ganancias: facturas pagadas en el período
     query = supabase_admin.table("invoices")\
         .select("total, tax, created_at")\

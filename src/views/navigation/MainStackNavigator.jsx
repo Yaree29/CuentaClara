@@ -3,9 +3,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MainNavigator from './MainNavigator';
 import CreateTransactionScreen from '../../modules/transactions/screens/CreateTransactionScreen';
 import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
+import EditProfileScreen from '../../modules/profile/screens/EditProfileScreen';
 import SettingsScreen from '../../modules/profile/screens/SettingsScreen';
 import AppSettingsScreen from '../../modules/profile/screens/AppSettingsScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
+import DataResetScreen from '../../modules/profile/screens/DataResetScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
 import TeamScreen from '../../modules/assistants/screens/TeamScreen';
 import AssistantSelectScreen from '../../modules/assistants/screens/AssistantSelectScreen';
@@ -32,9 +34,11 @@ const MainStackNavigator = () => {
       <Stack.Screen name="MainTabs" component={MainNavigator} />
       <Stack.Screen name="CreateTransaction" component={CreateTransactionScreen} />
       <Stack.Screen name="profile" component={ProfileScreen} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="settings" component={SettingsScreen} />
       <Stack.Screen name="AppSettingsScreen" component={AppSettingsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
+      <Stack.Screen name="DataReset" component={DataResetScreen} />
       <Stack.Screen name="Token2FA" component={Token2FA} />
       <Stack.Screen name="TeamScreen" component={TeamScreen} />
 

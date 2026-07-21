@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.models.auth import RegisterRequest, LoginRequest, TokenResponse, ResetPasswordRequest, RefreshTokenRequest, VerifyPasswordRequest
+from app.models.profile import ProfileUpdateRequest
 from app.services import auth_service
 from app.database import supabase_admin
 
@@ -114,14 +115,30 @@ def refresh(data: RefreshTokenRequest):
         raise HTTPException(status_code=401, detail=str(e))
 
 
-# Devuelve solo datos de perfil del usuario (nombre, email, rol, teléfono)
+# Devuelve solo datos de perfil del usuario (nombre, email, rol, teléfono, etc)
 @router.get("/me", summary="Datos del usuario autenticado")
 def get_me(current_user: dict = Depends(get_current_user)):
     user = supabase_admin.table("users")\
-        .select("id, name, email, role, phone, created_at, mfa_enabled")\
+        .select("id, name, email, role, phone, created_at, mfa_enabled, avatar_url")\
         .eq("id", current_user["sub"])\
         .execute()
     return user.data[0] if user.data else {}
+
+@router.patch("/me", summary="Actualizar perfil del usuario y negocio")
+def update_me(
+    data: ProfileUpdateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return auth_service.update_profile(
+            user_id=current_user["sub"],
+            business_id=current_user["business_id"],
+            data=data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 
 # Devuelve datos del negocio + features activos + módulos habilitados para la navegación.

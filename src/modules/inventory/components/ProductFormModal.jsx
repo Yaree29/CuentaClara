@@ -6,17 +6,13 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XMarkIcon } from 'react-native-heroicons/solid';
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
 
 // ─── Reglas de validación ──────────────────────────────────────────────────────
-
-/** El nombre NO puede contener dígitos */
-const NAME_HAS_DIGIT = /\d/;
 
 /** El precio debe ser un número positivo mayor que cero */
 const validatePrice = (val) => {
@@ -114,9 +110,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
 
   const handleNameChange = (val) => {
     setName(val);
-    if (NAME_HAS_DIGIT.test(val)) {
-      setNameError('El nombre no puede contener números.');
-    } else if (val.trim().length > 0 && val.trim().length < 2) {
+    if (val.trim().length > 0 && val.trim().length < 2) {
       setNameError('El nombre es demasiado corto.');
     } else {
       setNameError(null);
@@ -155,8 +149,8 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     // Ejecutar todas las validaciones antes de guardar
     const nErr  = !name.trim()
       ? 'El nombre es obligatorio.'
-      : NAME_HAS_DIGIT.test(name)
-        ? 'El nombre no puede contener números.'
+      : name.trim().length < 2
+        ? 'El nombre es demasiado corto.'
         : null;
     const pErr  = validatePrice(price);
     const cpErr = validateCostPrice(costPrice);
@@ -183,17 +177,26 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   };
 
   const hasErrors = !!nameError || !!priceError || !!costPriceError || !!stockError || !!minStockError;
+  const insets = useSafeAreaInsets();
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={true}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      statusBarTranslucent={true}
+      navigationBarTranslucent={true}
+      onRequestClose={onClose}
+    >
+      {/* Misma estructura que el modal de fiado (InformalCredit): overlay a
+          pantalla completa + contenido anclado abajo, SIN KeyboardAvoidingView.
+          El adjustResize nativo de Android (AndroidManifest) sube el contenido
+          sobre el teclado; meter un KeyboardAvoidingView aquí peleaba con ese
+          resize y despegaba el formulario del borde inferior. */}
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             {/* Encabezado */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <Text style={styles.modalTitle}>{initialData ? 'Editar Producto' : 'Nuevo Producto'}</Text>
@@ -353,9 +356,8 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                 </TouchableOpacity>
               )}
             </ScrollView>
-          </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };

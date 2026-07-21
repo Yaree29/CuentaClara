@@ -90,7 +90,8 @@ export default StyleSheet.create({
 
   productCardSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '05' },
+    borderWidth: 2,
+  },
 
   productInfo: {
     flex: 1,
@@ -124,23 +125,34 @@ export default StyleSheet.create({
     right: 16 },
 
   generatePromoBtn: {
-    backgroundColor: colors.success,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: colors.success,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8 },
+  },
+
+  promoBadge: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  promoBadgeText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 
   generatePromoBtnText: {
     color: colors.textButton,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 8 },
+    marginLeft: 12 },
 
   /* --- Modal de Publicidad --- */
   modalOverlay: {
@@ -184,7 +196,9 @@ export default StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     bottom: 80,
-    right: 16 },
+    right: 16,
+    alignItems: 'flex-end',
+  },
 
   fabButton: {
     width: 56,
@@ -193,11 +207,48 @@ export default StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8 },
+  },
+
+  fabBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 1,
+  },
+
+  fabMenu: {
+    alignItems: 'flex-end',
+    marginBottom: 15,
+    zIndex: 2,
+  },
+
+  fabMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+
+  fabMenuLabel: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    color: '#FFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginRight: 10,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  fabMenuButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   /* --- Estilos del Modal de Formulario --- */
   formGroup: { marginBottom: 16 },

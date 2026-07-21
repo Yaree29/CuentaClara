@@ -7,7 +7,7 @@
 //            variant="default": solo título, sin tuerca, sin avatar.
 // =============================================================================
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import colors from '../../../../theme/colors';
@@ -25,7 +25,11 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
   const [menuTop, setMenuTop] = useState(0);
   const menuAnim = useRef(new Animated.Value(0)).current;
 
-  const userType = useAuthStore((state) => state.user?.userType);
+  const user = useAuthStore((state) => state.user);
+  const userType = user?.userType;
+  const avatarUrl = user?.avatar_url || user?.business?.logo_url;
+  const initial = (user?.name || user?.business?.name || 'U').charAt(0).toUpperCase();
+
   const enableAssistantMode = useAssistantModeStore((state) => state.enableMode);
 
   const openMenu = () => {
@@ -91,7 +95,16 @@ const DashboardHeader = ({ title, variant = 'default' }) => {
           onPress={() => navigation.navigate('profile')}
           activeOpacity={0.7}
         >
-          <Ionicons name="person-circle" size={34} color={colors.textWhite} />
+          {avatarUrl ? (
+            <Image 
+              source={{ uri: avatarUrl }} 
+              style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: colors.primary }} 
+            />
+          ) : (
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: colors.textWhite, fontSize: 16, fontWeight: 'bold' }}>{initial}</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         <Modal visible={menuVisible} animationType="none" transparent={true} statusBarTranslucent={true}>

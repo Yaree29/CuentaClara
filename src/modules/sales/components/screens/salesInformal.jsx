@@ -16,8 +16,8 @@ import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon,XMarkIcon} from 'react-nat
 // Importación del HEADER
 import DashboardHeader from '../../../dashboard/components/shared/DashboardHeader';
 
-// MODIFICADO: Solo mantenemos 'cash' y 'yappy' como métodos de pago
-const PAYMENT_LABELS = { cash: 'efectivo', yappy: 'yappy' };
+// MODIFICADO: Mantenemos 'cash' y mapeamos 'transfer' de la DB a 'yappy' en la UI
+const PAYMENT_LABELS = { cash: 'efectivo', yappy: 'yappy', transfer: 'yappy' };
 
 
 
@@ -121,7 +121,10 @@ const SalesInformal = () => {
       // Guardamos la nota antes de procesar
       const finalNote = saleNote || '';
 
-      const result = await processSale(items, total, finalNote, paymentMethod, isCredit);
+      // Mapeamos 'yappy' a 'transfer' para que la base de datos lo acepte (restricción CHECK en method)
+      const apiPaymentMethod = paymentMethod === 'yappy' ? 'transfer' : paymentMethod;
+
+      const result = await processSale(items, total, finalNote, apiPaymentMethod, isCredit);
 
       if (isCredit) {
         await debtService.createDebt({

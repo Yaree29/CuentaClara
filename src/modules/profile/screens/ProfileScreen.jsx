@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,7 +34,9 @@ const ProfileScreen = () => {
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Mi Perfil</Text>
-            <View style={styles.headerPlaceholder} />
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')} style={styles.backButton}>
+              <Ionicons name="create-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
           </View>
 
           {/* Tarjeta de Perfil Profesional */}
@@ -43,9 +45,13 @@ const ProfileScreen = () => {
               {/* Bloque Destacado con Fondo Sutil y Centrado */}
               <View style={styles.profileHeaderBlock}>
                 <View style={styles.avatarContainer}>
-                  <Text style={styles.avatarText}>
-                    {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </Text>
+                  {profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: colors.border }} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </Text>
+                  )}
                 </View>
                 
                 <Text style={styles.profileName}>

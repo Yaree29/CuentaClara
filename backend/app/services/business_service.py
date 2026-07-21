@@ -13,21 +13,21 @@ from app.services.auth_service import ALL_VALID_MODULES, normalize_modules
 
 def get_business(business_id: str):
     """Obtiene la información del negocio incluyendo su categoría."""
-    result = supabase_admin.table("businesses")\
+    result = (
+        supabase_admin.table("businesses")
         .select(
             "id, name, category_id, industry_template_id, ui_mode, plan, phone, address, tax_id, created_at, "
             "categories(name), industry_templates(category_group)"
-        )\
-        .eq("id", business_id)\
+        )
+        .eq("id", business_id)
         .execute()
+    )
 
     if not result.data:
         raise ValueError("Negocio no encontrado")
 
     row = result.data[0]
 
-    # industry_templates viene embebido por el FK industry_template_id — puede
-    # ser None si el negocio no tiene plantilla asignada.
     industry_template = row.get("industry_templates") or {}
     if isinstance(industry_template, list):
         industry_template = industry_template[0] if industry_template else {}
@@ -36,12 +36,10 @@ def get_business(business_id: str):
         "id": row["id"],
         "name": row["name"],
         "category_id": row.get("category_id"),
-        "category_name": row.get("categories", {}).get("name") if row.get("categories") else None,
+        "category_name": row.get("categories", {}).get("name")
+        if row.get("categories")
+        else None,
         "industry_template_id": row.get("industry_template_id"),
-        # category_group agrupa las plantillas de industria en las 5 categorías
-        # del onboarding adaptativo (alimentos, servicios, comercio,
-        # comida_preparada, general) — usado por el frontend para decidir qué
-        # flags de configuración de inventario mostrar (ver /inventory/config).
         "category_group": industry_template.get("category_group"),
         "ui_mode": row.get("ui_mode", "simple"),
         "plan": row.get("plan", "free"),
@@ -61,19 +59,19 @@ def update_business(business_id: str, data):
         update_fields["phone"] = data.phone.strip() or None
     if data.address is not None:
         update_fields["address"] = data.address.strip() or None
-    if getattr(data, 'tax_id', None) is not None:
+    if getattr(data, "tax_id", None) is not None:
         update_fields["tax_id"] = data.tax_id.strip() or None
 
-    if getattr(data, 'ui_mode', None) is not None:
-        # Solo se permite crecer de Informal a PYME ('simple' -> 'advanced').
-        # Nunca degradar, y nunca reescribir un negocio que ya es PYME.
+    if getattr(data, "ui_mode", None) is not None:
         if data.ui_mode != "advanced":
             raise ValueError("Solo se permite actualizar ui_mode a 'advanced'")
 
-        current = supabase_admin.table("businesses")\
-            .select("ui_mode")\
-            .eq("id", business_id)\
+        current = (
+            supabase_admin.table("businesses")
+            .select("ui_mode")
+            .eq("id", business_id)
             .execute()
+        )
 
         if not current.data:
             raise ValueError("Negocio no encontrado")
@@ -86,10 +84,12 @@ def update_business(business_id: str, data):
     if not update_fields:
         raise ValueError("No se proporcionaron campos para actualizar")
 
-    result = supabase_admin.table("businesses")\
-        .update(update_fields)\
-        .eq("id", business_id)\
+    result = (
+        supabase_admin.table("businesses")
+        .update(update_fields)
+        .eq("id", business_id)
         .execute()
+    )
 
     if not result.data:
         raise ValueError("Negocio no encontrado")
@@ -99,13 +99,14 @@ def update_business(business_id: str, data):
 
 def get_business_config(business_id: str):
     """Obtiene la configuración del negocio."""
-    result = supabase_admin.table("business_configs")\
-        .select("*")\
-        .eq("business_id", business_id)\
+    result = (
+        supabase_admin.table("business_configs")
+        .select("*")
+        .eq("business_id", business_id)
         .execute()
+    )
 
     if not result.data:
-        # Si no existe configuración, devolver valores por defecto
         return {
             "business_id": business_id,
             "currency": "USD",
@@ -145,28 +146,26 @@ def update_business_config(business_id: str, data):
         update_fields["primary_color"] = data.primary_color
     if data.language is not None:
         update_fields["language"] = data.language
-    if getattr(data, 'settings', None) is not None:
+    if getattr(data, "settings", None) is not None:
         update_fields["settings"] = data.settings
 
     if not update_fields:
         raise ValueError("No se proporcionaron campos para actualizar")
 
-    # Verificar si ya existe una fila de config
-    existing = supabase_admin.table("business_configs")\
-        .select("id")\
-        .eq("business_id", business_id)\
+    existing = (
+        supabase_admin.table("business_configs")
+        .select("id")
+        .eq("business_id", business_id)
         .execute()
+    )
 
     if existing.data:
-        supabase_admin.table("business_configs")\
-            .update(update_fields)\
-            .eq("business_id", business_id)\
-            .execute()
+        supabase_admin.table("business_configs").update(update_fields).eq(
+            "business_id", business_id
+        ).execute()
     else:
         update_fields["business_id"] = business_id
-        supabase_admin.table("business_configs")\
-            .insert(update_fields)\
-            .execute()
+        supabase_admin.table("business_configs").insert(update_fields).execute()
 
     return get_business_config(business_id)
 
@@ -174,30 +173,31 @@ def update_business_config(business_id: str, data):
 def get_enabled_modules(business_id: str) -> list:
     """Lista de módulos habilitados (BASE_MODULES + features activos), misma
     lógica que normalize_modules usa al construir el contexto de login."""
-    features = supabase_admin.table("features")\
-        .select("module, is_active")\
-        .eq("business_id", business_id)\
+    features = (
+        supabase_admin.table("features")
+        .select("module, is_active")
+        .eq("business_id", business_id)
         .execute()
+    )
     return normalize_modules(features.data or [])
 
 
 def set_module_active(business_id: str, module: str, enabled: bool) -> dict:
     """
     Activa/desactiva un módulo opcional del negocio (tabla `features`).
-
-    No hay UNIQUE(business_id, module) en el esquema, así que se busca la fila
-    existente antes de decidir entre update/insert. Rechaza módulos fuera de
-    ALL_VALID_MODULES (misma lista blanca que usa el registro) y operaciones
-    redundantes (activar lo ya activo, desactivar lo ya inactivo).
     """
     if module not in ALL_VALID_MODULES:
-        raise ValueError(f"Módulo inválido. Opciones: {', '.join(sorted(ALL_VALID_MODULES))}")
+        raise ValueError(
+            f"Módulo inválido. Opciones: {', '.join(sorted(ALL_VALID_MODULES))}"
+        )
 
-    existing = supabase_admin.table("features")\
-        .select("id, is_active")\
-        .eq("business_id", business_id)\
-        .eq("module", module)\
+    existing = (
+        supabase_admin.table("features")
+        .select("id, is_active")
+        .eq("business_id", business_id)
+        .eq("module", module)
         .execute()
+    )
 
     if existing.data:
         row = existing.data[0]
@@ -209,57 +209,103 @@ def set_module_active(business_id: str, module: str, enabled: bool) -> dict:
         if enabled:
             update_payload["activated_at"] = datetime.utcnow().isoformat()
 
-        supabase_admin.table("features")\
-            .update(update_payload)\
-            .eq("id", row["id"])\
-            .execute()
+        supabase_admin.table("features").update(update_payload).eq(
+            "id", row["id"]
+        ).execute()
     else:
         if not enabled:
             raise ValueError(f"El módulo '{module}' ya está inactivo.")
 
-        supabase_admin.table("features").insert({
-            "business_id": business_id,
-            "module": module,
-            "is_active": True,
-            "activated_at": datetime.utcnow().isoformat(),
-        }).execute()
+        supabase_admin.table("features").insert(
+            {
+                "business_id": business_id,
+                "module": module,
+                "is_active": True,
+                "activated_at": datetime.utcnow().isoformat(),
+            }
+        ).execute()
 
     return {"enabled_modules": get_enabled_modules(business_id)}
 
 
-def delete_business_data(business_id: str) -> dict:
+def delete_account(user_id: str, business_id: str):
     """
-    Borra TODOS los datos transaccionales/registrados del negocio, dejando
-    intactos la cuenta del usuario, el negocio, su configuración y las
-    categorías. Pensado para reiniciar el historial (ventas, fiados,
-    inventario, gastos) sin tener que volver a registrarse.
-
-    El borrado se hace en orden seguro respecto a las llaves foráneas.
-    Los ON DELETE CASCADE del esquema se encargan de las tablas hijas:
-      - invoices  → CASCADE a invoice_items y payments
-      - debts     → CASCADE a debt_payments
+    Elimina la cuenta completa del usuario:
+    1. Borra la fila de businesses (ON DELETE CASCADE elimina todas las tablas hijas).
+    2. Borra el usuario de Supabase Auth.
     """
-    admin = supabase_admin
+    from app.database import supabase_admin as admin
 
-    # 1. Ventas (invoice_items y payments caen por CASCADE al borrar invoices).
-    admin.table("invoices").delete().eq("business_id", business_id).execute()
+    result = admin.table("businesses").delete().eq("id", business_id).execute()
+    if not result.data:
+        raise ValueError("Negocio no encontrado")
 
-    # 2. Fiado: debts primero (CASCADE a debt_payments), luego los clientes.
-    admin.table("debts").delete().eq("business_id", business_id).execute()
-    admin.table("customers").delete().eq("business_id", business_id).execute()
-
-    # 3. Inventario: movimientos → filas de stock → productos (por las FK).
-    admin.table("inventory_movements").delete().eq("business_id", business_id).execute()
-    admin.table("inventory").delete().eq("business_id", business_id).execute()
-    admin.table("products").delete().eq("business_id", business_id).execute()
-
-    # 4. Gastos del negocio.
-    admin.table("expenses").delete().eq("business_id", business_id).execute()
-
-    # 5. Notificaciones (best-effort: si la tabla no aplica, no interrumpe).
     try:
-        admin.table("notifications").delete().eq("business_id", business_id).execute()
+        admin.auth.admin.delete_user(user_id)
     except Exception:
         pass
 
     return {"deleted": True}
+
+
+def delete_data(business_id: str):
+    """
+    Reinicia el historial y transacciones del negocio, conservando:
+    businesses, users, business_configs, features, products, product_categories,
+    inventory, customers, suppliers, purchase_orders, purchase_items,
+    staff_attendance, staff_expenses, business_assistants.
+
+    Borra tablas transaccionales (en orden para respetar FK):
+    1. debt_payments  (FK → debts)
+    2. debts          (FK → customers, businesses)
+    3. payments       (FK → invoices)
+    4. invoice_items  (FK → invoices)
+    5. invoices       (FK → businesses)
+    6. expenses       (FK → businesses)
+    7. cash_sessions  (FK → businesses)
+    8. inventory_movements (FK → businesses)
+    9. audit_logs     (FK → businesses)
+    10. notifications (FK → businesses)
+    """
+    from app.database import supabase_admin as admin
+
+    check_tables = ["invoices", "debts", "cash_sessions", "expenses"]
+    has_data = False
+    for table in check_tables:
+        try:
+            result = (
+                admin.table(table)
+                .select("id", count="exact")
+                .eq("business_id", business_id)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                has_data = True
+                break
+        except Exception:
+            pass
+
+    if not has_data:
+        return {"deleted": False, "has_data": False}
+
+    tables_in_order = [
+        "debt_payments",
+        "debts",
+        "payments",
+        "invoice_items",
+        "invoices",
+        "expenses",
+        "cash_sessions",
+        "inventory_movements",
+        "audit_logs",
+        "notifications",
+    ]
+
+    for table in tables_in_order:
+        try:
+            admin.table(table).delete().eq("business_id", business_id).execute()
+        except Exception:
+            pass
+
+    return {"deleted": True, "has_data": True}

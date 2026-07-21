@@ -779,4 +779,56 @@ historyExpense: {
   fontWeight: 'bold',
   color: '#DC2626',
 },
+
+//Nota
+savedNoteContainer: {
+  backgroundColor: colors.salesBadgeBackground,
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  marginBottom: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+},
+
+savedNoteLabel: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: colors.textSecondary,
+  marginRight: 6,
+},
+
+savedNoteText: {
+  fontSize: 14,
+  color: colors.textPrimary,
+  fontStyle: 'italic',
+  flex: 1,
+},
+
+/* =========================
+    NOTA EN COMPROBANTE
+========================== */
+receiptNoteContainer: {
+  marginTop: 8,
+  padding: 12,
+  backgroundColor: colors.salesBadgeBackground,
+  borderRadius: 10,
+  marginBottom: 16,
+},
+
+receiptNoteLabel: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: colors.textSecondary,
+  marginBottom: 4,
+},
+
+receiptNoteText: {
+  fontSize: 14,
+  color: colors.textPrimary,
+  fontStyle: 'italic',
+},
 });

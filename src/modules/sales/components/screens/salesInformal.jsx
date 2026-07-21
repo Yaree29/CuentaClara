@@ -16,7 +16,8 @@ import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon,XMarkIcon} from 'react-nat
 // Importación del HEADER
 import DashboardHeader from '../../../dashboard/components/shared/DashboardHeader';
 
-const PAYMENT_LABELS = { cash: 'efectivo', card: 'tarjeta', transfer: 'transferencia' };
+// MODIFICADO: Solo mantenemos 'cash' y 'yappy' como métodos de pago
+const PAYMENT_LABELS = { cash: 'efectivo', yappy: 'yappy' };
 
 
 
@@ -112,7 +113,10 @@ const SalesInformal = () => {
         unit_price: p.price,
       }));
 
-      const result = await processSale(items, total, saleNote, paymentMethod, isCredit);
+      // Guardamos la nota antes de procesar
+      const finalNote = saleNote || '';
+
+      const result = await processSale(items, total, finalNote, paymentMethod, isCredit);
 
       if (isCredit) {
         await debtService.createDebt({
@@ -129,9 +133,11 @@ const SalesInformal = () => {
         isCredit,
         customerName: linkedCustomer?.name,
         paymentMethod,
+        note: finalNote,
       });
       setReceiptVisible(true);
 
+      // Limpiar todo después de registrar
       setCartCount(0);
       setTotal(0);
       setDescription('');
@@ -144,6 +150,10 @@ const SalesInformal = () => {
     }
   };
 
+  // Función para eliminar la nota
+  const clearNote = () => {
+    setSaleNote('');
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
@@ -319,6 +329,7 @@ const SalesInformal = () => {
                     setSelectedProducts([]);
                     setShowProducts(false);
                     setShowAllProducts(false);
+                    setSaleNote(''); // Limpiar nota también
                   }}
                 >
                   <Text style={styles.clearAmountText}>
@@ -438,6 +449,14 @@ const SalesInformal = () => {
                 )}
               </View>
 
+              {/* NOTA GUARDADA - SE MUESTRA EN TIEMPO REAL DEBAJO DE "SELECCIONAR PRODUCTO" */}
+              {saleNote ? (
+                <View style={styles.savedNoteContainer}>
+                  <Text style={styles.savedNoteLabel}>Nota:</Text>
+                  <Text style={styles.savedNoteText}>{saleNote}</Text>
+                </View>
+              ) : null}
+
               {/* MÉTODO DE PAGO */}
               <Text style={styles.label}>
                 Método de pago
@@ -451,46 +470,88 @@ const SalesInformal = () => {
                 </View>
               ) : (
                 <View style={styles.methodContainer}>
-                  {['cash', 'card', 'transfer'].map((method) => (
-                    <TouchableOpacity
-                      key={method}
+                  {/* MODIFICADO: Solo Efectivo y Yappy */}
+                  <TouchableOpacity
+                    style={[
+                      styles.methodBtn,
+                      paymentMethod === 'cash' &&
+                        styles.methodBtnActive,
+                    ]}
+                    onPress={() => setPaymentMethod('cash')}
+                  >
+                    <Text
                       style={[
-                        styles.methodBtn,
-                        paymentMethod === method &&
-                          styles.methodBtnActive,
+                        styles.methodBtnText,
+                        paymentMethod === 'cash' &&
+                          styles.methodBtnTextActive,
                       ]}
-                      onPress={() => setPaymentMethod(method)}
                     >
-                      <Text
-                        style={[
-                          styles.methodBtnText,
-                          paymentMethod === method &&
-                            styles.methodBtnTextActive,
-                        ]}
-                      >
-                        {method === 'cash'
-                          ? 'Efectivo'
-                          : method === 'card'
-                          ? 'Tarjeta'
-                          : 'Transferencia'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      Efectivo
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* NUEVO: Botón Yappy */}
+                  <TouchableOpacity
+                    style={[
+                      styles.methodBtn,
+                      paymentMethod === 'yappy' &&
+                        styles.methodBtnActive,
+                    ]}
+                    onPress={() => setPaymentMethod('yappy')}
+                  >
+                    <Text
+                      style={[
+                        styles.methodBtnText,
+                        paymentMethod === 'yappy' &&
+                          styles.methodBtnTextActive,
+                      ]}
+                    >
+                      Yappy
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
               {/* BOTONES EXTRA */}
               <View style={styles.actionsRow}>
 
-                {/* Agregar Nota */}
+                {/* Agregar Nota / Editar Nota / Eliminar Nota */}
                 <TouchableOpacity
                   style={styles.secondaryBtnGray}
-                  onPress={() => setNoteModalVisible(true)}
+                  onPress={() => {
+                    if (saleNote) {
+                      // Si hay nota, mostrar opción de eliminar
+                      Alert.alert(
+                        'Nota actual',
+                        `"${saleNote}"`,
+                        [
+                          {
+                            text: 'Eliminar nota',
+                            style: 'destructive',
+                            onPress: () => {
+                              setSaleNote('');
+                            },
+                          },
+                          {
+                            text: 'Editar',
+                            onPress: () => setNoteModalVisible(true),
+                          },
+                          {
+                            text: 'Cancelar',
+                            style: 'cancel',
+                          },
+                        ]
+                      );
+                    } else {
+                      // Si no hay nota, abrir modal para crear
+                      setNoteModalVisible(true);
+                    }
+                  }}
                 >
                   <DocumentTextIcon size={18} color="#0F2747" style={styles.secondaryBtnIcon}/>
 
                   <Text style={styles.secondaryBtnTextGray}>
-                    {saleNote ? 'Editar Nota' : 'Agregar Nota'}
+                    {saleNote ? 'Nota ✓' : 'Agregar Nota'}
                   </Text>
                 </TouchableOpacity>
 
@@ -535,6 +596,7 @@ const SalesInformal = () => {
                           style={styles.deleteNoteBtn}
                           onPress={() => {
                             setSaleNote('');
+                            setNoteModalVisible(false);
                           }}
                         >
                           <Text style={styles.deleteNoteText}>
@@ -542,13 +604,13 @@ const SalesInformal = () => {
                           </Text>
                         </TouchableOpacity>
 
-                        {/* CERRAR */}
+                        {/* GUARDAR / CERRAR */}
                         <TouchableOpacity
                           style={styles.closeNoteBtn}
                           onPress={() => setNoteModalVisible(false)}
                         >
                           <Text style={styles.closeNoteText}>
-                            Listo
+                            Guardar
                           </Text>
                         </TouchableOpacity>
 
@@ -639,6 +701,7 @@ const SalesInformal = () => {
           const statusLabel = (invoice) => {
             if (invoice.status === 'pending') return 'Fiado';
             const method = invoice.payments?.[0]?.method;
+            // MODIFICADO: Soporte para 'yappy' en el historial
             return `Pagado en ${PAYMENT_LABELS[method] || 'efectivo'}`;
           };
           const salesCount = salesHistory.length;
@@ -731,6 +794,14 @@ const SalesInformal = () => {
                     ? `Fiado a nombre de ${receiptData.customerName}`
                     : `Pagado en ${PAYMENT_LABELS[receiptData.paymentMethod] || 'efectivo'}`}
                 </Text>
+
+                {/* Mostrar nota en el comprobante si existe */}
+                {receiptData.note ? (
+                  <View style={styles.receiptNoteContainer}>
+                    <Text style={styles.receiptNoteLabel}>Nota:</Text>
+                    <Text style={styles.receiptNoteText}>{receiptData.note}</Text>
+                  </View>
+                ) : null}
               </>
             )}
 

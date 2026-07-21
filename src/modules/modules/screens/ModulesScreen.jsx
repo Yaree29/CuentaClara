@@ -1,33 +1,57 @@
 // =============================================================================
 // CREADO: 2026-07-19
+// MODIFICADO: 2026-07-21
 // Propósito: Punto de entrada a los módulos PYME que dejaron de ser tabs fijos
-//            (Compras, Servicios, Recetas, Comisiones,
-//            Propinas, Ofertas, Inventario
-//            Avanzado), más Análisis Estratégico, que se muestran siempre sin 
-//            depender de enabled_modules.
+//            (Compras, Personal, Caja, Servicios, Recetas, Comisiones,
+//            Propinas, Ofertas), más Análisis Estratégico e Inventario
+//            Avanzado, que se muestran siempre sin depender de enabled_modules.
 //            Reutiliza el patrón MenuSection/MenuItem de SettingsScreen.jsx.
+//
+// La lista de módulos opcionales ya no vive hardcodeada aquí — se deriva de
+// dashboard/engine/moduleConfig.js, que a su vez refleja ALL_VALID_MODULES
+// del backend (fuente única de verdad, ver auth_service.py). Los módulos
+// marcados `toggleable` en moduleConfig.js (Comisiones/Propinas/Ofertas, sin
+// activación automática por category_group) se activan aquí mismo vía
+// PUT /businesses/me/modules, en vez del bloque QA-visual temporal anterior.
 // =============================================================================
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import useBlueprintStore from '../../../store/useBlueprintStore';
+import businessService from '../../../services/businessService';
+import moduleConfig from '../../dashboard/engine/moduleConfig';
 import colors from '../../../theme/colors';
 import styles from '../styles/modules.styles';
 
-const MenuItem = ({ icon, label, subLabel, onPress, isLast }) => (
-  <TouchableOpacity style={[styles.menuItem, isLast && styles.menuItemLast]} onPress={onPress} activeOpacity={0.7}>
-    <View style={[styles.iconContainer, styles.iconContainerBusiness]}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
-    </View>
-    <View style={styles.menuTextContainer}>
-      <Text style={styles.menuLabel}>{label}</Text>
-      {subLabel && <Text style={styles.menuSubLabel}>{subLabel}</Text>}
-    </View>
-    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-  </TouchableOpacity>
-);
+const MenuItem = ({ icon, label, subLabel, onPress, isLast, disabled, rightSlot }) => {
+  // moduleConfig.js entrega íconos como componentes Heroicons; los ítems fijos
+  // de "Herramientas" siguen usando nombres de Ionicons — se soportan ambos.
+  const IconComponent = typeof icon === 'function' ? icon : null;
+
+  return (
+    <TouchableOpacity
+      style={[styles.menuItem, isLast && styles.menuItemLast]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      disabled={disabled}
+    >
+      <View style={[styles.iconContainer, styles.iconContainerBusiness]}>
+        {IconComponent ? (
+          <IconComponent size={20} color={colors.primary} />
+        ) : (
+          <Ionicons name={icon} size={20} color={colors.primary} />
+        )}
+      </View>
+      <View style={styles.menuTextContainer}>
+        <Text style={styles.menuLabel}>{label}</Text>
+        {subLabel && <Text style={styles.menuSubLabel}>{subLabel}</Text>}
+      </View>
+      {rightSlot || <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />}
+    </TouchableOpacity>
+  );
+};
 
 const MenuSection = ({ title, children }) => (
   <View style={styles.menuSection}>
@@ -38,24 +62,46 @@ const MenuSection = ({ title, children }) => (
   </View>
 );
 
-// Metadata de cada módulo activable por negocio: ícono, label y ruta del
-// stack a la que navega (ver Stack.Screen en MainStackNavigator.jsx).
-const OPTIONAL_MODULES = [
-  { key: 'purchases',   icon: 'cart-outline',        label: 'Compras',    subLabel: 'Órdenes y proveedores',        route: 'purchases' },
-  { key: 'staff',       icon: 'people-outline',      label: 'Personal',   subLabel: 'Empleados y roles',            route: 'staff' },
-  { key: 'cash',        icon: 'calculator-outline',  label: 'Caja',       subLabel: 'Flujo de caja y arqueos',      route: 'cash' },
-  { key: 'services',    icon: 'construct-outline',   label: 'Servicios',  subLabel: 'Catálogo de servicios',        route: 'services' },
-  { key: 'recipes',     icon: 'book-outline',        label: 'Recetas',    subLabel: 'Fichas técnicas de productos', route: 'recipes' },
-  { key: 'commissions', icon: 'stats-chart-outline', label: 'Comisiones', subLabel: 'Cálculo de comisiones',        route: 'commissions' },
-  { key: 'tips',        icon: 'cash-outline',        label: 'Propinas',   subLabel: 'Registro de propinas',         route: 'tips' },
-  { key: 'offers',      icon: 'pricetag-outline',    label: 'Ofertas',    subLabel: 'Promociones y descuentos',     route: 'offers' },
-];
+// Módulos opcionales (no tabs fijos) derivados de moduleConfig.js: solo los
+// que tienen `optional: true` y una `route` de Stack.Screen navegable.
+const OPTIONAL_MODULES = Object.values(moduleConfig)
+  .filter((mod) => mod.optional && mod.route)
+  .map((mod) => ({
+    key: mod.id,
+    icon: mod.icon,
+    label: mod.name,
+    subLabel: mod.subLabel,
+    route: mod.route,
+    toggleable: !!mod.toggleable,
+  }));
 
 const ModulesScreen = () => {
   const navigation = useNavigation();
   const enabledModules = useBlueprintStore((state) => state.modules);
+  const setModules = useBlueprintStore((state) => state.setModules);
+  const [activatingKey, setActivatingKey] = useState(null);
 
   const activeModules = OPTIONAL_MODULES.filter((mod) => enabledModules.includes(mod.key));
+
+  // Módulos sin activación automática por category_group (Comisiones/Propinas/
+  // Ofertas) que el negocio todavía no tiene activos — se ofrecen para
+  // activar manualmente en vez de navegar directo.
+  const activatableModules = OPTIONAL_MODULES.filter(
+    (mod) => mod.toggleable && !enabledModules.includes(mod.key)
+  );
+
+  const handleActivate = async (mod) => {
+    setActivatingKey(mod.key);
+    try {
+      const result = await businessService.setModuleActive(mod.key, true);
+      setModules(result?.enabled_modules);
+      Alert.alert('Módulo activado', `"${mod.label}" ya está disponible en "Módulos activos del negocio".`);
+    } catch (error) {
+      Alert.alert('No se pudo activar', error?.message || 'Intenta de nuevo en unos segundos.');
+    } finally {
+      setActivatingKey(null);
+    }
+  };
 
   return (
     <SafeAreaProvider>
@@ -95,6 +141,34 @@ const ModulesScreen = () => {
                     onPress={() => navigation.navigate(mod.route)}
                   />
                 ))}
+              </MenuSection>
+            )}
+
+            {activatableModules.length > 0 && (
+              <MenuSection title="Activar módulos">
+                {activatableModules.map((mod, index) => {
+                  const isActivating = activatingKey === mod.key;
+                  return (
+                    <MenuItem
+                      key={mod.key}
+                      icon={mod.icon}
+                      label={mod.label}
+                      subLabel={mod.subLabel}
+                      isLast={index === activatableModules.length - 1}
+                      disabled={isActivating}
+                      onPress={() => handleActivate(mod)}
+                      rightSlot={
+                        isActivating ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <View style={styles.activateButton}>
+                            <Text style={styles.activateText}>Activar</Text>
+                          </View>
+                        )
+                      }
+                    />
+                  );
+                })}
               </MenuSection>
             )}
           </View>

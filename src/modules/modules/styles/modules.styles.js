@@ -6,8 +6,9 @@ export default StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  // 120: estándar del proyecto — la lista de módulos activos/activables crece.
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   topBar: {
     paddingHorizontal: 20,
@@ -80,5 +81,16 @@ export default StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  activateButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '15',
+  },
+  activateText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

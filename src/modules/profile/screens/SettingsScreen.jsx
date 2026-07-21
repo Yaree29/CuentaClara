@@ -105,7 +105,7 @@ const SettingsScreen = () => {
                 iconBgStyle={styles.iconContainerBusiness}
                 iconColor={colors.primary}
                 isLast={true}
-                onPress={() => {}}
+                onPress={() => navigation.navigate('AppSettingsScreen')}
               />
             </MenuSection>
 

@@ -17,13 +17,15 @@ import { apiRequest } from '../../../services/apiClient';
 
 const billingService = {
   /**
-   * Obtener facturas del negocio (con filtro opcional por status)
+   * Obtener facturas del negocio (con filtro opcional por status y/o fecha)
    * @param {string} _businessId — ignorado, el backend lo extrae del JWT
-   * @param {object} options — { status?: 'paid'|'pending'|'void', limit?: number }
+   * @param {object} options — { status?: 'paid'|'pending'|'void', dateFrom?, dateTo?, limit?: number }
    */
-  getInvoices: async (_businessId, { status, limit = 20 } = {}) => {
+  getInvoices: async (_businessId, { status, dateFrom, dateTo, limit = 20 } = {}) => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
     if (limit) params.set('limit', String(limit));
 
     const query = params.toString();

@@ -74,7 +74,7 @@ def update_customer(business_id: str, customer_id: int, data) -> dict:
 
 def list_debts(business_id: str, status: str = None) -> list:
     query = supabase_admin.table("debts")\
-        .select("id, business_id, customer_id, original_amount, remaining_amount, description, status, due_date, created_at, customers(name)")\
+        .select("id, business_id, customer_id, original_amount, remaining_amount, description, status, due_date, created_at, customers(name, phone, notes)")\
         .eq("business_id", business_id)
 
     if status:
@@ -90,6 +90,8 @@ def list_debts(business_id: str, status: str = None) -> list:
     for row in data:
         customer = row.pop("customers", None)
         row["customer_name"] = customer["name"] if customer else "Sin nombre"
+        row["customer_phone"] = customer.get("phone") if customer else None
+        row["customer_notes"] = customer.get("notes") if customer else None
 
     return data
 
@@ -287,3 +289,23 @@ def register_payment(business_id: str, user_id: str, debt_id: int, data) -> dict
         "remaining_amount": float(new_remaining),
         "debt_status": new_status,
     }
+
+
+def list_payments(business_id: str, debt_id: int) -> list:
+    """Listar todos los abonos registrados para una deuda específica."""
+    # Verificar que la deuda pertenece al negocio
+    debt_result = supabase_admin.table("debts")\
+        .select("id")\
+        .eq("id", debt_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not debt_result.data:
+        raise ValueError("Deuda no encontrada")
+
+    result = supabase_admin.table("debt_payments")\
+        .select("id, debt_id, amount, method, notes, paid_at")\
+        .eq("debt_id", debt_id)\
+        .eq("business_id", business_id)\
+        .order("paid_at", desc=True)\
+        .execute()
+    return result.data or []

@@ -1,18 +1,18 @@
 // =============================================================================
-// CREADO: 2026-05-26
+// MODIFICADO: 2026-07-21
 // Propósito: Hook para el componente InformalCredit. Integrado desde la rama
 //            Fronted pero conectado a la API real (debtService) en lugar de
 //            datos mock. Internamente orquesta customers + debts + payments.
 //
+// Cambios v2:
+//   - Categorías de ordenamiento (más deuda, menos deuda, más abono, etc.)
+//   - Modal de detalle al tocar un fiado
+//   - Soporte para notas en el cliente
+//   - Menú de tres puntos por tarjeta (notificar, editar, añadir nota)
+//
 // Modelo de "credit" expuesto al componente (forma plana para la UI):
-//   { id, customerId, clientName, phone, totalDebt, items, lastUpdate }
-//   - id           → debt.id (string)
-//   - customerId   → debt.customer_id (necesario para edit)
-//   - clientName   → customer.name
-//   - phone        → customer.phone (incluye prefijo +507)
-//   - totalDebt    → debt.remaining_amount (número)
-//   - items        → debt.description
-//   - lastUpdate   → debt.created_at (ISO date)
+//   { id, customerId, clientName, phone, totalDebt, originalAmount, items,
+//     paidAmount, status, notes, lastUpdate }
 // =============================================================================
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
@@ -20,6 +20,15 @@ import { Linking, Alert } from 'react-native';
 import debtService from '../services/debtService';
 import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
+
+// Categorías de ordenamiento disponibles
+export const SORT_CATEGORIES = [
+  { key: 'recent',     label: 'Recientes' },
+  { key: 'most_debt',  label: 'Mayor deuda' },
+  { key: 'least_debt', label: 'Menor deuda' },
+  { key: 'most_paid',  label: 'Más abono' },
+  { key: 'least_paid', label: 'Menos abono' },
+];
 
 export const useInformalCredit = () => {
   const user = useAuthStore((state) => state.user);
@@ -39,6 +48,7 @@ export const useInformalCredit = () => {
 
   // UI
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortCategory, setSortCategory] = useState('recent');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -47,6 +57,16 @@ export const useInformalCredit = () => {
   const [editingCredit, setEditingCredit] = useState(null);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+
+  // Modal de detalle
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [detailCredit, setDetailCredit] = useState(null);
+  const [detailPayments, setDetailPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  // Modal de nota
+  const [isNoteModalVisible, setIsNoteModalVisible] = useState(false);
+  const [noteCredit, setNoteCredit] = useState(null);
 
   // Carga inicial: customers + debts + inventario en paralelo
   const fetchAll = useCallback(async () => {
@@ -84,28 +104,59 @@ export const useInformalCredit = () => {
 
     return debts.map((d) => {
       const customer = customersById.get(d.customer_id);
+      const originalAmount = Number(d.original_amount) || 0;
+      const remainingAmount = Number(d.remaining_amount) || 0;
 
       return {
         id: String(d.id),
         customerId: d.customer_id,
         clientName: d.customer_name || customer?.name || 'Sin nombre',
-        phone: customer?.phone || '',
-        totalDebt: Number(d.remaining_amount) || 0,
+        phone: d.customer_phone || customer?.phone || '',
+        totalDebt: remainingAmount,
+        originalAmount,
+        paidAmount: originalAmount - remainingAmount,
         items: d.description || '',
+        status: d.status || 'pending',
+        notes: d.customer_notes || customer?.notes || '',
         lastUpdate: d.created_at,
       };
     });
   }, [debts, customers]);
 
+  // Ordenamiento por categoría
+  const sortedCredits = useMemo(() => {
+    const sorted = [...credits];
+    switch (sortCategory) {
+      case 'most_debt':
+        sorted.sort((a, b) => b.totalDebt - a.totalDebt);
+        break;
+      case 'least_debt':
+        sorted.sort((a, b) => a.totalDebt - b.totalDebt);
+        break;
+      case 'most_paid':
+        sorted.sort((a, b) => b.paidAmount - a.paidAmount);
+        break;
+      case 'least_paid':
+        sorted.sort((a, b) => a.paidAmount - b.paidAmount);
+        break;
+      case 'recent':
+      default:
+        // Ya viene ordenado por created_at desc desde la API
+        break;
+    }
+    return sorted;
+  }, [credits, sortCategory]);
+
   const filteredCredits = useMemo(() => {
-    if (!searchQuery) return credits;
+    if (!searchQuery) return sortedCredits;
 
     const q = searchQuery.toLowerCase();
 
-    return credits.filter((c) =>
-      c.clientName.toLowerCase().includes(q)
+    return sortedCredits.filter((c) =>
+      c.clientName.toLowerCase().includes(q) ||
+      c.items.toLowerCase().includes(q)
     );
-  }, [credits, searchQuery]);
+  }, [sortedCredits, searchQuery]);
 
   // Busca cliente existente por nombre (case insensitive).
   const findCustomerByName = (name) => {
@@ -240,6 +291,21 @@ export const useInformalCredit = () => {
     });
   };
 
+  // Guardar nota del cliente
+  const saveNote = async (customerId, noteText) => {
+    try {
+      await debtService.updateCustomer(customerId, {
+        notes: noteText.trim() || null,
+      });
+      setIsNoteModalVisible(false);
+      setNoteCredit(null);
+      await fetchAll();
+    } catch (err) {
+      console.error('Error al guardar nota:', err);
+      Alert.alert('Error', err.message || 'No se pudo guardar la nota');
+    }
+  };
+
   const openAddModal = () => {
     setEditingCredit(null);
     setIsFormModalVisible(true);
@@ -255,16 +321,58 @@ export const useInformalCredit = () => {
     setIsPaymentModalVisible(true);
   };
 
+  // Abrir detalle: carga pagos del fiado
+  const openDetailModal = async (credit) => {
+    setDetailCredit(credit);
+    setIsDetailModalVisible(true);
+    setLoadingPayments(true);
+    try {
+      const payments = await debtService.getPayments(credit.id);
+      setDetailPayments(payments || []);
+    } catch (err) {
+      console.error('Error al cargar pagos:', err);
+      setDetailPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalVisible(false);
+    setDetailCredit(null);
+    setDetailPayments([]);
+  };
+
+  const openNoteModal = (credit) => {
+    setNoteCredit(credit);
+    setIsNoteModalVisible(true);
+  };
+
+  const closeNoteModal = () => {
+    setIsNoteModalVisible(false);
+    setNoteCredit(null);
+  };
+
   return {
     // Datos
-    searchQuery,setSearchQuery,filteredCredits,senderName,loading,error,refresh: fetchAll,
+    searchQuery, setSearchQuery, filteredCredits, senderName, loading, error, refresh: fetchAll,
     inventoryProducts,
 
+    // Categorías
+    sortCategory, setSortCategory,
+
     // Modales
-    isFormModalVisible,setIsFormModalVisible,editingCredit,isPaymentModalVisible,
-    setIsPaymentModalVisible,selectedClient,openAddModal,openEditModal,openPaymentModal,
+    isFormModalVisible, setIsFormModalVisible, editingCredit, isPaymentModalVisible,
+    setIsPaymentModalVisible, selectedClient, openAddModal, openEditModal, openPaymentModal,
+
+    // Detalle
+    isDetailModalVisible, detailCredit, detailPayments, loadingPayments,
+    openDetailModal, closeDetailModal,
+
+    // Notas
+    isNoteModalVisible, noteCredit, openNoteModal, closeNoteModal, saveNote,
 
     // Acciones
-    saveCredit,registerPayment,sendWhatsAppReminder,deleteCredit,
+    saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
   };
 };

@@ -17,6 +17,6 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    model_config = {"env_file": str(BACKEND_ENV_FILE)}
+    model_config = {"env_file": str(BACKEND_ENV_FILE), "extra": "ignore"}
 
 settings = Settings()

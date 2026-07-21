@@ -71,7 +71,11 @@ export default StyleSheet.create({
   /* --- Lista de Productos --- */
   listContainer: {
     padding: 16,
-    paddingBottom: 100 },
+    // 200: además del tab bar, esta pantalla tiene 2 FABs propios
+    // (fabContainer/bottomFloatContainer, bottom:80 + ~56 de alto) — el
+    // padding cubre ambas capas para que el último producto no quede
+    // detrás del botón.
+    paddingBottom: 200 },
 
   productCard: {
     flexDirection: 'row',
@@ -110,9 +114,12 @@ export default StyleSheet.create({
   editBtn: { padding: 8 },
 
   /* --- Botón Flotante Inferior (Modo Selección) --- */
+  // bottom:80 = altura del tab bar (72, MainNavigator.jsx) + 8 de margen —
+  // antes bottom:20 quedaba tapado por el tab bar. Mismo cálculo que
+  // src/components/ui/goblalFAB.jsx.
   bottomFloatContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 80,
     left: 16,
     right: 16 },
 
@@ -173,9 +180,10 @@ export default StyleSheet.create({
     color: colors.textPrimary },
 
     /* --- Botón Flotante Principal (FAB) --- */
+  // bottom:80 = altura del tab bar (72, MainNavigator.jsx) + 8 de margen.
   fabContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 80,
     right: 16 },
 
   fabButton: {

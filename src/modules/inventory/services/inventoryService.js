@@ -24,6 +24,7 @@ const mapProduct = (row) => ({
   name: row.name || '',
   sku: row.sku,
   price: Number(row.price) || 0,
+  costPrice: row.cost_price !== null && row.cost_price !== undefined ? Number(row.cost_price) : null,
   unitType: row.unit_type,
   category: row.category || 'Sin categoría',
   categoryColor: row.category_color || '#6366f1',
@@ -71,6 +72,10 @@ const inventoryService = {
     const payload = {
       name: productData.name,
       price: Number(productData.price || 0),
+      cost_price:
+        productData.costPrice !== null && productData.costPrice !== undefined
+          ? Number(productData.costPrice)
+          : null,
       category_name: productData.category || null,
       sku: productData.sku || null,
       unit_type: productData.unitType || null,
@@ -95,6 +100,9 @@ const inventoryService = {
     const payload = {
       ...(productData.name !== undefined ? { name: productData.name } : {}),
       ...(productData.price !== undefined ? { price: Number(productData.price) } : {}),
+      ...(productData.costPrice !== undefined
+        ? { cost_price: productData.costPrice !== null ? Number(productData.costPrice) : null }
+        : {}),
       ...(productData.category !== undefined ? { category_name: productData.category } : {}),
       ...(productData.sku !== undefined ? { sku: productData.sku } : {}),
       ...(productData.unitType !== undefined ? { unit_type: productData.unitType } : {}),
@@ -139,6 +147,27 @@ const inventoryService = {
 
   getMovements: async (limit = 50) => {
     return apiRequest(`/inventory/movements?limit=${limit}`);
+  },
+
+  // ── Configuración interna de inventario ───────────────────────────────────
+  /**
+   * Estado actual de los flags de configuración (control_peso, caducidad,
+   * mermas, recetas, produccion, escaner, stock_predictivo).
+   */
+  getConfig: async () => {
+    return apiRequest('/inventory/config');
+  },
+
+  /**
+   * Actualiza parcialmente los flags de configuración. Solo se envía el/los
+   * campo(s) que cambian.
+   * @param {Object} patch - ej. {control_peso: true}
+   */
+  updateConfig: async (patch) => {
+    return apiRequest('/inventory/config', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
   },
 };
 

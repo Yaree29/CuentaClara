@@ -26,6 +26,15 @@ const validatePrice = (val) => {
   return null;
 };
 
+/** El costo es opcional, pero si viene no puede ser negativo */
+const validateCostPrice = (val) => {
+  if (val === '') return null;
+  const n = parseFloat(val);
+  if (isNaN(n)) return 'El costo debe ser un número.';
+  if (n < 0) return 'El costo no puede ser negativo.';
+  return null;
+};
+
 /** Stock y stock mínimo no pueden ser negativos */
 const validateNonNegativeInt = (val, fieldLabel) => {
   if (val === '') return null; // campo opcional
@@ -51,6 +60,7 @@ const validateNonNegativeInt = (val, fieldLabel) => {
 const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [] }) => {
   const [name, setName]         = useState('');
   const [price, setPrice]       = useState('');
+  const [costPrice, setCostPrice] = useState('');
   const [category, setCategory] = useState('');
   const [stock, setStock]       = useState('');
   const [minStock, setMinStock] = useState('');
@@ -59,12 +69,14 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   // Errores por campo
   const [nameError, setNameError]       = useState(null);
   const [priceError, setPriceError]     = useState(null);
+  const [costPriceError, setCostPriceError] = useState(null);
   const [stockError, setStockError]     = useState(null);
   const [minStockError, setMinStockError] = useState(null);
 
   const clearErrors = () => {
     setNameError(null);
     setPriceError(null);
+    setCostPriceError(null);
     setStockError(null);
     setMinStockError(null);
   };
@@ -75,6 +87,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     if (initialData) {
       setName(initialData.name ?? '');
       setPrice(initialData.price?.toString() ?? '');
+      setCostPrice(initialData.costPrice !== null && initialData.costPrice !== undefined ? initialData.costPrice.toString() : '');
       setCategory(initialData.category ?? (categories[0] || ''));
       setStock(initialData.stock !== null && initialData.stock !== undefined ? initialData.stock.toString() : '');
       setMinStock(initialData.minStock !== null && initialData.minStock !== undefined ? initialData.minStock.toString() : '');
@@ -82,6 +95,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     } else {
       setName('');
       setPrice('');
+      setCostPrice('');
       setCategory(categories[0] || '');
       setStock('');
       setMinStock('');
@@ -116,6 +130,12 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     setPriceError(validatePrice(cleaned));
   };
 
+  const handleCostPriceChange = (val) => {
+    const cleaned = val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    setCostPrice(cleaned);
+    setCostPriceError(validateCostPrice(cleaned));
+  };
+
   const handleStockChange = (val) => {
     // Solo dígitos (sin negativos posibles desde teclado numérico)
     const cleaned = val.replace(/[^0-9]/g, '');
@@ -139,19 +159,22 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         ? 'El nombre no puede contener números.'
         : null;
     const pErr  = validatePrice(price);
+    const cpErr = validateCostPrice(costPrice);
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
 
     setNameError(nErr);
     setPriceError(pErr);
+    setCostPriceError(cpErr);
     setStockError(sErr);
     setMinStockError(msErr);
 
-    if (nErr || pErr || sErr || msErr) return; // hay errores → no guardar
+    if (nErr || pErr || cpErr || sErr || msErr) return; // hay errores → no guardar
 
     onSave({
       name: name.trim(),
       price: parseFloat(price),
+      costPrice: costPrice !== '' ? parseFloat(costPrice) : null,
       category: category || null,
       stock: stock !== '' ? parseInt(stock, 10) : null,
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
@@ -159,7 +182,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     });
   };
 
-  const hasErrors = !!nameError || !!priceError || !!stockError || !!minStockError;
+  const hasErrors = !!nameError || !!priceError || !!costPriceError || !!stockError || !!minStockError;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -206,6 +229,20 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                   placeholderTextColor={colors.placeholder}
                 />
                 {priceError ? <Text style={styles.errorText}>{priceError}</Text> : null}
+              </View>
+
+              {/* ── Costo (insumo, usado por Recetas) ── */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Costo ($)</Text>
+                <TextInput
+                  style={[styles.formInput, costPriceError && styles.inputError]}
+                  value={costPrice}
+                  onChangeText={handleCostPriceChange}
+                  keyboardType="decimal-pad"
+                  placeholder="Opcional — para calcular costo de recetas"
+                  placeholderTextColor={colors.placeholder}
+                />
+                {costPriceError ? <Text style={styles.errorText}>{costPriceError}</Text> : null}
               </View>
 
               {/* ── Stock disponible + Stock mínimo ── */}

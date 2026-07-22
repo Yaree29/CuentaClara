@@ -46,7 +46,7 @@ const BillingInsightsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Ganancias y Márgenes" variant="default" />
+      <DashboardHeader title="Ganancias y Márgenes" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.segmented}>

@@ -34,7 +34,7 @@ const BillingHistoryScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Historial de facturas" variant="default" />
+      <DashboardHeader title="Historial de facturas" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 20 }} />}

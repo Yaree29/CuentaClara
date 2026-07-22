@@ -78,16 +78,16 @@ def create_tip(business_id: str, data) -> dict:
         "id": tip_id,
         "amount": float(amount),
         "distribution_type": data.distribution_type,
-        "created_at": tip.data[0]["created_at"],
+        "created_at": tip.data[0]["registered_at"],
         "distributions": distribution_rows,
     }
 
 
 def list_tips(business_id: str, limit: int = 50) -> list:
     tips = supabase_admin.table("tips")\
-        .select("id, amount, distribution_type, created_at")\
+        .select("id, amount, distribution_type, registered_at")\
         .eq("business_id", business_id)\
-        .order("created_at", desc=True)\
+        .order("registered_at", desc=True)\
         .limit(limit)\
         .execute()
     tips_data = tips.data or []
@@ -113,7 +113,7 @@ def list_tips(business_id: str, limit: int = 50) -> list:
             "id": t["id"],
             "amount": float(t["amount"]),
             "distribution_type": t["distribution_type"],
-            "created_at": t["created_at"],
+            "created_at": t["registered_at"],
             "distributions": dist_by_tip.get(t["id"], []),
         }
         for t in tips_data
@@ -122,10 +122,10 @@ def list_tips(business_id: str, limit: int = 50) -> list:
 
 def get_summary(business_id: str, date_from: str, date_to: str) -> dict:
     tips = supabase_admin.table("tips")\
-        .select("amount, created_at")\
+        .select("amount, registered_at")\
         .eq("business_id", business_id)\
-        .gte("created_at", date_from)\
-        .lte("created_at", date_to)\
+        .gte("registered_at", date_from)\
+        .lte("registered_at", date_to)\
         .execute()
     rows = tips.data or []
     total = sum((Decimal(str(t["amount"])) for t in rows), Decimal("0"))
@@ -140,16 +140,16 @@ def get_monthly_summary(business_id: str, year: int) -> list:
     """Resumen mensual (1-12) del año dado, agregado en memoria — no hay
     agregación por mes disponible en el cliente de Supabase usado aquí."""
     tips = supabase_admin.table("tips")\
-        .select("amount, created_at")\
+        .select("amount, registered_at")\
         .eq("business_id", business_id)\
-        .gte("created_at", f"{year}-01-01")\
-        .lte("created_at", f"{year}-12-31T23:59:59")\
+        .gte("registered_at", f"{year}-01-01")\
+        .lte("registered_at", f"{year}-12-31T23:59:59")\
         .execute()
 
     totals = defaultdict(lambda: Decimal("0"))
     counts = defaultdict(int)
     for t in (tips.data or []):
-        month = int(t["created_at"][5:7])
+        month = int(t["registered_at"][5:7])
         totals[month] += Decimal(str(t["amount"]))
         counts[month] += 1
 

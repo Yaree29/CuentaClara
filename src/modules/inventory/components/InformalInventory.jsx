@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Animated,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   MagnifyingGlassIcon,
   MegaphoneIcon,
@@ -41,6 +42,18 @@ const InformalInventory = () => {
     isAddCategoryModalVisible, setIsAddCategoryModalVisible,
     categoriesLoading,
   } = useInformalInventory();
+
+  // Shortcut "Nuevo Producto" del dashboard: navega acá con openAddProduct=true
+  // y abre directo el formulario de crear producto. Se limpia el param en el
+  // mismo tick para que no se re-abra si el usuario cierra el modal y vuelve.
+  const navigation = useNavigation();
+  const route = useRoute();
+  useEffect(() => {
+    if (route.params?.openAddProduct) {
+      openAddForm();
+      navigation.setParams({ openAddProduct: undefined });
+    }
+  }, [route.params?.openAddProduct, navigation, openAddForm]);
 
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
   const fabAnimation = React.useRef(new Animated.Value(0)).current;

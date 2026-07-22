@@ -65,9 +65,9 @@ const InformalDashboard = ({ onTodayIncomeChange } = {}) => {
     onTodayIncomeChange?.(todayIncome);
   }, [todayIncome, onTodayIncomeChange]);
 
-  const goToTab = (tabName) => {
+  const goToTab = (tabName, params) => {
     try {
-      navigation.navigate(tabName);
+      navigation.navigate(tabName, params);
     } catch (e) {
       console.warn(`[Dashboard] tab "${tabName}" no disponible:`, e?.message);
     }
@@ -119,12 +119,16 @@ const InformalDashboard = ({ onTodayIncomeChange } = {}) => {
         </View>
       </View>
 
-      {/* ACCIONES RÁPIDAS */}
+      {/* ACCIONES RÁPIDAS
+          Los shortcuts no solo navegan al tab: además disparan el pop-up de
+          la acción concreta para ahorrarle al comerciante un par de taps.
+          Los params (openFiado / openAddProduct) son consumidos y limpiados
+          por las pantallas destino (ver salesInformal.jsx / InformalInventory.jsx). */}
       <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
       <View style={styles.quickActionsContainer}>
         <TouchableOpacity
           style={styles.quickActionButtonLeft}
-          onPress={() => goToTab('credit')}
+          onPress={() => goToTab('sales', { openFiado: true })}
         >
           <View style={styles.quickActionIconContainerLeft}>
             <Ionicons name="people-outline" size={24} color={colors.info} />
@@ -135,7 +139,7 @@ const InformalDashboard = ({ onTodayIncomeChange } = {}) => {
 
         <TouchableOpacity
           style={styles.quickActionButtonRight}
-          onPress={() => goToTab('inventory')}
+          onPress={() => goToTab('inventory', { openAddProduct: true })}
         >
           <View style={styles.quickActionIconContainerRight}>
             <Ionicons name="cube-outline" size={24} color={colors.success} />

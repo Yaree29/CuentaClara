@@ -25,13 +25,14 @@ import debtService, {
 import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
 
-// Categorías de ordenamiento disponibles
+// Categorías de ordenamiento disponibles.
+// Cada botón funciona como toggle: al tocarlo se invierte la dirección
+// (asc/desc) manteniendo la misma categoría. La dirección default es la más
+// útil para el comerciante en cada caso (mayor deuda, más reciente, A-Z).
 export const SORT_CATEGORIES = [
-  { key: 'recent',     label: 'Recientes' },
-  { key: 'most_debt',  label: 'Mayor deuda' },
-  { key: 'least_debt', label: 'Menor deuda' },
-  { key: 'most_paid',  label: 'Más abono' },
-  { key: 'least_paid', label: 'Menos abono' },
+  { key: 'debt', label: 'Deuda',      defaultDirection: 'desc' },
+  { key: 'date', label: 'Antigüedad', defaultDirection: 'desc' },
+  { key: 'name', label: 'Nombre',     defaultDirection: 'asc'  },
 ];
 
 // Une la nota guardada en la descripción del fiado con la nota de la factura
@@ -133,9 +134,22 @@ export const useInformalCredit = () => {
 
   // UI
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortCategory, setSortCategory] = useState('recent');
+  const [sortCategory, setSortCategory] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' | 'desc'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Toggle sobre las categorías: si se toca la que ya está activa se invierte
+  // la dirección; si se cambia de categoría se aplica su dirección default.
+  const toggleSortCategory = useCallback((key) => {
+    if (sortCategory === key) {
+      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+      return;
+    }
+    const category = SORT_CATEGORIES.find((c) => c.key === key);
+    setSortCategory(key);
+    setSortDirection(category?.defaultDirection || 'desc');
+  }, [sortCategory]);
 
   // Modales
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
@@ -260,29 +274,32 @@ export const useInformalCredit = () => {
       });
   }, [customers, debts]);
 
-  // Ordenamiento por categoría
+  // Ordenamiento por categoría + dirección (toggle).
+  // dir === -1 invierte el resultado de la comparación base (que siempre
+  // devuelve ascendente), así una sola expresión cubre asc y desc.
   const sortedCredits = useMemo(() => {
     const sorted = [...credits];
+    const dir = sortDirection === 'desc' ? -1 : 1;
+
     switch (sortCategory) {
-      case 'most_debt':
-        sorted.sort((a, b) => b.totalDebt - a.totalDebt);
+      case 'debt':
+        sorted.sort((a, b) => (a.totalDebt - b.totalDebt) * dir);
         break;
-      case 'least_debt':
-        sorted.sort((a, b) => a.totalDebt - b.totalDebt);
+      case 'name':
+        sorted.sort((a, b) => a.clientName.localeCompare(b.clientName) * dir);
         break;
-      case 'most_paid':
-        sorted.sort((a, b) => b.paidAmount - a.paidAmount);
+      case 'date':
+      default: {
+        sorted.sort((a, b) => {
+          const ta = new Date(a.lastUpdate || 0).getTime();
+          const tb = new Date(b.lastUpdate || 0).getTime();
+          return (ta - tb) * dir;
+        });
         break;
-      case 'least_paid':
-        sorted.sort((a, b) => a.paidAmount - b.paidAmount);
-        break;
-      case 'recent':
-      default:
-        // Ya viene ordenado por created_at desc desde la API
-        break;
+      }
     }
     return sorted;
-  }, [credits, sortCategory]);
+  }, [credits, sortCategory, sortDirection]);
 
   const filteredCredits = useMemo(() => {
     if (!searchQuery) return sortedCredits;
@@ -575,8 +592,8 @@ export const useInformalCredit = () => {
     searchQuery, setSearchQuery, filteredCredits, senderName, loading, error, refresh: fetchAll,
     inventoryProducts,
 
-    // Categorías
-    sortCategory, setSortCategory,
+    // Categorías (toggle único: dirección se invierte al re-tocar)
+    sortCategory, sortDirection, toggleSortCategory,
 
     // Modales
     isFormModalVisible, setIsFormModalVisible, editingCredit, isPaymentModalVisible,

@@ -4,7 +4,7 @@ import {
   ScrollView, Alert, Animated, ActivityIndicator, TouchableWithoutFeedback,
 } from 'react-native';
 import {
-  MagnifyingGlassIcon, PlusIcon, CurrencyDollarIcon,
+  MagnifyingGlassIcon, CurrencyDollarIcon,
   XMarkIcon,
 } from 'react-native-heroicons/solid';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,11 +21,11 @@ const InformalCredit = () => {
     searchQuery, setSearchQuery, filteredCredits,
     isFormModalVisible, setIsFormModalVisible, editingCredit,
     isPaymentModalVisible, setIsPaymentModalVisible,
-    selectedClient, openPaymentModal, openAddModal, openEditModal,
+    selectedClient, openPaymentModal, openEditModal,
     saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,
     inventoryProducts,
     // Nuevas features
-    sortCategory, setSortCategory,
+    sortCategory, sortDirection, toggleSortCategory,
     isDetailModalVisible, detailCredit, detailPayments, loadingPayments,
     openDetailModal, closeDetailModal,
     isNoteModalVisible, noteCredit, openNoteModal, closeNoteModal, saveNote,
@@ -402,31 +402,40 @@ const InformalCredit = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Categorías de ordenamiento */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryScroll}
-          contentContainerStyle={styles.categoryScrollContent}
-        >
-          {SORT_CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat.key}
-              style={[
-                styles.categoryPill,
-                sortCategory === cat.key && styles.categoryPillActive,
-              ]}
-              onPress={() => setSortCategory(cat.key)}
-            >
-              <Text style={[
-                styles.categoryPillText,
-                sortCategory === cat.key && styles.categoryPillTextActive,
-              ]}>
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* Categorías de ordenamiento (toggle único con chevron)
+            Cada botón funciona como toggle: al tocarlo la primera vez aplica
+            su dirección default; al re-tocarlo invierte asc/desc. La flecha
+            solo se muestra en el botón activo para no saturar la barra. */}
+        <View style={styles.categoryRow}>
+          {SORT_CATEGORIES.map((cat) => {
+            const isActive = sortCategory === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                style={[
+                  styles.categoryPill,
+                  isActive && styles.categoryPillActive,
+                ]}
+                onPress={() => toggleSortCategory(cat.key)}
+              >
+                <Text style={[
+                  styles.categoryPillText,
+                  isActive && styles.categoryPillTextActive,
+                ]}>
+                  {cat.label}
+                </Text>
+                {isActive && (
+                  <Ionicons
+                    name={sortDirection === 'desc' ? 'chevron-down' : 'chevron-up'}
+                    size={14}
+                    color={colors.textButton}
+                    style={{ marginLeft: 4 }}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Resumen rápido */}
@@ -452,28 +461,11 @@ const InformalCredit = () => {
             <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
             <Text style={styles.emptyStateTitle}>Sin fiados registrados</Text>
             <Text style={styles.emptyStateText}>
-              Toca el botón + para anotar un nuevo fiado
+              Registra una venta a fiado desde Ventas para verla aquí
             </Text>
           </View>
         }
       />
-
-      {/* ========== FAB: Anotar nuevo fiado ==========
-          Se había perdido en un refactor previo: openAddModal quedó
-          destructurado del hook pero sin ningún disparador en la UI, así que
-          no había forma de crear un fiado (pese a que el estado vacío decía
-          "Toca el botón + para anotar un nuevo fiado"). Mismo patrón/estilos
-          que el FAB de Inventario informal. */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          style={styles.fabButton}
-          activeOpacity={0.8}
-          onPress={openAddModal}
-          accessibilityLabel="Anotar nuevo fiado"
-        >
-          <PlusIcon size={28} color={colors.textWhite} />
-        </TouchableOpacity>
-      </View>
 
       {/* ========== MODAL: Menú Contextual ========== */}
       <Modal visible={menuVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={closeMenu}>

@@ -114,6 +114,9 @@ const inventoryService = {
       ...(productData.unit !== undefined ? { unit: productData.unit } : {}),
       ...(productData.minStock !== undefined ? { min_stock: Number(productData.minStock) } : {}),
       ...(productData.expirationDate !== undefined ? { expiration_date: productData.expirationDate } : {}),
+      // Solo lo usa el backend cuando el stock sube: decide si además del
+      // movimiento de entrada se registra el gasto en caja.
+      ...(productData.purchaseType !== undefined ? { purchase_type: productData.purchaseType } : {}),
     };
 
     const data = await apiRequest(`/inventory/products/${productId}`, {

@@ -4,7 +4,9 @@ import colors from '../../../theme/colors';
 export default StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    // Sin negro sólido detrás del modal: transparente, se ve el fondo real
+    // de la pantalla debajo en vez de un velo oscuro de pantalla completa.
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -74,7 +76,7 @@ export default StyleSheet.create({
   },
   cameraFrame: {
     width: '100%',
-    height: 260,
+    height: 520,
     borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: colors.cardSecondary,
@@ -92,6 +94,22 @@ export default StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  torchButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cornerTopLeft: {
     position: 'absolute',

@@ -64,6 +64,7 @@ export default StyleSheet.create({
 
   tabsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.border,
     borderRadius: 12,
     padding: 4,
@@ -687,128 +688,98 @@ showMoreText: {
   fontSize: 14,
 },
 
-  /* =========================
-      EVALUACIÓN DE VENTAS
-   ========================== */
-
-  evaluationCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-
-  evaluationTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F2747',
-    marginBottom: 12,
-  },
-
-  evaluationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-
-  evaluationLabel: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-
-  evaluationValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F2747',
-  },
-
-  // Fila de cierre: el neto real (lo cobrado menos los gastos). Se separa del
-  // resto con una línea para que se lea como el total, no como un dato más.
-  evaluationTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-
-  evaluationTotalLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F2747',
-  },
-
-  evaluationTotalValue: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  // Aclaración de que el fiado no entra en el neto (aún no se ha cobrado).
-  evaluationHint: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 6,
-  },
-
 // =========================
 //     History
 // ==========================
 
+  /* Título de sección: bajado de 24px a 15px y a tinta secundaria en
+     mayúsculas. Antes competía con los datos — un encabezado no debe ser lo
+     más prominente de la pantalla. */
   reportTitle: {
-    fontSize: 24,
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 20,
-    marginTop: 20,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 12,
+    marginTop: 24,
     textAlign: 'left',
   },
 
-historySummary: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 20,
-  gap: 12,
-},
+  /* --- Balance del período (hero number) --- */
+  heroCard: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
 
-summaryCardIncome: {
-  flex: 1,
-  backgroundColor: '#ECFDF5',
-  borderRadius: 16,
-  padding: 18,
-  borderWidth: 1,
-  borderColor: '#A7F3D0',
-},
+  heroLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
 
-summaryCardExpense: {
-  flex: 1,
-  backgroundColor: '#FEF2F2',
-  borderRadius: 16,
-  padding: 18,
-  borderWidth: 1,
-  borderColor: '#FECACA',
-},
+  heroAmount: {
+    fontSize: 38,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
 
-summaryLabel: {
-  fontSize: 14,
-  color: colors.textSecondary,
-  marginBottom: 8,
-},
+  heroHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+    textAlign: 'center',
+  },
 
-summaryIncome: {
-  fontSize: 24,
-  fontWeight: 'bold',
-  color: '#16A34A',
-},
+  /* --- Fila de métricas --- */
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
 
-summaryExpense: {
-  fontSize: 24,
-  fontWeight: 'bold',
-  color: '#DC2626',
-},
+  kpiTile: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  // Punto de color: la identidad no depende solo del color del número,
+  // cada tile lleva además su etiqueta en texto.
+  kpiDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+
+  kpiLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+
+  kpiValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+
+  kpiMeta: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
 
 historyContainer: {
   gap: 12,
@@ -832,16 +803,40 @@ historyTitle: {
   color: colors.textPrimary,
 },
 
+historyMetaRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  marginTop: 6,
+},
+
+historyBadge: {
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 6,
+},
+
+historyBadgeText: {
+  fontSize: 11,
+  fontWeight: '700',
+},
+
 historyDate: {
-  fontSize: 13,
-  color: colors.textSecondary,
-  marginTop: 4,
+  fontSize: 12,
+  color: colors.textMuted,
 },
 
 historyIncome: {
   fontSize: 18,
   fontWeight: 'bold',
   color: '#16A34A',
+},
+
+// Fiado: plata que te deben, no una pérdida. Ámbar, no rojo.
+historyPending: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#B45309',
 },
 
 historyExpense: {

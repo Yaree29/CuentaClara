@@ -56,6 +56,29 @@ const mergeNotes = (...notes) => {
   return unique.join('\n');
 };
 
+// Errores de la gestión de clientes, en lenguaje del comerciante. El caso
+// "todavía debe $X" ya viene redactado desde el backend y se deja tal cual,
+// porque es la información concreta que el usuario necesita para actuar.
+const friendlyCustomerError = (rawMessage) => {
+  const msg = (rawMessage || '').toLowerCase();
+
+  if (msg.includes('todavía debe')) return rawMessage;
+
+  if (msg.includes('cliente no encontrado')) {
+    return 'Este cliente ya no existe. Actualiza la lista e inténtalo de nuevo.';
+  }
+
+  if (msg.includes('sesión') || msg.includes('401')) {
+    return 'Tu sesión se cerró. Vuelve a iniciar sesión para continuar.';
+  }
+
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) {
+    return 'No hay conexión con el servidor. Revisa tu internet e inténtalo otra vez.';
+  }
+
+  return 'No pudimos guardar los cambios. Inténtalo de nuevo en un momento.';
+};
+
 // Traduce los errores técnicos del backend a mensajes que entienda el dueño
 // del negocio. Si aparece uno que no conocemos, damos una salida genérica pero
 // accionable en vez de mostrar el texto crudo de la API.
@@ -130,6 +153,10 @@ export const useInformalCredit = () => {
   const [isNoteModalVisible, setIsNoteModalVisible] = useState(false);
   const [noteCredit, setNoteCredit] = useState(null);
 
+  // Gestión de clientes: lista + ficha en edición
+  const [isCustomersModalVisible, setIsCustomersModalVisible] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+
   // Carga inicial: customers + debts + inventario en paralelo
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -193,6 +220,45 @@ export const useInformalCredit = () => {
       };
     });
   }, [debts, customers]);
+
+  // Lista de clientes para la pantalla de gestión, con sus totales ya
+  // calculados a partir de las deudas que el hook ya tiene en memoria (no hace
+  // falta pedirle nada más a la API). Se ordena poniendo primero a los que
+  // deben plata: son los que el comerciante necesita ver.
+  const customersWithStats = useMemo(() => {
+    const statsById = new Map();
+
+    for (const d of debts) {
+      const id = d.customer_id;
+      const remaining = Number(d.remaining_amount) || 0;
+      const isOpen = ['pending', 'partial', 'overdue'].includes(d.status);
+
+      const acc = statsById.get(id) || { totalDebt: 0, openDebts: 0 };
+      acc.totalDebt += remaining;
+      if (isOpen && remaining > 0) acc.openDebts += 1;
+      statsById.set(id, acc);
+    }
+
+    return customers
+      .map((c) => {
+        const stats = statsById.get(c.id) || { totalDebt: 0, openDebts: 0 };
+        return {
+          id: c.id,
+          name: c.name || 'Sin nombre',
+          phone: c.phone || '',
+          notes: c.notes || '',
+          totalDebt: stats.totalDebt,
+          openDebts: stats.openDebts,
+          // Solo se puede eliminar a quien no deba nada: el backend valida lo
+          // mismo, esto es para deshabilitar el botón antes de intentarlo.
+          canDelete: stats.totalDebt <= 0,
+        };
+      })
+      .sort((a, b) => {
+        if (b.totalDebt !== a.totalDebt) return b.totalDebt - a.totalDebt;
+        return a.name.localeCompare(b.name);
+      });
+  }, [customers, debts]);
 
   // Ordenamiento por categoría
   const sortedCredits = useMemo(() => {
@@ -379,6 +445,59 @@ export const useInformalCredit = () => {
     });
   };
 
+  // ── Gestión de clientes ────────────────────────────────────────────────────
+  // Mismo contrato { ok, error } que registerPayment: la UI muestra el mensaje
+  // dentro del formulario en vez de un Alert genérico.
+
+  const saveCustomer = async (customerId, { name, phone, notes }) => {
+    const cleanName = (name || '').trim();
+
+    if (!cleanName) {
+      return { ok: false, error: 'Escribe el nombre del cliente.' };
+    }
+
+    const digits = (phone || '').replace(/\D/g, '');
+    if (digits && digits.length !== 8) {
+      return {
+        ok: false,
+        error: 'El número de WhatsApp debe tener 8 dígitos. Déjalo vacío si no lo tienes.',
+      };
+    }
+
+    // Evita dos fichas para la misma persona: si ya existe otro cliente activo
+    // con ese nombre, el comerciante terminaría con la deuda partida en dos.
+    const duplicate = customers.find(
+      (c) => c.id !== customerId && c.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicate) {
+      return { ok: false, error: `Ya tienes un cliente llamado ${duplicate.name}.` };
+    }
+
+    try {
+      await debtService.updateCustomer(customerId, {
+        name: cleanName,
+        phone: digits ? `+507${digits}` : null,
+        notes: (notes || '').trim() || null,
+      });
+      await fetchAll();
+      return { ok: true };
+    } catch (err) {
+      console.error('Error al guardar cliente:', err);
+      return { ok: false, error: friendlyCustomerError(err?.message) };
+    }
+  };
+
+  const removeCustomer = async (customerId) => {
+    try {
+      await debtService.deleteCustomer(customerId);
+      await fetchAll();
+      return { ok: true };
+    } catch (err) {
+      console.error('Error al eliminar cliente:', err);
+      return { ok: false, error: friendlyCustomerError(err?.message) };
+    }
+  };
+
   // Guardar nota del cliente
   const saveNote = async (customerId, noteText) => {
     try {
@@ -441,6 +560,16 @@ export const useInformalCredit = () => {
     setNoteCredit(null);
   };
 
+  const openCustomersModal = () => {
+    setEditingCustomer(null);
+    setIsCustomersModalVisible(true);
+  };
+
+  const closeCustomersModal = () => {
+    setIsCustomersModalVisible(false);
+    setEditingCustomer(null);
+  };
+
   return {
     // Datos
     searchQuery, setSearchQuery, filteredCredits, senderName, loading, error, refresh: fetchAll,
@@ -459,6 +588,10 @@ export const useInformalCredit = () => {
 
     // Notas
     isNoteModalVisible, noteCredit, openNoteModal, closeNoteModal, saveNote,
+
+    // Clientes
+    customersWithStats, isCustomersModalVisible, openCustomersModal, closeCustomersModal,
+    editingCustomer, setEditingCustomer, saveCustomer, removeCustomer,
 
     // Acciones
     saveCredit, registerPayment, sendWhatsAppReminder, deleteCredit,

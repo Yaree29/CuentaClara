@@ -12,6 +12,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInformalCredit, SORT_CATEGORIES } from '../hooks/useInformalCredit';
 import { buildDebtDescription } from '../services/debtService';
+import CustomersModal from './CustomersModal';
 import styles from '../styles/informalCredit.styles';
 import colors from '../../../theme/colors';
 
@@ -28,6 +29,9 @@ const InformalCredit = () => {
     isDetailModalVisible, detailCredit, detailPayments, loadingPayments,
     openDetailModal, closeDetailModal,
     isNoteModalVisible, noteCredit, openNoteModal, closeNoteModal, saveNote,
+    // Gestión de clientes
+    customersWithStats, isCustomersModalVisible, openCustomersModal, closeCustomersModal,
+    editingCustomer, setEditingCustomer, saveCustomer, removeCustomer,
   } = useInformalCredit();
 
   // Los modales de esta pantalla son bottom-sheets: sin este inset, su botón
@@ -371,20 +375,31 @@ const InformalCredit = () => {
     <View style={styles.container}>
       {/* BUSCADOR + CATEGORÍAS */}
       <View style={styles.headerWrapper}>
-        <View style={styles.searchContainer}>
-          <MagnifyingGlassIcon size={20} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por nombre o producto..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <XMarkIcon size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
+        <View style={styles.searchRow}>
+          <View style={[styles.searchContainer, { flex: 1 }]}>
+            <MagnifyingGlassIcon size={20} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre o producto..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <XMarkIcon size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Acceso a la libreta de clientes (editar / eliminar) */}
+          <TouchableOpacity
+            style={styles.customersBtn}
+            onPress={openCustomersModal}
+            accessibilityLabel="Ver mis clientes"
+          >
+            <Ionicons name="people" size={20} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Categorías de ordenamiento */}
@@ -907,6 +922,17 @@ const InformalCredit = () => {
           </View>
         </View>
       </Modal>
+
+      {/* ========== MODAL: Mis Clientes ========== */}
+      <CustomersModal
+        visible={isCustomersModalVisible}
+        customers={customersWithStats}
+        editingCustomer={editingCustomer}
+        setEditingCustomer={setEditingCustomer}
+        onSave={saveCustomer}
+        onDelete={removeCustomer}
+        onClose={closeCustomersModal}
+      />
     </View>
   );
 };

@@ -12,19 +12,12 @@ import { XMarkIcon, CameraIcon, SparklesIcon } from 'react-native-heroicons/soli
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import UnitTypeSelector from './UnitTypeSelector';
 
 // Código de barras autogenerado: timestamp de 12 dígitos (numérico, así puede
 // imprimirse/leerse como CODE128). Simple y único en la práctica — evita la
 // necesidad de una secuencia consultada al backend.
 const generateBarcode = () => String(Date.now()).slice(-12);
-
-// Opciones fijas del selector de unidad de medida (unit_type) — reemplaza el
-// texto libre por un control simple cuando el negocio tiene control_peso activo.
-const WEIGHT_UNIT_OPTIONS = [
-  { value: 'kg', label: 'Kg' },
-  { value: 'lb', label: 'Libra' },
-  { value: 'unidad', label: 'Unidad' },
-];
 
 // ─── Reglas de validación ──────────────────────────────────────────────────────
 
@@ -137,7 +130,12 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setName('');
       setPrice('');
       setCostPrice('');
-      setCategory(categories[0] || '');
+      // Al crear desde un escaneo sin coincidencia (prefillBarcode presente),
+      // arranca en "Sin categoría" — el producto puede ser de cualquier
+      // categoría y no hay forma de adivinarla solo del código leído. En el
+      // resto de casos (botón "+" normal) se mantiene el comportamiento
+      // previo de preseleccionar la primera categoría existente.
+      setCategory(prefillBarcode ? '' : (categories[0] || ''));
       setStock('');
       setMinStock('');
       setPurchaseType('register_only');
@@ -149,9 +147,11 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     }
   }, [initialData, visible, categories, prefillBarcode]);
 
-  // Si categorías cargan después de abrir el modal
+  // Si categorías cargan después de abrir el modal (ej. tardaron en llegar).
+  // No aplica cuando se creó desde un escaneo sin coincidencia: ahí
+  // "Sin categoría" es la elección deliberada, no falta de datos todavía.
   useEffect(() => {
-    if (!category && categories.length > 0) {
+    if (!category && categories.length > 0 && !(!initialData && prefillBarcode)) {
       setCategory(categories[0]);
     }
   }, [categories]);
@@ -201,6 +201,16 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
 
   // ─── Guardar ─────────────────────────────────────────────────────────────────
 
+  // Unidades que esta edición SUMA al stock actual. Solo cuando entra
+  // mercancía tiene sentido preguntar si salió plata del negocio: bajar el
+  // stock (una merma, un conteo a la baja) nunca es un gasto.
+  const previousStock = initialData ? Number(initialData.stock) || 0 : 0;
+  const typedStock = stock !== '' ? parseInt(stock, 10) : 0;
+  const addedUnits = Number.isFinite(typedStock) ? typedStock - previousStock : 0;
+
+  // Al crear, cualquier stock inicial cuenta como mercancía que entra.
+  const isAddingStock = initialData ? addedUnits > 0 : typedStock > 0;
+
   const handleSave = () => {
     // Ejecutar todas las validaciones antes de guardar
     const nErr  = !name.trim()
@@ -209,7 +219,23 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         ? 'El nombre es demasiado corto.'
         : null;
     const pErr  = validatePrice(price);
-    const cpErr = showCostPrice ? validateCostPrice(costPrice) : null;
+    // Si dice que pagó la mercancía, el costo deja de ser opcional: es el dato
+    // con el que se calcula cuánto dinero salió. Sin él el gasto se estimaba
+    // con el precio de VENTA e inflaba los reportes (90 unidades que se venden
+    // a $99 figuraban como $8910 gastados).
+    //
+    // Solo se puede exigir si el campo está visible: showCostPrice depende de
+    // la configuración del negocio y, cuando está apagado, el costo ni siquiera
+    // se muestra ni se envía.
+    const costoRequerido =
+      showCostPrice &&
+      isAddingStock &&
+      purchaseType === 'use_gains' &&
+      (costPrice === '' || parseFloat(costPrice) <= 0);
+
+    const cpErr = costoRequerido
+      ? 'Escribe cuánto te costó cada unidad para poder registrar el gasto.'
+      : (showCostPrice ? validateCostPrice(costPrice) : null);
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
     const edErr = showExpiration ? validateExpirationDate(expirationDate) : null;
@@ -356,19 +382,15 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
               {showWeightControl && (
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Unidad de medida</Text>
-                  <View style={styles.purchaseTypeContainer}>
-                    {WEIGHT_UNIT_OPTIONS.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[styles.purchaseTypePill, unitType === opt.value && styles.purchaseTypePillActive]}
-                        onPress={() => setUnitType(opt.value)}
-                      >
-                        <Text style={[styles.purchaseTypeText, unitType === opt.value && styles.purchaseTypeTextActive]}>
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <UnitTypeSelector
+                    value={unitType}
+                    onChange={setUnitType}
+                    containerStyle={styles.purchaseTypeContainer}
+                    pillStyle={styles.purchaseTypePill}
+                    pillActiveStyle={styles.purchaseTypePillActive}
+                    textStyle={styles.purchaseTypeText}
+                    textActiveStyle={styles.purchaseTypeTextActive}
+                  />
                 </View>
               )}
 
@@ -400,10 +422,18 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                 </View>
               </View>
 
-              {/* ── ¿Cómo adquiriste este producto? ── */}
-              {!initialData && (
+              {/* ── ¿Cómo adquiriste este producto? ──
+                  Al crear se pregunta por el stock inicial. Al editar se
+                  pregunta solo si esta edición SUMA unidades: antes, subir la
+                  cantidad disponible no preguntaba nada y la mercancía entraba
+                  sin dejar movimiento ni gasto. */}
+              {isAddingStock && (
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>¿Cómo adquiriste este producto?</Text>
+                  <Text style={styles.formLabel}>
+                    {initialData
+                      ? `Vas a añadir ${addedUnits} unidad${addedUnits !== 1 ? 'es' : ''}. ¿Cómo las conseguiste?`
+                      : '¿Cómo adquiriste este producto?'}
+                  </Text>
                   <View style={styles.purchaseTypeContainer}>
                     <TouchableOpacity
                       style={[
@@ -438,6 +468,18 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  {/* Adelanta cuánto se va a descontar, para que el número no
+                      sea una sorpresa en el reporte. */}
+                  {purchaseType === 'use_gains' && showCostPrice && (
+                    <Text style={styles.purchaseHint}>
+                      {costPrice !== '' && parseFloat(costPrice) > 0
+                        ? `Se registrará un gasto de $${(
+                            (initialData ? addedUnits : typedStock) * parseFloat(costPrice)
+                          ).toFixed(2)} (${initialData ? addedUnits : typedStock} × $${parseFloat(costPrice).toFixed(2)} de costo).`
+                        : 'Escribe el Costo de Producción para calcular el gasto.'}
+                    </Text>
+                  )}
                 </View>
               )}
 

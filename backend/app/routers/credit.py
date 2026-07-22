@@ -7,6 +7,7 @@
 #   GET    /credit/customers              → listar clientes activos del negocio
 #   POST   /credit/customers              → crear cliente
 #   PATCH  /credit/customers/{id}         → actualizar datos del cliente
+#   DELETE /credit/customers/{id}         → eliminar cliente (baja lógica)
 #   GET    /credit/debts                  → listar deudas (filtrables por status)
 #   POST   /credit/debts                  → crear deuda/fiado
 #   PATCH  /credit/debts/{id}             → editar monto/descripción/fecha
@@ -56,6 +57,21 @@ def update_customer(
     try:
         return credit_service.update_customer(
             current_user["business_id"], customer_id, data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/customers/{customer_id}", summary="Eliminar cliente (baja lógica)")
+def delete_customer(
+    customer_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Baja lógica: el cliente deja de listarse pero su historial se conserva.
+    Falla con 400 si todavía tiene fiados con saldo pendiente."""
+    try:
+        return credit_service.deactivate_customer(
+            current_user["business_id"], customer_id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -21,6 +21,7 @@ import styles from './styles/salesHistory.style';
 import useAuthStore from '../../../../store/useAuthStore';
 import billingService from '../../../Invoice/services/billingService';
 import cashService from '../../services/cashService';
+import expensesService from '../../services/expensesService';
 import colors from '../../../../theme/colors';
 import { ArchiveBoxIcon } from 'react-native-heroicons/outline';
 
@@ -29,6 +30,9 @@ const SalesHistoryScreen = ({ cashStatus }) => {
   const user = useAuthStore((state) => state.user);
 
   const [invoices, setInvoices] = useState([]);
+  // Salidas de dinero de la misma caja: hoy son las reposiciones de stock
+  // (añadir unidades a un producto marcando "compré con mis ganancias").
+  const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [sessionLabel, setSessionLabel] = useState(null);
@@ -53,16 +57,28 @@ const SalesHistoryScreen = ({ cashStatus }) => {
 
       if (!sessionId) {
         setInvoices([]);
+        setExpenses([]);
         setSessionLabel(null);
         return;
       }
 
-      const data = await billingService.getInvoices(null, { cashSessionId: sessionId, limit: 200 });
+      // Ventas y gastos de la misma sesión, en paralelo. Si los gastos fallan
+      // el historial de ventas se muestra igual: es información adicional.
+      const [data, expensesData] = await Promise.all([
+        billingService.getInvoices(null, { cashSessionId: sessionId, limit: 200 }),
+        expensesService.getExpenses({ cashSessionId: sessionId, limit: 200 }).catch((e) => {
+          console.error('Error cargando gastos de la sesión:', e);
+          return [];
+        }),
+      ]);
+
       setInvoices(Array.isArray(data) ? data : []);
+      setExpenses(Array.isArray(expensesData) ? expensesData : []);
       setSessionLabel(label);
     } catch (error) {
       console.error('Error cargando ventas de la sesión:', error);
       setInvoices([]);
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
@@ -117,6 +133,11 @@ const SalesHistoryScreen = ({ cashStatus }) => {
     });
   }, [users, invoices]);
 
+  const totalExpenses = useMemo(
+    () => expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
+    [expenses]
+  );
+
   return (
     <>
       <ScrollView contentContainerStyle={styles.content}>
@@ -169,6 +190,42 @@ const SalesHistoryScreen = ({ cashStatus }) => {
               </View>
             </TouchableOpacity>
           ))
+        )}
+
+        {/* ── Entradas de mercancía pagadas con dinero del negocio ──
+            Se listan junto a las ventas porque son movimientos de la misma
+            caja: dinero que salió para reponer stock. */}
+        {!loading && expenses.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+              Compras de mercancía
+            </Text>
+
+            <View style={styles.userCard}>
+              <View style={styles.userHeader}>
+                <View>
+                  <Text style={styles.userName}>Salidas de caja</Text>
+                  <Text style={styles.userRole}>
+                    {expenses.length} movimiento{expenses.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <Text style={[styles.userMoney, { color: colors.danger }]}>
+                  -${totalExpenses.toFixed(2)}
+                </Text>
+              </View>
+
+              {expenses.map((exp) => (
+                <View key={exp.id} style={styles.userStatsRow}>
+                  <Text style={[styles.userInfoText, { flex: 1, marginLeft: 0 }]} numberOfLines={1}>
+                    {exp.description || 'Gasto sin descripción'}
+                  </Text>
+                  <Text style={[styles.userInfoText, { color: colors.danger, fontWeight: '700' }]}>
+                    -${(Number(exp.amount) || 0).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
         )}
       </ScrollView>
 

@@ -147,6 +147,7 @@ def update_product(
             business_id=current_user["business_id"],
             product_id=product_id,
             data=data,
+            user_id=current_user["sub"],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

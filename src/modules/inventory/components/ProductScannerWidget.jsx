@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { CameraIcon, MagnifyingGlassIcon } from 'react-native-heroicons/solid';
 import colors from '../../../theme/colors';
 import inventoryService from '../services/inventoryService';
@@ -97,32 +97,37 @@ const ProductScannerWidget = ({ onScan, onCreateNew }) => {
         <Text style={styles.buttonText}>Escanear producto</Text>
       </TouchableOpacity>
 
-      <Text style={styles.inputLabel}>O busca por código (SKU)</Text>
-      <View style={styles.manualRow}>
-        <TextInput
-          style={[styles.input, styles.manualInput]}
-          value={manualCode}
-          onChangeText={setManualCode}
-          placeholder="Ej. CAR-001"
-          placeholderTextColor={colors.placeholder}
-          autoCapitalize="characters"
-          editable={!loadingProducts}
-          onSubmitEditing={handleManualSearch}
-          returnKeyType="search"
-        />
-        <TouchableOpacity
-          style={[styles.searchIconButton, !canSearchManual && styles.buttonDisabled]}
-          onPress={handleManualSearch}
-          activeOpacity={0.85}
-          disabled={!canSearchManual}
-        >
-          {loadingProducts ? (
-            <ActivityIndicator size="small" color={colors.textWhite} />
-          ) : (
-            <MagnifyingGlassIcon size={18} color={colors.textWhite} />
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* KeyboardAvoidingView solo alrededor de este bloque: el widget vive
+          dentro del ScrollView normal de PymeInventory.jsx, así que sin esto
+          el teclado tapaba el input al estar cerca del final de la pantalla. */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Text style={styles.inputLabel}>O busca por código (SKU)</Text>
+        <View style={styles.manualRow}>
+          <TextInput
+            style={[styles.input, styles.manualInput]}
+            value={manualCode}
+            onChangeText={setManualCode}
+            placeholder="Ej. CAR-001"
+            placeholderTextColor={colors.placeholder}
+            autoCapitalize="characters"
+            editable={!loadingProducts}
+            onSubmitEditing={handleManualSearch}
+            returnKeyType="search"
+          />
+          <TouchableOpacity
+            style={[styles.searchIconButton, !canSearchManual && styles.buttonDisabled]}
+            onPress={handleManualSearch}
+            activeOpacity={0.85}
+            disabled={!canSearchManual}
+          >
+            {loadingProducts ? (
+              <ActivityIndicator size="small" color={colors.textWhite} />
+            ) : (
+              <MagnifyingGlassIcon size={18} color={colors.textWhite} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
       {scanResult ? (
         <View style={styles.resultCard}>

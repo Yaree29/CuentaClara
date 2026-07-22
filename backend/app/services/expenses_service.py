@@ -47,6 +47,12 @@ def list_expenses(
     if date_from:
         query = query.gte("created_at", date_from)
     if date_to:
+        # "2026-07-22" se compara como 2026-07-22T00:00:00, así que sin esto
+        # quedaban fuera TODOS los gastos del día en curso: el total (que sí
+        # normaliza, ver sales_service.get_profits_and_expenses) mostraba miles
+        # mientras el detalle devolvía cero filas.
+        if len(date_to) == 10:
+            date_to = f"{date_to}T23:59:59.999Z"
         query = query.lte("created_at", date_to)
 
     result = query.execute()

@@ -205,7 +205,12 @@ const moduleConfig = {
     name: 'Compras',
     icon: ShoppingCartIcon,
     enabled: true,
-    optional: true,
+    // `optional` se quitó a propósito: oculta la tarjeta de Compras del grid
+    // de Herramientas (ModulesScreen.jsx) sin tocar el backend ni la ruta de
+    // stack ('purchases' sigue registrada en MainStackNavigator.jsx, y
+    // enabled_modules/quickActions de Dashboard siguen funcionando igual —
+    // ninguno de los dos depende de este flag). Solo se ocultó el acceso
+    // visible mientras se termina de definir el flujo de "orden y proveedor".
     route: 'purchases',
     subLabel: 'Órdenes y proveedores',
 

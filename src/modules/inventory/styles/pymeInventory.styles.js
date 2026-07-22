@@ -71,37 +71,6 @@ export default StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  flagsSection: {
-    marginBottom: 16,
-  },
-  flagsSectionTitle: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-  flagCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10,
-  },
-  flagCardTitle: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  flagCardDescription: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    marginTop: 3,
-    lineHeight: 17,
-  },
-
   /* ===================== Sección genérica con header (título + acción) ===================== */
   sectionBlock: {
     marginBottom: 16,
@@ -164,6 +133,34 @@ export default StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
+    color: colors.textPrimary,
+  },
+
+  /* ===================== Chips de categorías existentes ===================== */
+  categoryChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    backgroundColor: colors.card,
+  },
+  categoryChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
 

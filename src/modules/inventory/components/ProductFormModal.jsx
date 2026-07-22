@@ -12,19 +12,12 @@ import { XMarkIcon, CameraIcon, SparklesIcon } from 'react-native-heroicons/soli
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import UnitTypeSelector from './UnitTypeSelector';
 
 // Código de barras autogenerado: timestamp de 12 dígitos (numérico, así puede
 // imprimirse/leerse como CODE128). Simple y único en la práctica — evita la
 // necesidad de una secuencia consultada al backend.
 const generateBarcode = () => String(Date.now()).slice(-12);
-
-// Opciones fijas del selector de unidad de medida (unit_type) — reemplaza el
-// texto libre por un control simple cuando el negocio tiene control_peso activo.
-const WEIGHT_UNIT_OPTIONS = [
-  { value: 'kg', label: 'Kg' },
-  { value: 'lb', label: 'Libra' },
-  { value: 'unidad', label: 'Unidad' },
-];
 
 // ─── Reglas de validación ──────────────────────────────────────────────────────
 
@@ -137,7 +130,12 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setName('');
       setPrice('');
       setCostPrice('');
-      setCategory(categories[0] || '');
+      // Al crear desde un escaneo sin coincidencia (prefillBarcode presente),
+      // arranca en "Sin categoría" — el producto puede ser de cualquier
+      // categoría y no hay forma de adivinarla solo del código leído. En el
+      // resto de casos (botón "+" normal) se mantiene el comportamiento
+      // previo de preseleccionar la primera categoría existente.
+      setCategory(prefillBarcode ? '' : (categories[0] || ''));
       setStock('');
       setMinStock('');
       setPurchaseType('register_only');
@@ -149,9 +147,11 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     }
   }, [initialData, visible, categories, prefillBarcode]);
 
-  // Si categorías cargan después de abrir el modal
+  // Si categorías cargan después de abrir el modal (ej. tardaron en llegar).
+  // No aplica cuando se creó desde un escaneo sin coincidencia: ahí
+  // "Sin categoría" es la elección deliberada, no falta de datos todavía.
   useEffect(() => {
-    if (!category && categories.length > 0) {
+    if (!category && categories.length > 0 && !(!initialData && prefillBarcode)) {
       setCategory(categories[0]);
     }
   }, [categories]);
@@ -382,19 +382,15 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
               {showWeightControl && (
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Unidad de medida</Text>
-                  <View style={styles.purchaseTypeContainer}>
-                    {WEIGHT_UNIT_OPTIONS.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[styles.purchaseTypePill, unitType === opt.value && styles.purchaseTypePillActive]}
-                        onPress={() => setUnitType(opt.value)}
-                      >
-                        <Text style={[styles.purchaseTypeText, unitType === opt.value && styles.purchaseTypeTextActive]}>
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <UnitTypeSelector
+                    value={unitType}
+                    onChange={setUnitType}
+                    containerStyle={styles.purchaseTypeContainer}
+                    pillStyle={styles.purchaseTypePill}
+                    pillActiveStyle={styles.purchaseTypePillActive}
+                    textStyle={styles.purchaseTypeText}
+                    textActiveStyle={styles.purchaseTypeTextActive}
+                  />
                 </View>
               )}
 

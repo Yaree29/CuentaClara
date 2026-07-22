@@ -1,78 +1,19 @@
-import { useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import useAuthStore from '../../../store/useAuthStore';
+import { Alert } from 'react-native';
 import { useNotifications } from '../hooks/useNotifications';
-import notificationsService from '../services/notificationService';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-const registerForPush = async () => {
-  if (!Device.isDevice) {
-    return null;
-  }
-
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    return null;
-  }
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-    });
-  }
-
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  return token;
-};
-
+// Decisión del proyecto (2026-07-21): NO se usa push real (FCM/Firebase).
+// Las notificaciones de asistente solo llegan mientras la app está abierta o
+// recién en segundo plano, vía la suscripción Realtime de Supabase que ya
+// hace useNotifications() sobre la tabla `notifications` — no requiere
+// permisos de sistema ni token de dispositivo.
 const NotificationsListener = () => {
-  const { user, isAuthenticated } = useAuthStore();
   useNotifications({
     onNewNotification: (notification) => {
       if (notification?.type === 'alert') {
-        Alert.alert('Stock bajo', notification.message || 'Tienes una alerta de inventario.');
+        Alert.alert('CuentaClara', notification.message || 'Tienes una notificación nueva.');
       }
     },
   });
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-    let isMounted = true;
-    const register = async () => {
-      try {
-        const token = await registerForPush();
-        if (!token || !isMounted) return;
-        await notificationsService.registerPushToken({
-          token,
-          deviceType: Platform.OS,
-        });
-      } catch (err) {
-        console.error('[NotificationsListener] Error registrando token push:', err);
-      }
-    };
-
-    register();
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated, user?.id]);
 
   return null;
 };

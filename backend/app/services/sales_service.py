@@ -1,4 +1,5 @@
 from app.database import supabase_admin
+from app.services import notifications_service
 from datetime import datetime
 from decimal import Decimal
 
@@ -128,6 +129,14 @@ def create_quick_sale(business_id: str, user_id: str, data):
             "user_id": user_id,
             "created_at": datetime.utcnow().isoformat()
         }).execute()
+
+    # Notificar al dueño si la venta la registró un asistente (Modo Asistente).
+    if data.assistant_id is not None:
+        notifications_service.notify_owner_of_assistant_action(
+            business_id,
+            "sales",
+            f"{assistant_name or 'Un asistente'} registró una venta por ${float(total_with_tax):.2f}."
+        )
 
     return {
         "invoice_id": invoice_id,

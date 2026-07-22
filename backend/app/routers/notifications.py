@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from app.routers.auth import get_current_user
-from app.models.notifications import PushTokenRequest
+from app.models.notifications import NotificationPreferencesUpdateRequest
 from app.services import notifications_service
 
 router = APIRouter()
@@ -42,17 +42,26 @@ def mark_read(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/push-token", status_code=201, summary="Registrar token push")
-def register_push_token(
-    data: PushTokenRequest,
+@router.get("/preferences", summary="Preferencias de notificación del negocio")
+def get_notification_preferences(current_user: dict = Depends(get_current_user)):
+    try:
+        return notifications_service.get_notification_preferences(
+            business_id=current_user["business_id"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/preferences", summary="Editar preferencias de notificación")
+def update_notification_preferences(
+    data: NotificationPreferencesUpdateRequest,
     current_user: dict = Depends(get_current_user),
 ):
     try:
-        return notifications_service.register_push_token(
-            business_id=current_user["business_id"],
-            user_id=current_user["sub"],
-            token=data.token,
-            device_type=data.device_type or "ios",
+        return notifications_service.update_notification_preferences(
+            business_id=current_user["business_id"], data=data
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

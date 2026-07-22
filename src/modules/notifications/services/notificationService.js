@@ -1,23 +1,20 @@
 // =============================================================================
-// MODIFICADO: 2026-06-02 (integración main → loginDr)
-// Propósito: Servicio de notificaciones. Se reemplazó la implementación de
-//            main —que consultaba Supabase DIRECTAMENTE (supabase.from(...))—
-//            por llamadas a la API de FastAPI bajo el prefijo /notifications,
-//            respetando el lineamiento del proyecto: el frontend NUNCA accede
-//            a la base de datos directamente, todo pasa por el backend.
+// MODIFICADO: 2026-07-21 (notificaciones de Modo Asistente)
+// Propósito: Servicio de notificaciones. Llama a la API de FastAPI bajo el
+//            prefijo /notifications — el frontend nunca accede a la base de
+//            datos directamente, todo pasa por el backend.
+//
+// Decisión del proyecto: NO se usa push real (FCM/Firebase) — las
+// notificaciones de asistente solo llegan mientras la app está abierta o
+// recién en segundo plano, vía Realtime de Supabase sobre la tabla
+// `notifications` (ver hooks/useNotifications.js). Por eso no hay
+// registerPushToken aquí.
 //
 // Endpoints usados (ver backend/app/routers/notifications.py):
-//   · GET   /notifications/                 → listar
-//   · PATCH /notifications/{id}/read         → marcar como leída
-//   · POST  /notifications/push-token        → registrar token push
-//
-// Nota: este módulo de notificaciones en el frontend queda PRESENTE pero
-//       SIN CABLEAR (no se monta NotificationsListener en App.js) porque
-//       depende de `expo-notifications` y `expo-device`, que aún no están
-//       instalados en este proyecto. Para activarlo en el futuro:
-//         1) npx expo install expo-notifications expo-device
-//         2) crear la tabla `push_tokens` en la base de datos
-//         3) montar <NotificationsListener /> en App.js
+//   · GET    /notifications/                → listar
+//   · PATCH  /notifications/{id}/read        → marcar como leída
+//   · GET    /notifications/preferences      → preferencias por tipo de evento
+//   · PATCH  /notifications/preferences      → editar preferencias
 // =============================================================================
 import { apiRequest } from '../../../services/apiClient';
 
@@ -44,10 +41,14 @@ const notificationsService = {
     return apiRequest(`/notifications/${notificationId}/read`, { method: 'PATCH' });
   },
 
-  registerPushToken: async ({ token, deviceType = 'ios' }) => {
-    return apiRequest('/notifications/push-token', {
-      method: 'POST',
-      body: JSON.stringify({ token, device_type: deviceType }),
+  getPreferences: async () => {
+    return apiRequest('/notifications/preferences');
+  },
+
+  updatePreferences: async (patch) => {
+    return apiRequest('/notifications/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
     });
   },
 };

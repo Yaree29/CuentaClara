@@ -123,14 +123,6 @@ const SalesInformal = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // Al volver a la pantalla (ej. tras añadir stock en Inventario) se refrescan
-  // los productos en silencio, sin spinner, para no parpadear la lista.
-  useFocusEffect(
-    useCallback(() => {
-      loadProducts({ silent: true });
-    }, [loadProducts])
-  );
-
   // Pull-to-refresh: recarga lo que corresponde a la pestaña visible.
   const [refreshing, setRefreshing] = useState(false);
 

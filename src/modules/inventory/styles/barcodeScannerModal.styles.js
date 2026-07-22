@@ -76,7 +76,7 @@ export default StyleSheet.create({
   },
   cameraFrame: {
     width: '100%',
-    height: 260,
+    height: 520,
     borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: colors.cardSecondary,

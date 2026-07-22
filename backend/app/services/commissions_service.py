@@ -2,11 +2,17 @@
 # commissions_service.py
 # -----------------------
 # Lógica de negocio del módulo /commissions:
-#   - Configuración de comisión (percentage/fixed) por asistente.
+#   - Configuración de comisión (percentage/fixed) por asistente — vive
+#     directamente en business_assistants.commission_type/commission_value,
+#     no en una tabla aparte (no existe assistant_commissions).
 #   - Reporte calculado a partir de ventas reales (mismo patrón que
 #     sales_service.get_profits_and_expenses, filtrado por assistant_id).
 #   - Historial de pagos (commission_payments) — registrar un pago es una
-#     acción explícita del dueño, nunca automática.
+#     acción explícita del dueño, nunca automática. assistant_name se guarda
+#     como snapshot al momento del pago (mismo patrón que
+#     invoices.assistant_name en sales_service.create_quick_sale), y
+#     assistant_id es ON DELETE SET NULL, para que el historial sobreviva
+#     si se borra al asistente.
 # =============================================================================
 from decimal import Decimal
 from datetime import datetime, timezone
@@ -16,7 +22,7 @@ from app.database import supabase_admin
 
 def _get_assistant_or_404(business_id: str, assistant_id: int) -> dict:
     result = supabase_admin.table("business_assistants")\
-        .select("id, name, role, is_blocked")\
+        .select("id, name, role, is_blocked, commission_type, commission_value")\
         .eq("id", assistant_id)\
         .eq("business_id", business_id)\
         .execute()
@@ -38,29 +44,23 @@ def _income_for_assistant(business_id: str, assistant_id: int, date_from: str, d
 
 
 def list_commission_configs(business_id: str) -> list:
-    """Config de comisión de cada asistente activo — 'No configurado' si no tiene fila."""
+    """Config de comisión de cada asistente activo — 'No configurado' si las
+    columnas commission_type/commission_value están en null."""
     assistants = supabase_admin.table("business_assistants")\
-        .select("id, name, role, is_blocked")\
+        .select("id, name, role, is_blocked, commission_type, commission_value")\
         .eq("business_id", business_id)\
         .order("name")\
         .execute()
 
-    configs = supabase_admin.table("assistant_commissions")\
-        .select("assistant_id, commission_type, commission_value")\
-        .eq("business_id", business_id)\
-        .execute()
-    config_by_assistant = {c["assistant_id"]: c for c in (configs.data or [])}
-
     result = []
     for a in (assistants.data or []):
-        cfg = config_by_assistant.get(a["id"])
         result.append({
             "assistant_id": a["id"],
             "name": a["name"],
             "role": a.get("role"),
             "is_blocked": a["is_blocked"],
-            "commission_type": cfg["commission_type"] if cfg else None,
-            "commission_value": float(cfg["commission_value"]) if cfg else None,
+            "commission_type": a.get("commission_type"),
+            "commission_value": float(a["commission_value"]) if a.get("commission_value") is not None else None,
         })
     return result
 
@@ -68,24 +68,23 @@ def list_commission_configs(business_id: str) -> list:
 def upsert_commission_config(business_id: str, assistant_id: int, data) -> dict:
     _get_assistant_or_404(business_id, assistant_id)
 
-    supabase_admin.table("assistant_commissions")\
-        .upsert({
-            "business_id": business_id,
-            "assistant_id": assistant_id,
+    supabase_admin.table("business_assistants")\
+        .update({
             "commission_type": data.commission_type,
             "commission_value": float(data.commission_value),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }, on_conflict="business_id,assistant_id")\
+        })\
+        .eq("id", assistant_id)\
+        .eq("business_id", business_id)\
         .execute()
 
-    result = supabase_admin.table("assistant_commissions")\
-        .select("assistant_id, commission_type, commission_value")\
+    result = supabase_admin.table("business_assistants")\
+        .select("id, commission_type, commission_value")\
+        .eq("id", assistant_id)\
         .eq("business_id", business_id)\
-        .eq("assistant_id", assistant_id)\
         .execute()
     row = result.data[0]
     return {
-        "assistant_id": row["assistant_id"],
+        "assistant_id": row["id"],
         "commission_type": row["commission_type"],
         "commission_value": float(row["commission_value"]),
     }
@@ -95,26 +94,19 @@ def get_commission_report(business_id: str, date_from: str, date_to: str) -> lis
     """Comisión calculada por asistente en el período, a partir de ventas reales.
     Sin config -> commission_amount None ("No configurado"), no se inventa un valor."""
     assistants = supabase_admin.table("business_assistants")\
-        .select("id, name, role")\
+        .select("id, name, role, commission_type, commission_value")\
         .eq("business_id", business_id)\
         .order("name")\
         .execute()
 
-    configs = supabase_admin.table("assistant_commissions")\
-        .select("assistant_id, commission_type, commission_value")\
-        .eq("business_id", business_id)\
-        .execute()
-    config_by_assistant = {c["assistant_id"]: c for c in (configs.data or [])}
-
     report = []
     for a in (assistants.data or []):
         income = _income_for_assistant(business_id, a["id"], date_from, date_to)
-        cfg = config_by_assistant.get(a["id"])
 
         commission_amount = None
-        if cfg:
-            value = Decimal(str(cfg["commission_value"]))
-            if cfg["commission_type"] == "percentage":
+        if a.get("commission_type") is not None and a.get("commission_value") is not None:
+            value = Decimal(str(a["commission_value"]))
+            if a["commission_type"] == "percentage":
                 commission_amount = float(income * value / Decimal("100"))
             else:
                 commission_amount = float(value)
@@ -124,8 +116,8 @@ def get_commission_report(business_id: str, date_from: str, date_to: str) -> lis
             "name": a["name"],
             "role": a.get("role"),
             "income": float(income),
-            "commission_type": cfg["commission_type"] if cfg else None,
-            "commission_value": float(cfg["commission_value"]) if cfg else None,
+            "commission_type": a.get("commission_type"),
+            "commission_value": float(a["commission_value"]) if a.get("commission_value") is not None else None,
             "commission_amount": commission_amount,
         })
     return report
@@ -142,6 +134,7 @@ def register_payment(business_id: str, data) -> dict:
         "period_to": data.period_to,
         "amount": float(data.amount),
         "notes": data.notes,
+        "paid_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
 
     return result.data[0]

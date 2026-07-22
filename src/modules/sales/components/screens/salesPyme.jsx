@@ -4,10 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import DashboardHeader from '../../../dashboard/components/shared/DashboardHeader';
 import useAssistantModeStore from '../../../../store/useAssistantModeStore';
+import useCashSession from '../../hooks/useCashSession';
 
 import SalesSection from '../components/SalesSection';
-import AccountingScreen from '../components/AccountingScreen';
-import RegisterCount from '../components/RegisterCount';
+import SalesHistoryScreen from '../components/SalesHistoryScreen';
+import CashRegisterScreen from '../components/CashRegisterScreen';
 
 import styles from '../styles/salesPyme.style';
 
@@ -27,20 +28,42 @@ const SalesPyme = () => {
 
   const [activeTab, setActiveTab] = useState(showSalesTab ? 'sales' : 'registerCount');
 
+  // Única fuente de estado de caja para las 3 pestañas — ver useCashSession.js.
+  // Se monta aquí (no en cada pestaña) para compartir un solo fetch/poll.
+  const {
+    status: cashStatus,
+    loading: cashLoading,
+    openSession,
+    closeSession,
+    registerExpense,
+  } = useCashSession();
+
   const renderContent = () => {
     switch (activeTab) {
       case 'accounting':
         // Tab "Cierre Diario" — arqueo de caja.
-        return <RegisterCount />;
+        return (
+          <CashRegisterScreen
+            cashStatus={cashStatus}
+            loadingCash={cashLoading}
+            openSession={openSession}
+            closeSession={closeSession}
+            registerExpense={registerExpense}
+          />
+        );
       case 'registerCount':
         // Tab "Registro de Ventas" — ledger de solo lectura.
-        return <AccountingScreen />;
+        return <SalesHistoryScreen cashStatus={cashStatus} />;
       case 'sales':
       default:
         // Tab "Ventas" — crear venta. Si por algún motivo activeTab quedó en
         // 'sales' sin tener acceso (no debería ocurrir, el botón ni se
         // muestra), cae al ledger en vez de exponer el flujo de venta.
-        return showSalesTab ? <SalesSection /> : <AccountingScreen />;
+        return showSalesTab ? (
+          <SalesSection cashStatus={cashStatus} onGoToCashRegister={() => setActiveTab('accounting')} />
+        ) : (
+          <SalesHistoryScreen cashStatus={cashStatus} />
+        );
     }
   };
 

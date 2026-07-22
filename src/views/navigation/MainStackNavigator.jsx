@@ -8,6 +8,7 @@ import AppSettingsScreen from '../../modules/profile/screens/AppSettingsScreen';
 import SecuritySettings from '../../modules/profile/screens/SecuritySettingsScreen';
 import DataResetScreen from '../../modules/profile/screens/DataResetScreen';
 import NotificationSettingsScreen from '../../modules/notifications/screens/NotificationSettingsScreen';
+import SalesScheduleScreen from '../../modules/profile/screens/SalesScheduleScreen';
 import NotificationsScreen from '../../modules/notifications/screens/NotificationsScreen';
 import Token2FA from '../../modules/verification/screens/Token2FA';
 import TeamScreen from '../../modules/assistants/screens/TeamScreen';
@@ -40,6 +41,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="SecuritySettings" component={SecuritySettings} />
       <Stack.Screen name="DataReset" component={DataResetScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="SalesSchedule" component={SalesScheduleScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Token2FA" component={Token2FA} />
       <Stack.Screen name="TeamScreen" component={TeamScreen} />

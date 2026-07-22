@@ -224,6 +224,16 @@ const ProfileScreen = () => {
                 iconColor={colors.primary}
                 onPress={() => navigation.navigate('TeamScreen')}
               />
+              {userType === 'pyme' && profile?.role === 'owner' && (
+                <MenuItem
+                  icon="time-outline"
+                  label="Horario de Ventas"
+                  subLabel="Define cuándo se puede abrir la caja y vender"
+                  iconBgStyle={styles.iconContainerBusiness}
+                  iconColor={colors.primary}
+                  onPress={() => navigation.navigate('SalesSchedule')}
+                />
+              )}
               {userType === 'pyme' && (
                 <MenuItem
                   icon="people-circle-outline"

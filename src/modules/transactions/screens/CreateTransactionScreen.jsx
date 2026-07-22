@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../../../store/useAuthStore';
-import colors from '../../../theme/colors';
+
+// Importamos los estilos separados
+import styles from '../styles/CreateTransactionScreen.styles'; 
 
 const CreateTransactionScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -17,11 +19,6 @@ const CreateTransactionScreen = ({ route }) => {
   const [extraData, setExtraData] = useState({});
 
   const renderPymeFields = () => {
-    // Vocabulario correcto: category_group (no 'butcher') — ver auditoría.
-    // Nota: user.businessType no existe hoy en el contexto de sesión
-    // (GET /auth/me + /auth/context no lo exponen), así que esta condición
-    // sigue sin activarse hasta que se exponga category_group ahí — fuera de
-    // alcance de este cambio mínimo (solo corrige el string comparado).
     if (businessType === 'alimentos') {
       return (
         <>
@@ -85,54 +82,3 @@ const CreateTransactionScreen = ({ route }) => {
 };
 
 export default CreateTransactionScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: colors.cardSecondary,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: colors.border,
-    width: 35,
-    height: 35,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  title: {
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    marginTop: 50,
-  },
-  input: {
-    backgroundColor: colors.card,
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  button: {
-    backgroundColor: '#2563eb',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: colors.textButton,
-    fontWeight: 'bold',
-  },
-});

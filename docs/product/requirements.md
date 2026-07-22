@@ -185,7 +185,7 @@
 - [ ] Editar: nombre, RUC/NIT, dirección, teléfono, email
 - [ ] Logo personalizado (subir imagen)
 - [ ] Política de retorno (texto libre)
-- [ ] Horario de atención
+- [x] Horario de atención (horario fijo diario, opcional por negocio — ver reconstrucción de Ventas PYME: gobierna cuándo se puede abrir/cerrar caja y registrar ventas)
 - [ ] Cambios se reflejan inmediatamente en facturas
 
 ### RF-024: Configuración de Usuario

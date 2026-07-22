@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    # Zona horaria fija de la app (mercado objetivo: Panamá, ver docs/product/PRD.md).
+    # El proyecto no tiene soporte multi-timezone por negocio — se usa esta
+    # constante para interpretar el horario de ventas (sales_opening_time/
+    # sales_closing_time) contra la hora actual.
+    app_timezone: str = "America/Panama"
 
     model_config = {"env_file": str(BACKEND_ENV_FILE), "extra": "ignore"}
 

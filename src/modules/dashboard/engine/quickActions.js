@@ -21,15 +21,6 @@ import {
 // QuickActions.jsx captura el error de navegación en vez de romper.
 const actionCatalog = {
 
-  new_sale: {
-    id: 'new_sale',
-    title: 'Nueva Venta',
-    subtitle: 'Registrar una venta',
-    icon: BanknotesIcon,
-    color: '#2563EB',
-    route: 'sales',
-  },
-
   register_expense: {
     id: 'register_expense',
     title: 'Registrar Gasto',

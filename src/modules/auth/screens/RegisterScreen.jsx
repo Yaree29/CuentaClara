@@ -13,8 +13,9 @@ import {
   validateEmail, 
   validatePassword, 
   validateName, 
-  validateBusinessName, 
+  validateBusinessName,
   validatePhone,
+  validateRUC,
   getPasswordStrength
 } from '../utils/validation';
 
@@ -93,6 +94,7 @@ const RegisterScreen = ({ navigation }) => {
     password: '',
     phone: '',
     businessName: '',
+    nit: '',
   });
   const [passwordStrength, setPasswordStrength] = useState({ level: 'débil', percentage: 0 });
 
@@ -104,6 +106,14 @@ const RegisterScreen = ({ navigation }) => {
     if (field === 'password') {
       setPasswordStrength(getPasswordStrength(value));
     }
+  };
+
+  // RUC es opcional — solo se marca error inline si el usuario escribió algo
+  // y no calza con el formato esperado. Nunca bloquea con el campo vacío.
+  const handleNitChange = (val) => {
+    updateField('nit', val);
+    const rucValidation = validateRUC(val);
+    setErrors((prev) => ({ ...prev, nit: rucValidation.valid ? '' : rucValidation.error }));
   };
 
   const updateSettingField = (key, value) => {
@@ -199,6 +209,9 @@ const RegisterScreen = ({ navigation }) => {
           const phoneValidation = validatePhone(formData.phone);
           if (!phoneValidation.valid) newErrors.phone = phoneValidation.error;
         }
+
+        const rucValidation = validateRUC(formData.nit);
+        if (!rucValidation.valid) newErrors.nit = rucValidation.error;
 
         const businessValidation = validateBusinessName(formData.businessName);
         if (!businessValidation.valid) newErrors.businessName = businessValidation.error;
@@ -465,13 +478,17 @@ const RegisterScreen = ({ navigation }) => {
             <View style={styles.form}>
               <Text style={styles.sectionTitle}>Sección General</Text>
               
-              <TextInput
-                style={styles.input}
-                placeholder="RUC / NIT / Identificación Tributaria *"
-                placeholderTextColor={colors.placeholder}
-                value={formData.nit}
-                onChangeText={(val) => updateField('nit', val)}
-              />
+              <View>
+                <TextInput
+                  style={[styles.input, errors.nit && styles.inputError]}
+                  placeholder="RUC / NIT / Identificación Tributaria *"
+                  placeholderTextColor={colors.placeholder}
+                  value={formData.nit}
+                  onChangeText={handleNitChange}
+                  autoCapitalize="characters"
+                />
+                {errors.nit ? <Text style={styles.errorMessage}>{errors.nit}</Text> : null}
+              </View>
 
               <TextInput
                 style={styles.input}

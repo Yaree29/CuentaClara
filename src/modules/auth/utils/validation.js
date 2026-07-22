@@ -34,6 +34,13 @@ const VALIDATION_RULES = {
     pattern: /^\+?[0-9\s\-\(\)]{7,20}$/,
     message: 'Ingresa un número telefónico válido',
   },
+  ruc: {
+    // Persona natural (ej: 8-926-1601) y persona jurídica (ej: 26631254-3-2020)
+    // comparten la misma forma dígitos-dígitos-dígitos; ambas aceptan un
+    // sufijo opcional "DV" (dígito verificador) de 1-2 dígitos.
+    pattern: /^\d+-\d+-\d+(\s+DV\s+\d{1,2})?$/i,
+    message: 'Formato de RUC inválido (ej: 8-926-1601 o 8-926-1601 DV 71)',
+  },
 };
 
 export const validateEmail = (email) => {
@@ -178,6 +185,20 @@ export const validatePhone = (phone) => {
 
   if (!VALIDATION_RULES.phone.pattern.test(trimmed)) {
     return { valid: false, error: VALIDATION_RULES.phone.message };
+  }
+
+  return { valid: true };
+};
+
+export const validateRUC = (ruc) => {
+  if (!ruc || !ruc.trim()) {
+    return { valid: true }; // RUC es opcional
+  }
+
+  const trimmed = ruc.trim();
+
+  if (!VALIDATION_RULES.ruc.pattern.test(trimmed)) {
+    return { valid: false, error: VALIDATION_RULES.ruc.message };
   }
 
   return { valid: true };

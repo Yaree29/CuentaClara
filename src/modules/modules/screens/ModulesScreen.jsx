@@ -129,21 +129,6 @@ const ModulesScreen = () => {
               />
             </MenuSection>
 
-            {activeModules.length > 0 && (
-              <MenuSection title="Módulos activos del negocio">
-                {activeModules.map((mod, index) => (
-                  <MenuItem
-                    key={mod.key}
-                    icon={mod.icon}
-                    label={mod.label}
-                    subLabel={mod.subLabel}
-                    isLast={index === activeModules.length - 1}
-                    onPress={() => navigation.navigate(mod.route)}
-                  />
-                ))}
-              </MenuSection>
-            )}
-
             {activatableModules.length > 0 && (
               <MenuSection title="Activar módulos">
                 {activatableModules.map((mod, index) => {

@@ -4,32 +4,26 @@ import colors from '../../../theme/colors';
 export default StyleSheet.create({
   container: {
     width: '100%',
-    alignItems: 'center',
   },
-  logo: {
-    width: 96,
-    height: 96,
-    resizeMode: 'contain',
-    marginBottom: 8,
-  },
-  brandTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 24,
-    textAlign: 'center',
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 6,
   },
   form: {
     width: '100%',
-    gap: 16,
+    gap: 18,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.cardSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
-    borderRadius: 10,
-    fontSize: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   inputError: {
     borderColor: colors.textError,
@@ -56,7 +50,6 @@ export default StyleSheet.create({
     color: colors.textError,
     fontSize: 12,
     marginTop: 4,
-    marginBottom: 8,
   },
   helperText: {
     color: colors.textSecondary,
@@ -70,19 +63,19 @@ export default StyleSheet.create({
   },
   forgotPasswordLink: {
     alignSelf: 'flex-end',
-    marginTop: -4,
+    marginTop: -6,
   },
   forgotPasswordText: {
     color: colors.textLink,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   button: {
     backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 28,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   buttonDisabled: {
     backgroundColor: colors.disabledButton,
@@ -90,10 +83,10 @@ export default StyleSheet.create({
   buttonText: {
     color: colors.textButton,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   biometricSection: {
-    marginTop: 8,
+    marginTop: 4,
     alignItems: 'center',
   },
   helloText: {
@@ -103,17 +96,17 @@ export default StyleSheet.create({
   },
   biometricButton: {
     width: '100%',
-    backgroundColor: colors.background,
-    borderWidth: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
     borderColor: colors.primary,
-    padding: 16,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 28,
     alignItems: 'center',
   },
   biometricButtonText: {
     color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   errorText: {
     color: colors.textError,
@@ -122,7 +115,7 @@ export default StyleSheet.create({
     textAlign: 'center',
   },
   registerLink: {
-    marginTop: 24,
+    marginTop: 28,
     alignItems: 'center',
   },
   registerLinkText: {

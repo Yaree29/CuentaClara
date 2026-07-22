@@ -4,6 +4,7 @@ import  colors  from '../../../theme/colors';
 export default StyleSheet.create({
   container: {
     width: '100%',
+    paddingBottom: 8,
   },
   title: {
     fontSize: 24,
@@ -14,18 +15,26 @@ export default StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 6,
   },
   form: {
     gap: 16,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.cardSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
-    borderRadius: 10,
-    fontSize: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   inputError: {
     borderColor: colors.textError,
@@ -52,7 +61,6 @@ export default StyleSheet.create({
     color: colors.textError,
     fontSize: 12,
     marginTop: 4,
-    marginBottom: 8,
   },
   helperText: {
     color: colors.textSecondary,
@@ -66,25 +74,44 @@ export default StyleSheet.create({
   },
   button: {
     backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 28,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   buttonText: {
     color: colors.textButton,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  buttonOutline: {
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: 28,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  buttonOutlineText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  link: {
+    marginTop: 24,
+    alignItems: 'center',
   },
   linkText: {
     color: colors.textLink,
     fontSize: 14,
+    fontWeight: '600',
   },
   sectionCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     gap: 12,
@@ -103,7 +130,7 @@ export default StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
-  label: {
+  rowLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
@@ -115,10 +142,10 @@ export default StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 20,
     minWidth: 50,
     alignItems: 'center',
-    backgroundColor: colors.cardSecondary,
+    backgroundColor: colors.card,
   },
   smallBtnActive: {
     backgroundColor: colors.primary,
@@ -136,5 +163,18 @@ export default StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    marginTop: -8,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
 });

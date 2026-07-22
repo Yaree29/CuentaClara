@@ -52,6 +52,27 @@ const businessService = {
   },
 
   /**
+   * Obtener el horario de ventas configurado.
+   * @returns {Promise<{opening_time: string, closing_time: string}|null>} null = sin restricción horaria.
+   */
+  getSalesSchedule: async () => {
+    return apiRequest('/businesses/me/sales-schedule');
+  },
+
+  /**
+   * Configurar el horario fijo diario de ventas. Enviar ambos campos en
+   * null desactiva la restricción horaria (la caja sigue siendo obligatoria).
+   * Solo el dueño puede modificarlo (el backend lo exige con require_role).
+   * @param {Object} schedule - { opening_time: string|null, closing_time: string|null }
+   */
+  updateSalesSchedule: async ({ opening_time, closing_time }) => {
+    return apiRequest('/businesses/me/sales-schedule', {
+      method: 'PUT',
+      body: JSON.stringify({ opening_time, closing_time }),
+    });
+  },
+
+  /**
    * Activar/desactivar un módulo opcional (ej. 'commissions', 'tips', 'offers').
    * Devuelve { enabled_modules } actualizado para refrescar el blueprint local
    * sin necesitar un nuevo login.

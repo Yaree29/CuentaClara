@@ -12,7 +12,7 @@ export default StyleSheet.create({
     // 24 no alcanzaba a despejar el tab bar (height:72 en MainNavigator.jsx)
     // en Modo Asistente, donde esta pantalla vive como tab (assistantInventory)
     // — botones quedaban tapados. 120 es la convención ya usada en el resto
-    // de pantallas PYME bajo el tab bar (salesPyme.style.js, closeDay.style.js).
+    // de pantallas PYME bajo el tab bar (salesPyme.style.js, cashRegister.style.js).
     paddingBottom: 120,
   },
   hero: {

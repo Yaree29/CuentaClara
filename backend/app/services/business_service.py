@@ -170,6 +170,60 @@ def update_business_config(business_id: str, data):
     return get_business_config(business_id)
 
 
+def get_sales_schedule(business_id: str):
+    """Horario fijo diario de ventas (opcional). Devuelve None si no está
+    configurado — cualquiera de los dos campos vacío cuenta como "sin
+    restricción horaria" (la caja obligatoria sigue aplicando de todos modos,
+    ver cash_service.py)."""
+    result = (
+        supabase_admin.table("business_configs")
+        .select("sales_opening_time, sales_closing_time")
+        .eq("business_id", business_id)
+        .execute()
+    )
+    if not result.data:
+        return None
+
+    opening = result.data[0].get("sales_opening_time")
+    closing = result.data[0].get("sales_closing_time")
+    if not opening or not closing:
+        return None
+
+    return {"opening_time": opening[:5], "closing_time": closing[:5]}
+
+
+def update_sales_schedule(business_id: str, data):
+    """Configura (o borra, si ambos vienen null) el horario de ventas.
+    Crea la fila de business_configs si todavía no existe (mismo patrón que
+    update_business_config)."""
+    if (data.opening_time is None) != (data.closing_time is None):
+        raise ValueError("Debes indicar ambas horas (apertura y cierre) o ninguna.")
+    if data.opening_time and data.closing_time and data.opening_time >= data.closing_time:
+        raise ValueError("La hora de apertura debe ser anterior a la hora de cierre.")
+
+    update_fields = {
+        "sales_opening_time": data.opening_time,
+        "sales_closing_time": data.closing_time,
+    }
+
+    existing = (
+        supabase_admin.table("business_configs")
+        .select("id")
+        .eq("business_id", business_id)
+        .execute()
+    )
+
+    if existing.data:
+        supabase_admin.table("business_configs").update(update_fields).eq(
+            "business_id", business_id
+        ).execute()
+    else:
+        update_fields["business_id"] = business_id
+        supabase_admin.table("business_configs").insert(update_fields).execute()
+
+    return get_sales_schedule(business_id)
+
+
 def get_enabled_modules(business_id: str) -> list:
     """Lista de módulos habilitados (BASE_MODULES + features activos), misma
     lógica que normalize_modules usa al construir el contexto de login."""

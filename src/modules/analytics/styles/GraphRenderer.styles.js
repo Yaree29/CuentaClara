@@ -24,11 +24,11 @@ export default StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     padding: 20, // Aumentamos el padding interno para que la gráfica respire mejor
-    backgroundColor: colors.card || '#ffffff',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border || '#e2e8f0',
+    borderColor: colors.border,
     // Sombra más suave y moderna (estilo Apple/Stripe)
-    shadowColor: colors.shadowCard || '#0f172a',
+    shadowColor: colors.shadowCard,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -46,7 +46,7 @@ export default StyleSheet.create({
   graphTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary || '#1e293b',
+    color: colors.textPrimary,
     marginBottom: 4, // Más cerca de la descripción para agrupar visualmente
     letterSpacing: -0.3, // Toque tipográfico moderno
   },
@@ -54,7 +54,7 @@ export default StyleSheet.create({
   graphDescription: {
     fontSize: 13,
     lineHeight: 18,
-    color: colors.textSecondary || '#64748b',
+    color: colors.textSecondary,
     marginBottom: 20, // Espacio claro antes de empezar a dibujar la gráfica
   },
 
@@ -72,15 +72,15 @@ export default StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9', // Fondo gris muy suave
+    backgroundColor: colors.chartPhBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: colors.chartPhBorder,
     borderStyle: 'dashed', // Borde punteado para indicar estado vacío
   },
 
   fallbackText: {
-    color: colors.textSecondary || '#64748b',
+    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -97,12 +97,12 @@ export default StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginHorizontal: 4,
-    backgroundColor: colors.border || '#cbd5e1',
+    backgroundColor: colors.border,
   },
 
   activeDot: {
     width: 20, // Forma de "píldora" para el dot activo
     borderRadius: 4,
-    backgroundColor: colors.primary || '#3b82f6',
+    backgroundColor: colors.primary,
   },
 });

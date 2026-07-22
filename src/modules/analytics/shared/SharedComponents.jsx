@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-import styles from '../styles/GraphRenderer.styles';
+import styles from '../styles/StrategicAnalysisScreen.styles';
 import GraphRenderer from '../utils/GraphRenderer';
 
 

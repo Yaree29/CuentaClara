@@ -4,6 +4,7 @@ import {
   LineChart as GiftedLineChart
 } from 'react-native-gifted-charts';
 import styles from './styles/AreaChart.styles';
+import colors from '../../../../theme/colors';
 
 export default function AreaChart({
   data,
@@ -36,11 +37,11 @@ export default function AreaChart({
         initialSpacing={10}
         endSpacing={10}
         isArea
-        color="#10b981"
+        color={colors.success}
         // 👇 AQUÍ REDUCES EL GROSOR DE LA LÍNEA (ej. de 2 o 3 a 1.5)
         thickness={1.5}
-        startFillColor="rgba(16,185,129,0.3)"
-        endFillColor="rgba(16,185,129,0.01)"
+        startFillColor={colors.success + '4D'}
+        endFillColor={colors.success + '03'}
         yAxisLabelWidth={25}
         noOfSections={2}
         xAxisLabelTextStyle={styles.labelStyle}

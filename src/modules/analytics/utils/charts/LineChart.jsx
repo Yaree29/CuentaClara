@@ -3,6 +3,7 @@ import { View, Dimensions } from 'react-native';
 import { LineChart as GiftedLineChart } from 'react-native-gifted-charts';
 
 import styles from './styles/lineChart.styles';
+import colors from '../../../../theme/colors';
 
 const screenWidth = Dimensions.get('window').width - 40;
 
@@ -20,10 +21,10 @@ export default function LineChart({ data, options }) {
         height={200}
         spacing={45}
         initialSpacing={20}
-        color="#3b82f6"
+        color={colors.primary}
         thickness={3}
-        startFillColor="rgba(59, 130, 246, 0.3)"
-        endFillColor="rgba(59, 130, 246, 0.01)"
+        startFillColor={colors.primary + '4D'}
+        endFillColor={colors.primary + '03'}
         xAxisLabelTextStyle={styles.labelStyle}
         yAxisTextStyle={styles.labelStyle}
         {...options}

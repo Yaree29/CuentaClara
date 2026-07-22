@@ -100,7 +100,9 @@ const ProductScannerWidget = ({ onScan, onCreateNew }) => {
       {/* KeyboardAvoidingView solo alrededor de este bloque: el widget vive
           dentro del ScrollView normal de PymeInventory.jsx, así que sin esto
           el teclado tapaba el input al estar cerca del final de la pantalla. */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 80}>
+        
         <Text style={styles.inputLabel}>O busca por código (SKU)</Text>
         <View style={styles.manualRow}>
           <TextInput

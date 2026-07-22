@@ -56,28 +56,47 @@ def _products_by_id(product_ids: list) -> dict:
 
 
 def _recipe_cost(ingredients: list, products_by_id: dict):
-    """Costo en tiempo real: Σ(cantidad_ingrediente × cost_price actual)."""
+    """Costo en tiempo real: Σ(cantidad_ingrediente × cost_price actual).
+
+    Si cost_price de un insumo es 0/NULL (nunca se configuró al crear el
+    producto — campo "Costo de Producción" en ProductFormModal, opcional),
+    ese insumo NO se trata como "cuesta $0.00" (sería inventar un dato real):
+    su cost_price/subtotal quedan en None y se marca has_missing_cost=True,
+    mismo criterio que invoice_service.get_profitability con
+    has_missing_cost/has_gap para no reportar un número parcial como si
+    fuera el costo completo real.
+    """
     total = Decimal("0")
     detail = []
+    has_missing_cost = False
     for ing in ingredients:
         product = products_by_id.get(ing["ingredient_product_id"], {})
-        cost_price = Decimal(str(product.get("cost_price") or 0))
+        cost_price_raw = product.get("cost_price")
+        has_cost = cost_price_raw is not None and Decimal(str(cost_price_raw)) > 0
         quantity = Decimal(str(ing["quantity"]))
-        subtotal = quantity * cost_price
-        total += subtotal
+
+        if has_cost:
+            cost_price = Decimal(str(cost_price_raw))
+            subtotal = quantity * cost_price
+            total += subtotal
+        else:
+            cost_price = None
+            subtotal = None
+            has_missing_cost = True
+
         detail.append({
             "ingredient_product_id": ing["ingredient_product_id"],
             "ingredient_name": product.get("name"),
             "quantity": float(quantity),
             "unit": ing.get("unit"),
-            "cost_price": float(cost_price),
-            "subtotal": float(subtotal),
+            "cost_price": float(cost_price) if cost_price is not None else None,
+            "subtotal": float(subtotal) if subtotal is not None else None,
         })
-    return total, detail
+    return total, detail, has_missing_cost
 
 
 def _map_recipe(recipe: dict, ingredients: list, products_by_id: dict) -> dict:
-    total_cost, ingredient_detail = _recipe_cost(ingredients, products_by_id)
+    total_cost, ingredient_detail, has_missing_cost = _recipe_cost(ingredients, products_by_id)
     portions_yield = Decimal(str(recipe["portions_yield"]))
     cost_per_portion = total_cost / portions_yield if portions_yield > 0 else Decimal("0")
     final_product = products_by_id.get(recipe["product_id"], {})
@@ -91,8 +110,11 @@ def _map_recipe(recipe: dict, ingredients: list, products_by_id: dict) -> dict:
         "portions_yield": float(portions_yield),
         "is_active": recipe.get("is_active", True),
         "ingredients": ingredient_detail,
-        "total_cost": float(total_cost),
-        "cost_per_portion": float(cost_per_portion),
+        # None (no $0.00) cuando falta cost_price de algún insumo — el total
+        # sería un número parcial disfrazado de costo real.
+        "total_cost": float(total_cost) if not has_missing_cost else None,
+        "cost_per_portion": float(cost_per_portion) if not has_missing_cost else None,
+        "has_missing_cost": has_missing_cost,
         "created_at": recipe.get("created_at"),
     }
 
@@ -282,7 +304,11 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
     product_ids = [i["ingredient_product_id"] for i in ingredients]
     products_by_id = _products_by_id(product_ids)
     scaled_ingredients = [{**ing, "quantity": Decimal(str(ing["quantity"])) * scale} for ing in ingredients]
-    total_cost, _ = _recipe_cost(scaled_ingredients, products_by_id)
+    # total_cost aquí es la suma parcial (insumos sin cost_price aportan 0) —
+    # production_records.total_cost es NOT NULL, así que no puede quedar en
+    # None como en el detalle de receta; sigue siendo el costo real de los
+    # insumos que sí tienen cost_price configurado.
+    total_cost, _, _ = _recipe_cost(scaled_ingredients, products_by_id)
 
     record_payload = {
         "business_id": business_id,
@@ -403,12 +429,37 @@ def ingredient_consumption(business_id: str, recipe_id: int, ingredient_product_
     } for r in rows]
 
 
+def _product_sales_totals(business_id: str, product_id: int) -> dict:
+    """
+    Unidades y ganancia por ventas reales de un producto — cruza invoice_items
+    con invoices (status='paid'), mismo criterio que
+    invoice_service.get_profitability (no invoice_items.business_id propio,
+    se filtra vía invoices). No usa fecha: es el acumulado histórico completo
+    del producto final de la receta.
+    """
+    result = supabase_admin.table("invoices") \
+        .select("invoice_items(product_id, quantity, subtotal)") \
+        .eq("business_id", business_id) \
+        .eq("status", "paid") \
+        .execute()
+
+    quantity_sold = Decimal("0")
+    revenue = Decimal("0")
+    for inv in (result.data or []):
+        for item in (inv.get("invoice_items") or []):
+            if item.get("product_id") == product_id:
+                quantity_sold += Decimal(str(item["quantity"]))
+                revenue += Decimal(str(item["subtotal"]))
+
+    return {"quantity_sold": quantity_sold, "revenue": revenue}
+
+
 def profitability(business_id: str, recipe_id: int) -> dict:
     """
-    Rentabilidad por receta. Sin un vínculo de "porciones vendidas" a ventas
-    reales todavía, se calcula solo el margen unitario (precio de venta por
-    porción − costo por porción); el resto se reporta como limitación en vez
-    de inventar el dato.
+    Rentabilidad por receta: margen unitario (precio de venta por porción −
+    costo por porción) y ganancia total real, cruzando las porciones
+    efectivamente vendidas del producto final (invoice_items vía invoices
+    pagadas) — ya no es un texto fijo de "no disponible".
     """
     recipe = _get_recipe_or_404(business_id, recipe_id)
     ingredients = _get_ingredients(recipe_id)
@@ -425,25 +476,41 @@ def profitability(business_id: str, recipe_id: int) -> dict:
         .limit(1) \
         .execute()
 
+    has_missing_cost = False
     if last_result.data:
         last = last_result.data[0]
         portions = Decimal(str(last["portions_produced"]))
         cost_per_portion = Decimal(str(last["total_cost"])) / portions if portions > 0 else Decimal("0")
         cost_source = "last_production"
     else:
-        total_cost, _ = _recipe_cost(ingredients, products_by_id)
+        total_cost, _, has_missing_cost = _recipe_cost(ingredients, products_by_id)
         portions_yield = Decimal(str(recipe["portions_yield"]))
         cost_per_portion = total_cost / portions_yield if portions_yield > 0 else Decimal("0")
         cost_source = "real_time_recipe_cost"
 
-    unit_margin = product_price - cost_per_portion
+    sales = _product_sales_totals(business_id, recipe["product_id"])
+    quantity_sold = sales["quantity_sold"]
+
+    if has_missing_cost:
+        # cost_per_portion de "last_production" siempre es un número real (se
+        # congeló al producir); solo "real_time_recipe_cost" puede venir con
+        # insumos sin cost_price configurado.
+        unit_margin = None
+        total_profit = None
+        limitation = "Costo no configurado: uno o más insumos de esta receta no tienen cost_price configurado."
+    else:
+        unit_margin = product_price - cost_per_portion
+        total_profit = unit_margin * quantity_sold
+        limitation = None if quantity_sold > 0 else "Aún no hay ventas registradas de este producto."
 
     return {
         "recipe_id": recipe_id,
         "product_price": float(product_price),
-        "cost_per_portion": float(cost_per_portion),
+        "cost_per_portion": float(cost_per_portion) if not has_missing_cost else None,
         "cost_source": cost_source,
-        "unit_margin": float(unit_margin),
-        "total_profit": None,
-        "limitation": "No disponible: no hay vínculo con ventas reales para calcular porciones vendidas de esta receta.",
+        "has_missing_cost": has_missing_cost,
+        "unit_margin": float(unit_margin) if unit_margin is not None else None,
+        "quantity_sold": float(quantity_sold),
+        "total_profit": float(total_profit) if total_profit is not None else None,
+        "limitation": limitation,
     }

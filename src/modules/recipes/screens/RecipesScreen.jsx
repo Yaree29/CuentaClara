@@ -26,6 +26,16 @@ import UnitTypeSelector from '../../inventory/components/UnitTypeSelector';
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const NO_DISPONIBLE = 'No disponible';
+const COSTO_NO_CONFIGURADO = 'Costo no configurado';
+// null (recipes_service.py ya lo manda así cuando has_missing_cost) o 0
+// (inventory_service.create_product guarda cost_price=0 por defecto cuando
+// nunca se llenó "Costo de Producción" en ProductFormModal — no es un costo
+// real de $0.00, es "nunca configurado"; recipes_service.py trata 0 igual
+// que NULL con el mismo criterio: `cost_price > 0`) no son lo mismo que un
+// costo real — mostrar "$0.00" ahí sería inventar un dato. Mismo criterio
+// que has_missing_cost en BillingInsightsScreen.jsx (MiRUC).
+const costText = (value) =>
+  value === null || value === undefined || Number(value) === 0 ? COSTO_NO_CONFIGURADO : money(value);
 
 // ─── Formulario de crear/editar receta ──────────────────────────────────────
 
@@ -188,7 +198,7 @@ const RecipeFormModal = ({ visible, recipe, products, onClose, onSaved }) => {
                       propia de costo para guardar un valor manual distinto. */}
                   {selectedProduct && (
                     <Text style={styles.ingredientCostHint}>
-                      Costo unitario real: {money(selectedProduct.costPrice)}
+                      Costo unitario real: {costText(selectedProduct.costPrice)}
                     </Text>
                   )}
                 </View>
@@ -332,7 +342,7 @@ const RecipeDetailModal = ({ visible, recipe, onClose, onChanged, onEdit, onDele
                   Rinde {recipe.portionsYield} porciones · {recipe.productName || 'Producto eliminado'}
                 </Text>
               </View>
-              <Text style={styles.recipeCardCost}>{money(recipe.costPerPortion)}{'\n'}
+              <Text style={styles.recipeCardCost}>{costText(recipe.costPerPortion)}{'\n'}
                 <Text style={styles.recipeCardCostLabel}>por porción</Text>
               </Text>
             </View>
@@ -341,14 +351,14 @@ const RecipeDetailModal = ({ visible, recipe, onClose, onChanged, onEdit, onDele
               <View key={`${ing.ingredientProductId}-${index}`} style={[styles.row, index === recipe.ingredients.length - 1 && styles.rowLast]}>
                 <View style={styles.rowLeft}>
                   <Text style={styles.rowName}>{ing.ingredientName || 'Insumo eliminado'}</Text>
-                  <Text style={styles.rowMeta}>{ing.quantity} {ing.unit} × {money(ing.costPrice)}</Text>
+                  <Text style={styles.rowMeta}>{ing.quantity} {ing.unit} × {costText(ing.costPrice)}</Text>
                 </View>
-                <Text style={styles.rowValue}>{money(ing.subtotal)}</Text>
+                <Text style={styles.rowValue}>{costText(ing.subtotal)}</Text>
               </View>
             ))}
 
             <Text style={[styles.sectionSubtitle, { marginTop: 8 }]}>
-              Costo total de la receta: {money(recipe.totalCost)}
+              Costo total de la receta: {costText(recipe.totalCost)}
             </Text>
 
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
@@ -418,17 +428,31 @@ const RecipeDetailModal = ({ visible, recipe, onClose, onChanged, onEdit, onDele
                 </View>
                 <View style={styles.profitRow}>
                   <Text style={styles.profitLabel}>Costo por porción</Text>
-                  <Text style={styles.profitValue}>{money(profitability.cost_per_portion)}</Text>
+                  <Text style={styles.profitValue}>{costText(profitability.cost_per_portion)}</Text>
                 </View>
                 <View style={styles.profitRow}>
                   <Text style={styles.profitLabel}>Margen unitario</Text>
-                  <Text style={styles.profitValue}>{money(profitability.unit_margin)}</Text>
+                  <Text style={styles.profitValue}>{costText(profitability.unit_margin)}</Text>
+                </View>
+                <View style={styles.profitRow}>
+                  <Text style={styles.profitLabel}>Porciones vendidas</Text>
+                  <Text style={styles.profitValue}>{profitability.quantity_sold ?? 0}</Text>
                 </View>
                 <View style={styles.profitRow}>
                   <Text style={styles.profitLabel}>Ganancia total (porciones vendidas)</Text>
-                  <Text style={styles.profitValue}>{NO_DISPONIBLE}</Text>
+                  {/* Antes mostraba el texto fijo "No disponible" sin
+                      importar lo que devolviera el backend. Ahora lee el
+                      número real (total_profit, ya cruzado con ventas
+                      reales en recipes_service.py) — "Costo no
+                      configurado" solo si has_missing_cost, nunca $0.00
+                      inventado cuando en realidad no hay costo cargado. */}
+                  <Text style={styles.profitValue}>
+                    {profitability.has_missing_cost ? COSTO_NO_CONFIGURADO : money(profitability.total_profit)}
+                  </Text>
                 </View>
-                <Text style={styles.limitationText}>{profitability.limitation}</Text>
+                {profitability.limitation ? (
+                  <Text style={styles.limitationText}>{profitability.limitation}</Text>
+                ) : null}
               </View>
             ) : (
               <Text style={styles.emptyText}>{NO_DISPONIBLE}</Text>
@@ -598,7 +622,7 @@ const RecipesScreen = () => {
                       </Text>
                     </View>
                     <View>
-                      <Text style={styles.recipeCardCost}>{money(recipe.totalCost)}</Text>
+                      <Text style={styles.recipeCardCost}>{costText(recipe.totalCost)}</Text>
                       <Text style={styles.recipeCardCostLabel}>costo total</Text>
                     </View>
                   </View>

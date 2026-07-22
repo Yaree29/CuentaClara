@@ -7,13 +7,17 @@
 // =============================================================================
 import { apiRequest } from '../../../services/apiClient';
 
+// null real (costo no configurado) se preservaba como 0 con `|| 0` — eso
+// hacía que "$0.00" se mostrara como si fuera un costo real. cost_price/
+// subtotal/total_cost/cost_per_portion ahora se mantienen en null cuando el
+// backend los manda así (ver recipes_service.py, has_missing_cost).
 const mapIngredient = (row) => ({
   ingredientProductId: row.ingredient_product_id,
   ingredientName: row.ingredient_name,
   quantity: Number(row.quantity) || 0,
   unit: row.unit || '',
-  costPrice: Number(row.cost_price) || 0,
-  subtotal: Number(row.subtotal) || 0,
+  costPrice: row.cost_price !== null && row.cost_price !== undefined ? Number(row.cost_price) : null,
+  subtotal: row.subtotal !== null && row.subtotal !== undefined ? Number(row.subtotal) : null,
 });
 
 const mapRecipe = (row) => ({
@@ -26,8 +30,10 @@ const mapRecipe = (row) => ({
   portionsYield: Number(row.portions_yield) || 0,
   isActive: !!row.is_active,
   ingredients: Array.isArray(row.ingredients) ? row.ingredients.map(mapIngredient) : [],
-  totalCost: Number(row.total_cost) || 0,
-  costPerPortion: Number(row.cost_per_portion) || 0,
+  totalCost: row.total_cost !== null && row.total_cost !== undefined ? Number(row.total_cost) : null,
+  costPerPortion:
+    row.cost_per_portion !== null && row.cost_per_portion !== undefined ? Number(row.cost_per_portion) : null,
+  hasMissingCost: !!row.has_missing_cost,
   createdAt: row.created_at,
 });
 

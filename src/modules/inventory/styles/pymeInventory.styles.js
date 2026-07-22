@@ -103,7 +103,6 @@ export default StyleSheet.create({
   addCategoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -111,7 +110,6 @@ export default StyleSheet.create({
     backgroundColor: colors.primary + '12',
     borderWidth: 1.5,
     borderColor: colors.primary,
-    marginBottom: 12,
   },
   addCategoryPillText: {
     color: colors.primary,
@@ -137,11 +135,14 @@ export default StyleSheet.create({
   },
 
   /* ===================== Chips de categorías existentes ===================== */
-  categoryChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  categoryCarousel: {
     marginBottom: 12,
+  },
+  categoryCarouselContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 4,
   },
   categoryChip: {
     flexDirection: 'row',

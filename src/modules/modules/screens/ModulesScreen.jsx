@@ -3,8 +3,11 @@
 // MODIFICADO: 2026-07-22
 // Propósito: Punto de entrada a los módulos PYME que dejaron de ser tabs fijos
 //            (Compras, Servicios, Recetas, Comisiones, Propinas, Ofertas),
-//            más Análisis Estratégico e Inventario Avanzado, que se muestran
-//            siempre sin depender de enabled_modules.
+//            más Análisis Estratégico (siempre visible) e Inventario Avanzado
+//            (visible solo si enabled_modules incluye 'inventory' — un
+//            negocio Servicios sin "vende productos físicos" nunca activa
+//            ese módulo en register_business y no debe tener acceso a
+//            Inventario en ningún lado).
 //            "Personal"/"Caja" ya no viven aquí (ver auditoría más abajo).
 //
 // "Herramientas" pasó de lista vertical a grid de 2 columnas: Análisis
@@ -102,12 +105,18 @@ const ModulesScreen = () => {
             />
 
             <View style={styles.grid}>
-              <ToolCard
-                icon={moduleConfig.inventory.icon}
-                label="Inventario Avanzado"
-                subLabel="Control de stock por categorías"
-                onPress={() => navigation.navigate('PymeInventory')}
-              />
+              {/* Servicios sin "vende productos físicos" nunca activa
+                  'inventory' en register_business (ver auth_service.py) —
+                  sin este guard, la tarjeta llevaba a PymeInventory igual,
+                  sin importar enabled_modules. */}
+              {enabledModules.includes('inventory') && (
+                <ToolCard
+                  icon={moduleConfig.inventory.icon}
+                  label="Inventario Avanzado"
+                  subLabel="Control de stock por categorías"
+                  onPress={() => navigation.navigate('PymeInventory')}
+                />
+              )}
 
               {activeModules.map((mod) => {
                 const IconComponent = mod.icon;
@@ -124,18 +133,15 @@ const ModulesScreen = () => {
             </View>
 
             {activatableCount > 0 && (
-              <>
-                <View style={styles.sectionSeparator} />
-                <TouchableOpacity
-                  style={styles.activateMoreCard}
-                  onPress={() => navigation.navigate('ActivateModules')}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                  <Text style={styles.activateMoreText}>Activar más módulos</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
-              </>
+              <TouchableOpacity
+                style={styles.activateMoreCard}
+                onPress={() => navigation.navigate('ActivateModules')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                <Text style={styles.activateMoreText}>Activar más módulos</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
             )}
           </View>
         </ScrollView>

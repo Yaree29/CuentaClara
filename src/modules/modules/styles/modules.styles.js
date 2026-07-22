@@ -16,12 +16,6 @@ export default StyleSheet.create({
   bodyContainer: {
     paddingTop: 20,
   },
-  sectionSeparator: {
-    height: 1,
-    backgroundColor: colors.borderLight,
-    marginHorizontal: 16,
-    marginVertical: 16,
-  },
   menuSection: {
     marginBottom: 20,
     paddingHorizontal: 16,
@@ -33,7 +27,9 @@ export default StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 8,
-    marginHorizontal: 20,
+    // 16px: mismo padding lateral que el resto de la pantalla (grid,
+    // featuredCard, activateMoreCard), no los 20px de antes.
+    marginHorizontal: 16,
   },
   menuSectionContent: {
     backgroundColor: colors.card,

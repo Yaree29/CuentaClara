@@ -254,6 +254,12 @@ def register_business(data):
             if settings_dict.get('sell_physical_products') in [True, 'Sí', 'si', 'SÍ', 'SI']:
                 modules_to_activate.append('inventory')
                 modules_to_activate.append('purchases')
+            # Cobra por comisión -> activar módulo de Comisiones. Si el dueño
+            # marca "No" aquí, el módulo sigue disponible para activarlo
+            # manualmente después desde "Activar más módulos"
+            # (ModulesScreen.jsx/ActivateModulesScreen.jsx) — no se pierde el acceso.
+            if settings_dict.get('employee_commission') in [True, 'Sí', 'si', 'SÍ', 'SI']:
+                modules_to_activate.append('commissions')
         elif category_group == 'comercio':
             modules_to_activate = ['inventory', 'sales', 'purchases', 'cash', 'credit']
         elif category_group == 'comida_preparada':

@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   // paddingBottom para que "Actividad del Día" (último bloque) no quede
   // tapado por el tab bar inferior (height: 72 en MainNavigator.jsx) — mismo
   // valor que usan otras pantallas PYME con scroll bajo el tab bar (ver
-  // salesPyme.style.js / closeDay.style.js). El proyecto no usa
+  // salesPyme.style.js / cashRegister.style.js). El proyecto no usa
   // useSafeAreaInsets en ninguna pantalla existente.
   contentContainer: {
     paddingBottom: 120,

@@ -10,12 +10,36 @@
 # payments (method='cash') unidos a invoices reales dentro de la ventana de
 # la sesión. No existe (ni se crea aquí) una tabla de "otros ingresos"
 # manuales — el esperado se calcula solo con datos reales de ventas/gastos.
+#
+# Reconstrucción "horario de operación + ciclo de vida de caja" (ver plan):
+# - El horario de ventas (business_configs.sales_opening_time/closing_time,
+#   ver 20_sales_schedule_and_cash_lifecycle.sql) es opcional por negocio.
+#   Si no está configurado, no hay restricción horaria — pero abrir caja
+#   sigue siendo obligatorio para vender (eso se aplica en sales_service.py).
+# - No existe opción de "extender" la hora de cierre: al llegar la hora
+#   configurada, las ventas se bloquean sin excepción (decisión explícita del
+#   usuario, 2026-07-22) — la caja solo se puede cerrar (nunca antes de esa
+#   hora), no hay negociación de tiempo extra.
 # =============================================================================
-from datetime import datetime
+from datetime import datetime, time, timezone
 from decimal import Decimal
 from typing import Optional
+from zoneinfo import ZoneInfo
 
+from app.config import settings
 from app.database import supabase_admin
+from app.services import business_service
+
+_TZ = ZoneInfo(settings.app_timezone)
+
+
+def _now_local_time() -> time:
+    return datetime.now(timezone.utc).astimezone(_TZ).time()
+
+
+def _parse_hhmm(value: str) -> time:
+    hour, minute = value.split(":")[:2]
+    return time(int(hour), int(minute))
 
 
 def get_open_session(business_id: str) -> Optional[dict]:
@@ -63,13 +87,47 @@ def _session_totals(business_id: str, session: dict) -> dict:
     return {"cash_income": cash_income, "expenses": total_expenses}
 
 
+def _schedule_state(schedule: Optional[dict]) -> dict:
+    """within_hours/past_closing calculados contra la hora local actual. Sin
+    horario configurado: siempre "dentro de horario" (sin restricción)."""
+    if not schedule:
+        return {"within_hours": True, "past_closing": False}
+
+    now_t = _now_local_time()
+    opening_t = _parse_hhmm(schedule["opening_time"])
+    closing_t = _parse_hhmm(schedule["closing_time"])
+    return {
+        "within_hours": opening_t <= now_t < closing_t,
+        "past_closing": now_t >= closing_t,
+    }
+
+
+def is_within_operating_hours(business_id: str) -> bool:
+    """Usado por sales_service para el gate de "fuera de horario de ventas"
+    al crear una venta (independiente de si hay o no una sesión abierta)."""
+    schedule = business_service.get_sales_schedule(business_id)
+    return _schedule_state(schedule)["within_hours"]
+
+
 def get_session_status(business_id: str) -> dict:
-    """Estado de la caja actual: si hay una sesión abierta, incluye el
-    monto esperado calculado hasta este momento (efectivo real, no
-    proyectado)."""
+    """Estado de la caja actual: si hay una sesión abierta, incluye el monto
+    esperado calculado hasta este momento, más las banderas de horario/cierre
+    que gobiernan qué acciones están permitidas ahora mismo."""
     session = get_open_session(business_id)
+    schedule = business_service.get_sales_schedule(business_id)
+    state = _schedule_state(schedule)
+
     if not session:
-        return {"is_open": False, "session": None}
+        return {
+            "is_open": False,
+            "session": None,
+            "schedule": schedule,
+            "within_operating_hours": state["within_hours"],
+            "past_closing_time": state["past_closing"],
+            "can_open": state["within_hours"],
+            "can_sell": False,
+            "can_close": False,
+        }
 
     totals = _session_totals(business_id, session)
     opening = Decimal(str(session["opening_amount"] or 0))
@@ -82,12 +140,22 @@ def get_session_status(business_id: str) -> dict:
         "cash_income": float(totals["cash_income"]),
         "expenses": float(totals["expenses"]),
         "expected_amount": float(expected),
+        "schedule": schedule,
+        "within_operating_hours": state["within_hours"],
+        "past_closing_time": state["past_closing"],
+        "can_open": False,
+        "can_sell": state["within_hours"],
+        "can_close": (not schedule) or state["past_closing"],
     }
 
 
 def open_session(business_id: str, user_id: str, opening_amount: Decimal) -> dict:
     if get_open_session(business_id):
         raise ValueError("Ya existe una caja abierta. Ciérrala antes de abrir una nueva.")
+
+    schedule = business_service.get_sales_schedule(business_id)
+    if schedule and not _schedule_state(schedule)["within_hours"]:
+        raise ValueError("Fuera de horario de ventas.")
 
     result = supabase_admin.table("cash_sessions").insert({
         "business_id": business_id,
@@ -107,6 +175,12 @@ def close_session(business_id: str, counted_amount: Decimal) -> dict:
     session = get_open_session(business_id)
     if not session:
         raise ValueError("No hay ninguna caja abierta para cerrar.")
+
+    schedule = business_service.get_sales_schedule(business_id)
+    if schedule and not _schedule_state(schedule)["past_closing"]:
+        raise ValueError(
+            f"Aún no puedes cerrar la caja: el negocio cierra a las {schedule['closing_time']}."
+        )
 
     totals = _session_totals(business_id, session)
     opening = Decimal(str(session["opening_amount"] or 0))

@@ -34,7 +34,7 @@ export default StyleSheet.create({
   },
 
   // Aplicar como `style` (no solo `contentContainerStyle`) en el ScrollView
-  // raíz de SalesSection.jsx y RegisterCount.jsx.
+  // raíz de SalesSection.jsx y CashRegisterScreen.jsx.
   scrollFlex: {
     flex: 1,
   },

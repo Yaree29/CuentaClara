@@ -118,7 +118,7 @@ const useSalesStore = create((set) => ({
      TOTALES REALES DEL DÍA (hidratados desde GET /sales/profits)
      ===========================
      Campo separado de dailySales/expenses a propósito: esos dos arrays los
-     consumen RegisterCount.jsx (arqueo de caja) y AccountingScreen.jsx
+     consumen CashRegisterScreen.jsx (arqueo de caja) y SalesHistoryScreen.jsx
      (desglose por cajero) con cada venta/gasto individual de la sesión —
      sobreescribirlos con un total agregado rompería esas pantallas. Home usa
      dailyTotals cuando está disponible; si no (sin conexión, rol sin permiso),

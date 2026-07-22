@@ -1,11 +1,21 @@
 from app.database import supabase_admin
-from app.services import notifications_service
+from app.services import notifications_service, cash_service
 from datetime import datetime
 from decimal import Decimal
 
 def create_quick_sale(business_id: str, user_id: str, data):
     total = Decimal("0")
     tax_rate = Decimal("0")
+
+    # Ciclo de vida de caja (ver plan "horario de operación + caja"): ninguna
+    # venta se registra sin una sesión de caja abierta, y si el negocio tiene
+    # horario configurado, tampoco fuera de horario — al llegar la hora de
+    # cierre las ventas se bloquean sin excepción, no hay opción de extender.
+    session = cash_service.get_open_session(business_id)
+    if not session:
+        raise ValueError("Debes abrir la caja antes de registrar ventas.")
+    if not cash_service.is_within_operating_hours(business_id):
+        raise ValueError("Fuera de horario de ventas.")
 
     # Snapshot del nombre del asistente al momento de la venta. Se guarda como
     # texto (invoices.assistant_name), NO se calcula al leer — así el registro
@@ -77,6 +87,7 @@ def create_quick_sale(business_id: str, user_id: str, data):
         "user_id": user_id,
         "assistant_id": data.assistant_id,
         "assistant_name": assistant_name,
+        "cash_session_id": session["id"],
         "created_at": datetime.utcnow().isoformat()
     }).execute()
 

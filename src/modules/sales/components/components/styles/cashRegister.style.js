@@ -15,7 +15,7 @@ const shadowStyle = Platform.select({
 
 export default StyleSheet.create({
   // Aplicar como `style` (no solo `contentContainerStyle`) en los ScrollView
-  // raíz de RegisterCount.jsx — sin flex:1 aquí, el ScrollView se mide por su
+  // raíz de CashRegisterScreen.jsx — sin flex:1 aquí, el ScrollView se mide por su
   // contenido en vez de por el viewport (screen - tab bar de 72px en
   // MainNavigator.jsx) y el botón final ("Registrar Gasto"/"Cerrar Caja")
   // puede quedar tapado por el tab bar aunque `content` ya tenga
@@ -69,10 +69,9 @@ export default StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Estilos faltantes para los campos de solo lectura en tu JSX
   readOnlyInput: {
     height: 50,
-    backgroundColor: colors.border, // Un tono ligeramente gris/deshabilitado para contrastar
+    backgroundColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     justifyContent: 'center',
@@ -139,6 +138,24 @@ export default StyleSheet.create({
     color: colors.textPrimary,
   },
 
+  // === Nota informativa (horario / restricciones inline) ===
+  scheduleNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary + '12',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  scheduleNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+
   // === Lista de gastos de la sesión ===
   expenseItem: {
     flexDirection: 'row',
@@ -190,7 +207,37 @@ export default StyleSheet.create({
     color: colors.textButton,
   },
 
-  // === Modal de cierre de caja ===
+  // === Historial breve de sesiones pasadas (cashService.getSessions) ===
+  historySection: {
+    marginTop: 20,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  historyItemLast: {
+    borderBottomWidth: 0,
+  },
+  historyItemDate: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  historyItemAmounts: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  historyItemDifference: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // === Modal de cierre de caja / aviso de extensión ===
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlay,

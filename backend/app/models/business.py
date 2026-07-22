@@ -3,8 +3,12 @@
 # -------------------
 # Pydantic request models para el router /businesses.
 # =============================================================================
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, field_validator
 from typing import Optional
+
+_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 class BusinessUpdate(BaseModel):
@@ -31,3 +35,17 @@ class ModuleToggleRequest(BaseModel):
     """Activar/desactivar un módulo opcional del negocio (tabla `features`)."""
     module: str
     enabled: bool = True
+
+
+class SalesScheduleUpdate(BaseModel):
+    """Horario fijo diario de ventas (opcional). Ambos null = sin restricción
+    horaria — la caja sigue siendo obligatoria de todos modos."""
+    opening_time: Optional[str] = None
+    closing_time: Optional[str] = None
+
+    @field_validator("opening_time", "closing_time")
+    @classmethod
+    def validate_hhmm(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _HHMM_RE.match(v):
+            raise ValueError("Formato de hora inválido, usa HH:MM (24h).")
+        return v

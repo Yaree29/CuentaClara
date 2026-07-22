@@ -20,6 +20,8 @@ from app.models.inventory import (
     StockAdjustRequest,
 )
 from app.models.credit import DebtCreate
+from app.models.business import SalesScheduleUpdate
+from app.models.cash import CashSessionOpenRequest, CashSessionCloseRequest
 
 
 def _product(**overrides):
@@ -135,3 +137,43 @@ class TestPU12MovimientoInventario:
         with pytest.raises(ValidationError) as exc:
             StockAdjustRequest(product_id=1, quantity=Decimal("5"), reason="xxx")
         assert "Opciones:" in str(exc.value)
+
+
+# ── PU-13: Validación de horario de ventas (SalesScheduleUpdate.validate_hhmm) ──
+class TestPU13HorarioVentas:
+    def test_pu13_01_horario_valido(self):
+        schedule = SalesScheduleUpdate(opening_time="07:00", closing_time="20:00")
+        assert schedule.opening_time == "07:00"
+        assert schedule.closing_time == "20:00"
+
+    def test_pu13_02_ambos_null_valido(self):
+        # Sin restricción horaria (opt-out) — ambos campos null es válido.
+        schedule = SalesScheduleUpdate()
+        assert schedule.opening_time is None
+        assert schedule.closing_time is None
+
+    def test_pu13_03_formato_invalido_rechazado(self):
+        with pytest.raises(ValidationError) as exc:
+            SalesScheduleUpdate(opening_time="7:00", closing_time="20:00")
+        assert "Formato de hora inv" in str(exc.value)
+
+    def test_pu13_04_hora_fuera_de_rango_rechazada(self):
+        with pytest.raises(ValidationError) as exc:
+            SalesScheduleUpdate(opening_time="25:00", closing_time="20:00")
+        assert "Formato de hora inv" in str(exc.value)
+
+
+# ── PU-14: Validación de montos de sesión de caja (cash.py) ──
+class TestPU14MontosCaja:
+    def test_pu14_01_monto_apertura_valido(self):
+        assert CashSessionOpenRequest(opening_amount=Decimal("50")).opening_amount == Decimal("50")
+
+    def test_pu14_02_monto_apertura_negativo_rechazado(self):
+        with pytest.raises(ValidationError) as exc:
+            CashSessionOpenRequest(opening_amount=Decimal("-1"))
+        assert "no puede ser negativo" in str(exc.value)
+
+    def test_pu14_03_monto_contado_negativo_rechazado(self):
+        with pytest.raises(ValidationError) as exc:
+            CashSessionCloseRequest(counted_amount=Decimal("-1"))
+        assert "no puede ser negativo" in str(exc.value)

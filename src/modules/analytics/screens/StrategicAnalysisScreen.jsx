@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import styles from '../styles/strategicAnalysisScreen.styles';
+import styles from '../styles/StrategicAnalysisScreen.styles';
 import VentasSection from '../utils/VentasSection';
 import FinanzasSection from '../utils/FinanzasSection';
 import InventarioSection from '../utils/InventarioSection';

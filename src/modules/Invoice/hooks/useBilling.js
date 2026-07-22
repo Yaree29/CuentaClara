@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import billingService from '../services/billingService';
-import useAuthStore from '../../../store/useAuthStore';
-//import useUserStore from '../../../store/useUserStore';
 import inventoryService from '../../inventory/services/inventoryService';
 import debtService from '../../credit/services/debtService';
 
@@ -15,29 +13,21 @@ export const useBilling = () => {
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(true);
   const [customersError, setCustomersError] = useState(null);
-  const user = useAuthStore((state) => state.user);
-  const businessData = 'informal';
 
-  const resolveBusinessId = () =>
-    businessData?.id ||
-    businessData?.business_id ||
-    user?.business_id ||
-    user?.businessId ||
-    null;
-
+  // inventoryService.getProducts() ignora el parámetro businessId — el
+  // backend siempre lo extrae del JWT (ver comentario en
+  // inventoryService.js). Antes esta función esperaba un businessId
+  // resuelto de un `businessData = 'informal'` (string suelto, sin .id ni
+  // .business_id) y abortaba con inventario vacío si no lo conseguía —
+  // por eso "Inventario disponible" salía vacío aunque el negocio sí
+  // tuviera productos activos. fetchCustomers ya llamaba a su servicio sin
+  // ese filtro; se alinea el mismo patrón aquí.
   const fetchInventory = async () => {
-    const businessId = resolveBusinessId();
-    if (!businessId) {
-      setInventory([]);
-      setInventoryLoading(false);
-      return;
-    }
-
     setInventoryLoading(true);
     setInventoryError(null);
 
     try {
-      const data = await inventoryService.getProducts(businessId);
+      const data = await inventoryService.getProducts();
       setInventory(data);
     } catch (err) {
       console.error('Error al cargar inventario:', err);
@@ -49,7 +39,7 @@ export const useBilling = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, [businessData, user]);
+  }, []);
 
   const fetchCustomers = async () => {
     setCustomersLoading(true);
@@ -67,7 +57,7 @@ export const useBilling = () => {
 
   useEffect(() => {
     fetchCustomers();
-  }, [businessData, user]);
+  }, []);
 
   const createCustomer = async ({ name, phone, notes }) => {
     const customer = await debtService.createCustomer({ name, phone, notes });

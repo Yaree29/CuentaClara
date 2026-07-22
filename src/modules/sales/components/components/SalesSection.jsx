@@ -239,7 +239,7 @@ const SalesPyme = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
       <TouchableOpacity style={styles.createButton} onPress={addNewSale}>
         <Text style={styles.saveButtonText}>+ Nueva Venta</Text>
       </TouchableOpacity>

@@ -56,6 +56,17 @@ def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
     pdf.cell(145, 8, "Total", align="R")
     pdf.cell(35, 8, f"${float(invoice['total']):.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
 
+    # Aviso legal: fpdf2 no emite un comprobante fiscal oficial (no hay CAI/CAE
+    # ni integración con la autoridad tributaria), así que debe quedar explícito
+    # en el propio documento para no inducir a que se use como tal.
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.multi_cell(
+        0, 5,
+        "Este documento es informativo y no constituye un comprobante fiscal oficial.",
+        align="C",
+    )
+
     return bytes(pdf.output())
 
 

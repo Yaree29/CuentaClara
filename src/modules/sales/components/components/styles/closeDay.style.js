@@ -14,6 +14,16 @@ const shadowStyle = Platform.select({
 });
 
 export default StyleSheet.create({
+  // Aplicar como `style` (no solo `contentContainerStyle`) en los ScrollView
+  // raíz de RegisterCount.jsx — sin flex:1 aquí, el ScrollView se mide por su
+  // contenido en vez de por el viewport (screen - tab bar de 72px en
+  // MainNavigator.jsx) y el botón final ("Registrar Gasto"/"Cerrar Caja")
+  // puede quedar tapado por el tab bar aunque `content` ya tenga
+  // paddingBottom:120. Mismo patrón que InformalDashboard.styles.js.
+  scrollFlex: {
+    flex: 1,
+  },
+
   content: {
     padding: 16,
     paddingBottom: 120,

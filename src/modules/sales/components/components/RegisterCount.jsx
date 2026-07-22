@@ -180,7 +180,7 @@ const RegisterCount = () => {
   // ─── Sin caja abierta: pantalla "Abrir Caja" ─────────────────────────────
   if (!sessionStatus?.is_open) {
     return (
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
         <View style={styles.generalRegisterCard}>
           <Text style={styles.productsSectionTitle}>Abrir Caja</Text>
 
@@ -211,7 +211,7 @@ const RegisterCount = () => {
 
   // ─── Caja abierta: operar el día + cerrar ────────────────────────────────
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
       <View style={styles.sessionCard}>
         <Text style={styles.productsSectionTitle}>Caja abierta</Text>
 

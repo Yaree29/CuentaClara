@@ -1,13 +1,18 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.invoices import InvoiceCreateRequest
 from app.services import invoice_service, invoice_pdf_service
-from app.routers.auth import get_current_user
+from app.routers.auth import require_role
 from app.database import supabase_admin
 
 router = APIRouter()
 
+# MiRUC (facturación fiscal) es exclusiva del dueño/admin del negocio — igual
+# que /sales/profits. Un asistente (incluido Supervisor) ya no ve la tab en
+# el frontend, pero sin este require_role podía llamar el endpoint directo y
+# crear/leer facturas fiscales igual. Ver auditoría: antes solo usaba
+# get_current_user, sin chequeo de rol.
 @router.post("/", summary="Crear factura fiscal (PYME)")
-def create_invoice(data: InvoiceCreateRequest, current_user: dict = Depends(get_current_user)):
+def create_invoice(data: InvoiceCreateRequest, current_user: dict = Depends(require_role("owner", "admin"))):
     try:
         return invoice_service.create_invoice(
             business_id=current_user["business_id"],
@@ -23,7 +28,7 @@ def list_invoices(
     date_from: str = None,
     date_to: str = None,
     limit: int = 20,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_role("owner", "admin"))
 ):
     query = supabase_admin.table("invoices")\
         .select("*, invoice_types(name, prefix), payments(method), invoice_items(quantity, unit_price, products(name))")\
@@ -42,7 +47,7 @@ def list_invoices(
     return result.data
 
 @router.get("/{invoice_id}", summary="Detalle de una factura")
-def get_invoice(invoice_id: int, current_user: dict = Depends(get_current_user)):
+def get_invoice(invoice_id: int, current_user: dict = Depends(require_role("owner", "admin"))):
     invoice = supabase_admin.table("invoices")\
         .select("*, invoice_items(*, products(name)), payments(*)")\
         .eq("id", invoice_id)\
@@ -55,12 +60,28 @@ def get_invoice(invoice_id: int, current_user: dict = Depends(get_current_user))
     return invoice.data[0]
 
 @router.get("/{invoice_id}/pdf", summary="Generar PDF de una factura y obtener URL firmada para compartir")
-def get_invoice_pdf(invoice_id: int, current_user: dict = Depends(get_current_user)):
+def get_invoice_pdf(invoice_id: int, current_user: dict = Depends(require_role("owner", "admin"))):
     try:
         url = invoice_pdf_service.generate_invoice_pdf_url(
             business_id=current_user["business_id"],
             invoice_id=invoice_id
         )
         return {"url": url}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/reports/profitability", summary="Ganancias y márgenes por factura/producto (owner/admin)")
+def get_profitability(
+    date_from: str,
+    date_to: str,
+    current_user: dict = Depends(require_role("owner", "admin"))
+):
+    try:
+        return invoice_service.get_profitability(
+            business_id=current_user["business_id"],
+            date_from=date_from,
+            date_to=date_to,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

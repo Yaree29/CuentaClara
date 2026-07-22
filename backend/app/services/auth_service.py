@@ -14,6 +14,7 @@ from app.database import supabase, supabase_admin
 from app.config import settings
 from datetime import datetime
 from typing import Optional
+import base64
 
 # Módulos fijos para usuarios informales: inicio, ventas, fiado, inventario
 DEFAULT_INFORMAL_MODULES = ['sales', 'credit', 'inventory']
@@ -48,6 +49,46 @@ def _build_inventory_config_flags(category_group: Optional[str]) -> dict:
     return flags
 
 
+def _upload_image_to_storage(base64_str: str, bucket: str, file_path: str) -> str:
+    """
+    Decodifica una imagen base64 (con o sin prefijo data URI), la comprime
+    con Pillow (máx. 512x512, JPEG calidad 60) y la sube a `bucket/file_path`
+    en Supabase Storage. Devuelve la URL pública con un timestamp para
+    invalidar caché. Compartido por update_profile (avatar de usuario) y
+    register_business (logo de negocio) para no duplicar esta lógica.
+    """
+    if "," in base64_str:
+        base64_str = base64_str.split(",")[1]
+
+    image_data = base64.b64decode(base64_str)
+
+    from io import BytesIO
+    from PIL import Image
+
+    img = Image.open(BytesIO(image_data))
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+
+    img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+
+    out_io = BytesIO()
+    img.save(out_io, format="JPEG", quality=60, optimize=True)
+    compressed_image_data = out_io.getvalue()
+
+    supabase_admin.storage.from_(bucket).upload(
+        path=file_path,
+        file=compressed_image_data,
+        file_options={"content-type": "image/jpeg", "upsert": "true"}
+    )
+
+    public_url = supabase_admin.storage.from_(bucket).get_public_url(file_path)
+    if not isinstance(public_url, str):
+        public_url = f"{settings.supabase_url}/storage/v1/object/public/{bucket}/{file_path}"
+
+    timestamp = int(datetime.utcnow().timestamp())
+    return f"{public_url}?t={timestamp}"
+
+
 def normalize_modules(features: list) -> list:
     # Parte de BASE_MODULES y agrega solo los features activos y reconocidos
     enabled = set(BASE_MODULES)
@@ -65,6 +106,15 @@ def register_business(data):
     existing = supabase_admin.table("users").select("id").eq("email", email).execute()
     if existing.data:
         raise ValueError("El email ya está registrado en el sistema")
+
+    # 1.1 PYME (ui_mode="advanced") requiere una plantilla de industria — sin
+    # ella, category_group queda en None y el negocio nunca activa los flags
+    # de configuración de inventario (control_peso/caducidad/mermas/etc.) ni
+    # los módulos por category_group. Antes solo el frontend lo exigía
+    # (botón deshabilitado) y un bug lo dejó pasar en silencio — se valida
+    # también aquí para no depender únicamente de la UI.
+    if (data.ui_mode or "simple") == "advanced" and not data.industry_template_id:
+        raise ValueError("Debes seleccionar la categoría del negocio para completar el registro PYME.")
 
     # 2. Supabase Auth es el dueño de las credenciales; usamos admin para
     #    saltarnos la confirmación por email y crear el usuario directamente
@@ -146,9 +196,17 @@ def register_business(data):
         "language": "es",
         "settings": settings_dict
     }
-    if getattr(data, "logo_url", None) and data.logo_url.strip():
-        config_payload["logo_url"] = data.logo_url.strip()
-        
+    # Logo del negocio: el paso 3 de PYME ahora sube una imagen real (cámara/
+    # galería) en vez de pedir una URL manual — mismo patrón de subida que el
+    # avatar de usuario (bucket 'avatars', reutilizando _upload_image_to_storage).
+    if getattr(data, "logo_base64", None):
+        try:
+            config_payload["logo_url"] = _upload_image_to_storage(
+                data.logo_base64, "avatars", f"business-{business_id}.jpg"
+            )
+        except Exception as e:
+            raise ValueError(f"Error al subir el logo del negocio: {str(e)}")
+
     supabase_admin.table("business_configs").insert(config_payload).execute()
 
     # 6. Activar features según la categoría, plantilla de industria o módulos por defecto (onboarding adaptativo)
@@ -385,8 +443,6 @@ def get_user_context(user_id: str) -> dict:
 # pyotp/qrcode se eliminaron por quedar sin uso; los factores viven ahora en el
 # esquema auth de Supabase, no en las columnas users.mfa_secret/mfa_enabled.
 
-import base64
-
 def update_profile(user_id: str, business_id: str, data):
     """
     Actualiza el perfil del usuario (nombre, teléfono, avatar) y/o
@@ -397,50 +453,7 @@ def update_profile(user_id: str, business_id: str, data):
 
     if data.avatar_base64:
         try:
-            b64_str = data.avatar_base64
-            if "," in b64_str:
-                b64_str = b64_str.split(",")[1]
-            
-            image_data = base64.b64decode(b64_str)
-            
-            # Comprimir con Pillow
-            from io import BytesIO
-            from PIL import Image
-            
-            img = Image.open(BytesIO(image_data))
-            # Convertir a RGB (por si es RGBA/PNG)
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            
-            # Redimensionar si es muy grande (máximo 512x512 para avatares)
-            img.thumbnail((512, 512), Image.Resampling.LANCZOS)
-            
-            out_io = BytesIO()
-            # Guardar con compresión alta (quality=60 suele bajar a <50kb)
-            img.save(out_io, format="JPEG", quality=60, optimize=True)
-            compressed_image_data = out_io.getvalue()
-            
-            # Usamos siempre el mismo nombre para sobrescribir y ahorrar espacio
-            file_path = f"{user_id}.jpg"
-            timestamp = int(datetime.utcnow().timestamp())
-            
-            supabase_admin.storage.from_("avatars").upload(
-                path=file_path,
-                file=compressed_image_data,
-                file_options={"content-type": "image/jpeg", "upsert": "true"}
-            )
-            
-            # Obtener URL pública (asumiendo que el bucket es público)
-            public_url = supabase_admin.storage.from_("avatars").get_public_url(file_path)
-            # En la versión actual del SDK de python, get_public_url puede no ser un método directo, 
-            # es mejor construirla manualmente o asegurar el método
-            if not isinstance(public_url, str):
-                # Workaround si get_public_url no retorna string directo
-                public_url = f"{settings.supabase_url}/storage/v1/object/public/avatars/{file_path}"
-                
-            # Agregamos el timestamp como parámetro de consulta para forzar 
-            # al frontend a limpiar la caché sin llenar el bucket de Supabase
-            avatar_url = f"{public_url}?t={timestamp}"
+            avatar_url = _upload_image_to_storage(data.avatar_base64, "avatars", f"{user_id}.jpg")
         except Exception as e:
             raise ValueError(f"Error al subir el avatar: {str(e)}")
 

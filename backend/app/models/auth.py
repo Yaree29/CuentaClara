@@ -27,6 +27,11 @@ class RegisterRequest(BaseModel):
     address: Optional[str] = Field(None, max_length=255)
     tax_id: Optional[str] = Field(None, max_length=50)
     logo_url: Optional[str] = Field(None, max_length=255)
+    # Logo del negocio capturado con cámara/galería en el paso 3 de PYME —
+    # se sube a Storage en register_business (mismo patrón que el avatar de
+    # perfil). logo_url queda como fallback si algún consumidor futuro
+    # todavía envía una URL directa.
+    logo_base64: Optional[str] = None
     settings: Optional[dict] = None
     # Toggle "Impuesto 7%" del registro informal (desactivado por defecto).
     # Para PYME se ignora — su tasa viene de settings.taxRate.

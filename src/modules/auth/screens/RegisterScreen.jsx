@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import colors from '../../../theme/colors';
 import styles from '../styles/register.styles';
@@ -35,29 +36,26 @@ const RegisterScreen = ({ navigation }) => {
     categoryId: null,
     nit: '',
     address: '',
-    logoUrl: '',
+    logoBase64: null,
+    // Se quitaron los toggles puramente decorativos (unitOfMeasure,
+    // wasteMargin, useDigitalScale, useBarcodes, salesFormat,
+    // simplifiedInventory, basicReports): se guardaban en
+    // business_configs.settings pero ningún componente visual ni el backend
+    // los leía de vuelta (ver auditoría). Quedan solo los que sí afectan algo
+    // real: employeeCommission/manageTips (subtítulos del Dashboard PYME),
+    // sellPhysicalProducts/transformsRawMaterial (activan módulos en
+    // register_business) y taxRate (business_configs.tax_rate real).
     settings: {
-      // Alimentos (ID: 1)
-      unitOfMeasure: 'Kg', 
-      wasteMargin: '0',
-      useDigitalScale: 'No',
-      
       // Servicios (ID: 2)
       employeeCommission: 'No',
       sellPhysicalProducts: 'No',
-      
-      // Comercio (ID: 3)
-      useBarcodes: 'No',
-      
+
       // Restaurante / Alimentos Preparados (ID: 4)
       transformsRawMaterial: 'No',
       manageTips: 'No',
-      
-      // General (ID: 5 o Default)
-      salesFormat: 'Mostrador', 
+
+      // General (todas las categorías)
       taxRate: '7.00',
-      simplifiedInventory: 'Sí',
-      basicReports: 'Sí',
     },
     businessType: '',
     avgPrice: '',
@@ -66,6 +64,7 @@ const RegisterScreen = ({ navigation }) => {
 
   const [templates, setTemplates] = useState([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [logoUri, setLogoUri] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     name: '',
@@ -94,6 +93,24 @@ const RegisterScreen = ({ navigation }) => {
         [key]: value,
       },
     }));
+  };
+
+  // Selector de logo (cámara/galería) — mismo patrón que EditProfileScreen.jsx
+  // (expo-image-picker + base64), reemplaza el TextInput de URL manual. El
+  // backend sube el base64 a Supabase Storage y guarda la URL resultante.
+  const pickLogo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      setLogoUri(result.assets[0].uri);
+      updateField('logoBase64', result.assets[0].base64);
+    }
   };
 
   const handleNext = () => {
@@ -255,7 +272,7 @@ const RegisterScreen = ({ navigation }) => {
     (async () => {
       try {
         const [tmplData, biometricEnabled] = await Promise.all([
-          registerService. getCategories(),
+          registerService.getTemplates(),
           isBiometricAvailable(),
         ]);
         if (mounted) {
@@ -427,12 +444,19 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={(val) => updateField('address', val)}
               />
 
-              <TextInput
-                style={styles.input}
-                placeholder="URL del Logo (opcional)"
-                value={formData.logoUrl}
-                onChangeText={(val) => updateField('logoUrl', val)}
-              />
+              <TouchableOpacity
+                style={[styles.input, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}
+                onPress={pickLogo}
+              >
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={{ width: 36, height: 36, borderRadius: 8 }} />
+                ) : (
+                  <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+                )}
+                <Text style={{ color: logoUri ? colors.textPrimary : colors.textSecondary }}>
+                  {logoUri ? 'Cambiar logo' : 'Agregar logo (opcional)'}
+                </Text>
+              </TouchableOpacity>
 
               <Text style={styles.sectionTitle}>Categoría de Negocio</Text>
 
@@ -473,62 +497,18 @@ const RegisterScreen = ({ navigation }) => {
                 </View>
               )}
 
-              {/* CONFIGURACIÓN OPERATIVA DINÁMICA CORREGIDA */}
-              {formData.industryTemplateId && (
+              {/* Configuración Operativa — solo Servicios (ID 2) y Restaurante/
+                  Alimentos Preparados (ID 4) tienen toggles que de verdad
+                  afectan algo (activan módulos en register_business o
+                  cambian subtítulos reales del Dashboard PYME). Alimentos
+                  (ID 1) y Comercio (ID 3) se quitaron: sus toggles
+                  (unidad de medida, merma, balanza, códigos de barras) se
+                  guardaban en business_configs.settings pero ningún lugar
+                  del sistema los leía de vuelta. */}
+              {(formData.industryTemplateId === 2 || formData.industryTemplateId === 4) && (
                 <>
                   <Text style={styles.sectionTitle}>Configuración Operativa</Text>
                   <View style={styles.sectionCard}>
-                    
-                    {/* ID 1: Alimentos (Carnes, Mariscos, Verduras, etc.) */}
-                    {formData.industryTemplateId === 1 && (
-                      <>
-                        <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Unidad de Medida</Text>
-                          <View style={styles.inputRow}>
-                            {['Kg', 'Lb', 'Ambos'].map((unit) => (
-                              <TouchableOpacity
-                                key={unit}
-                                style={[styles.smallBtn, formData.settings.unitOfMeasure === unit && styles.smallBtnActive]}
-                                onPress={() => updateSettingField('unitOfMeasure', unit)}
-                              >
-                                <Text style={[styles.smallBtnText, formData.settings.unitOfMeasure === unit && styles.smallBtnTextActive]}>
-                                  {unit}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                        
-                        <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Merma Estimada (%)</Text>
-                          <TextInput
-                            style={[styles.input, { padding: 8, width: 80, textAlign: 'center' }]}
-                            keyboardType="numeric"
-                            value={formData.settings.wasteMargin}
-                            onChangeText={(val) => updateSettingField('wasteMargin', val)}
-                            placeholder="0"
-                          />
-                        </View>
-
-                        <View style={styles.rowContainer}>
-                          <Text style={styles.label}>¿Usa balanza digital?</Text>
-                          <View style={styles.inputRow}>
-                            {['Sí', 'No'].map((opt) => (
-                              <TouchableOpacity
-                                key={opt}
-                                style={[styles.smallBtn, formData.settings.useDigitalScale === opt && styles.smallBtnActive]}
-                                onPress={() => updateSettingField('useDigitalScale', opt)}
-                              >
-                                <Text style={[styles.smallBtnText, formData.settings.useDigitalScale === opt && styles.smallBtnTextActive]}>
-                                  {opt}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                      </>
-                    )}
-
                     {/* ID 2: Servicios (Estilista, Barbería, Técnicos, etc.) */}
                     {formData.industryTemplateId === 2 && (
                       <>
@@ -559,28 +539,6 @@ const RegisterScreen = ({ navigation }) => {
                                 onPress={() => updateSettingField('sellPhysicalProducts', opt)}
                               >
                                 <Text style={[styles.smallBtnText, formData.settings.sellPhysicalProducts === opt && styles.smallBtnTextActive]}>
-                                  {opt}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                      </>
-                    )}
-
-                    {/* ID 3: Comercio (MiniSuper, Tienda de ropa, Ferreterías, etc.) */}
-                    {formData.industryTemplateId === 3 && (
-                      <>
-                        <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Usa códigos de barras</Text>
-                          <View style={styles.inputRow}>
-                            {['Sí', 'No'].map((opt) => (
-                              <TouchableOpacity
-                                key={opt}
-                                style={[styles.smallBtn, formData.settings.useBarcodes === opt && styles.smallBtnActive]}
-                                onPress={() => updateSettingField('useBarcodes', opt)}
-                              >
-                                <Text style={[styles.smallBtnText, formData.settings.useBarcodes === opt && styles.smallBtnTextActive]}>
                                   {opt}
                                 </Text>
                               </TouchableOpacity>
@@ -629,26 +587,13 @@ const RegisterScreen = ({ navigation }) => {
                       </>
                     )}
                   </View>
+                </>
+              )}
 
+              {formData.industryTemplateId && (
+                <>
                   <Text style={styles.sectionTitle}>Configuración General</Text>
                   <View style={styles.sectionCard}>
-                    <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Forma de venta</Text>
-                      <View style={styles.inputRow}>
-                        {['Mostrador', 'Delivery', 'Ambos'].map((mode) => (
-                          <TouchableOpacity
-                            key={mode}
-                            style={[styles.smallBtn, formData.settings.salesFormat === mode && styles.smallBtnActive]}
-                            onPress={() => updateSettingField('salesFormat', mode)}
-                          >
-                            <Text style={[styles.smallBtnText, formData.settings.salesFormat === mode && styles.smallBtnTextActive]}>
-                              {mode}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-
                     <View style={styles.rowContainer}>
                       <Text style={styles.label}>Tasa de impuesto (%)</Text>
                       <TextInput
@@ -658,40 +603,6 @@ const RegisterScreen = ({ navigation }) => {
                         onChangeText={(val) => updateSettingField('taxRate', val)}
                         placeholder="7.00"
                       />
-                    </View>
-
-                    <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Inventario simplificado</Text>
-                      <View style={styles.inputRow}>
-                        {['Sí', 'No'].map((opt) => (
-                          <TouchableOpacity
-                            key={opt}
-                            style={[styles.smallBtn, formData.settings.simplifiedInventory === opt && styles.smallBtnActive]}
-                            onPress={() => updateSettingField('simplifiedInventory', opt)}
-                          >
-                            <Text style={[styles.smallBtnText, formData.settings.simplifiedInventory === opt && styles.smallBtnTextActive]}>
-                              {opt}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-
-                    <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Reportes básicos</Text>
-                      <View style={styles.inputRow}>
-                        {['Sí', 'No'].map((opt) => (
-                          <TouchableOpacity
-                            key={opt}
-                            style={[styles.smallBtn, formData.settings.basicReports === opt && styles.smallBtnActive]}
-                            onPress={() => updateSettingField('basicReports', opt)}
-                          >
-                            <Text style={[styles.smallBtnText, formData.settings.basicReports === opt && styles.smallBtnTextActive]}>
-                              {opt}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
                     </View>
                   </View>
                 </>

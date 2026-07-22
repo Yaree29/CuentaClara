@@ -86,20 +86,25 @@ const AuthLayout = ({ children, title, subtitle, showBack = false, onBack }) => 
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.cardArea}
-      >
-        <ScrollView
-          contentContainerStyle={styles.cardScrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      {/* Tarjeta blanca FIJA: el borde redondeado vive aquí y nunca se
+          mueve ni se recorta. Lo único que se desplaza es el contenido
+          del formulario dentro del ScrollView interno. */}
+      <View style={styles.cardArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.cardKeyboardView}
         >
-          <View style={styles.cardNew}>
+          <ScrollView
+            contentContainerStyle={styles.cardScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
+          >
             {children}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 };

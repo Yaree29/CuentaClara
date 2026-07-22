@@ -78,18 +78,18 @@ export default StyleSheet.create({
   cardArea: {
     flex: 1,
     marginTop: -32,
-  },
-  cardScrollContent: {
-    flexGrow: 1,
-    paddingBottom: 24,
-  },
-  cardNew: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    overflow: 'hidden',
+  },
+  cardKeyboardView: {
+    flex: 1,
+  },
+  cardScrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 32,
-    minHeight: 560,
   },
 });

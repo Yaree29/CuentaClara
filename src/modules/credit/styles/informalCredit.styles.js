@@ -52,20 +52,24 @@ export default StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  /* --- Categorías de Ordenamiento --- */
-  categoryScroll: {
+  /* --- Categorías de Ordenamiento (toggle único con chevron) ---
+     Ya no es un ScrollView horizontal: son solo 3 botones que caben en el
+     ancho, así que se distribuyen con flex para que el usuario los identifique
+     de un vistazo. */
+  categoryRow: {
+    flexDirection: 'row',
     marginTop: 10,
     marginBottom: 8,
-  },
-
-  categoryScrollContent: {
     gap: 8,
-    paddingRight: 16,
   },
 
   categoryPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -336,33 +340,6 @@ export default StyleSheet.create({
     height: 4,
     backgroundColor: colors.success,
     borderRadius: 2,
-  },
-
-  /* --- Botón Flotante (FAB) --- */
-  // bottom:20, igual que el FAB de Inventario informal
-  // (informalInventory.styles.js). El tab bar de MainNavigator NO es
-  // position:absolute — ocupa su propio espacio y ya reserva insets.bottom —,
-  // así que el área de la pantalla termina encima de él y no hace falta
-  // compensar su altura aquí (el antiguo bottom:80 dejaba el FAB flotando
-  // demasiado alto).
-  fabContainer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 16,
-  },
-
-  fabButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
 
   /* --- Modales Comunes --- */

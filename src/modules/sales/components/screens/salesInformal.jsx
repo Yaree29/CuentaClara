@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal, RefreshControl } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 
 // 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,6 +52,19 @@ const SalesInformal = () => {
   const [linkModalVisible, setLinkModalVisible] = useState(false);
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
+
+  // Shortcut "Anotar Fiado" del dashboard: navega acá con openFiado=true y
+  // abre directo el selector de cliente. Se limpia el param en el mismo tick
+  // para que no se vuelva a disparar si el usuario cierra el modal y cambia
+  // de tab / vuelve.
+  const navigation = useNavigation();
+  const route = useRoute();
+  useEffect(() => {
+    if (route.params?.openFiado) {
+      setLinkModalVisible(true);
+      navigation.setParams({ openFiado: undefined });
+    }
+  }, [route.params?.openFiado, navigation]);
 
   const {
     processSale,loading,error,fetchProfitsAndExpenses,profitsData} = useSales();

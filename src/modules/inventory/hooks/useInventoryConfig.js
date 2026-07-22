@@ -34,7 +34,7 @@ export const FLAGS_BY_CATEGORY_GROUP = {
 export const FLAG_LABELS = {
   control_peso: {
     label: 'Control por peso',
-    description: 'Función pendiente: todavía no afecta cómo se vende ni se registra stock por peso (kg, g, lb) en Ventas.',
+    description: 'Habilita el selector de unidad de medida (kg/libra/unidad) al crear o editar un producto.',
   },
   caducidad: { label: 'Caducidad', description: 'Seguimiento de fechas de vencimiento por producto.' },
   mermas: { label: 'Mermas', description: 'Registrar pérdidas y desperdicio de inventario.' },

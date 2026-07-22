@@ -12,6 +12,12 @@ export default StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
+    // El visor de cámara nativo (CameraView) puede ignorar el clip del
+    // overflow:hidden/borderRadius de su contenedor directo en Android (es
+    // una superficie de hardware aparte, no una View normal) — se repite
+    // overflow:'hidden' aquí, en el contenedor padre, como red de seguridad
+    // para que nunca se salga de las esquinas redondeadas del bottom-sheet.
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',
@@ -74,10 +80,18 @@ export default StyleSheet.create({
     backgroundColor: colors.cardSecondary,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    // position:'relative' explícito: cameraView se ancla con absoluteFill a
+    // ESTE contenedor (con medidas fijas en px, no porcentuales) en vez de
+    // depender de que el layout resuelva un 100%/100% a tiempo — evita el
+    // parpadeo/desborde de un frame del visor durante el primer render.
+    position: 'relative',
   },
   cameraView: {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   cornerTopLeft: {
     position: 'absolute',

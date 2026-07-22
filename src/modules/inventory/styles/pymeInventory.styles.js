@@ -134,6 +134,7 @@ export default StyleSheet.create({
   addCategoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -141,6 +142,7 @@ export default StyleSheet.create({
     backgroundColor: colors.primary + '12',
     borderWidth: 1.5,
     borderColor: colors.primary,
+    marginBottom: 12,
   },
   addCategoryPillText: {
     color: colors.primary,

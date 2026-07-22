@@ -32,8 +32,10 @@ import profileStyles from '../../profile/styles/profile.styles';
 // ya tienen acceso funcional real (ver ExpiringProductsCard/WasteModal).
 // "escaner" tampoco está acá porque ya tiene un widget real: ProductScannerWidget.
 // "stock_predictivo" tampoco: ya tiene tarjeta real (ver PredictiveStockCard /
-// GET /inventory/stock/predictive).
-const PLACEHOLDER_FLAGS = ['control_peso', 'recetas', 'produccion'];
+// GET /inventory/stock/predictive). "control_peso" tampoco: ya controla un
+// campo real del formulario (selector de unidad kg/libra/unidad en
+// ProductFormModal, ver showWeightControl más abajo).
+const PLACEHOLDER_FLAGS = ['recetas', 'produccion'];
 
 const PREDICTIVE_THRESHOLD_DAYS = 7;
 
@@ -323,7 +325,12 @@ const PymeInventory = () => {
       if (response.alreadyExists) {
         Alert.alert('Aviso', `La categoría "${response.category.name}" ya existe.`);
       } else {
-        await fetchCategories();
+        // Actualización optimista — mismo patrón que
+        // useInformalInventory.addCategory: se agrega la categoría nueva
+        // directamente al estado local (en vez de esperar un refetch
+        // completo a GET /inventory/categories) para que la lista se
+        // refresque de inmediato sin depender de un segundo round-trip.
+        setCategories((prev) => [...prev, response.category.name].sort((a, b) => a.localeCompare(b)));
       }
       setNewCategoryName('');
       setCategoryError(null);
@@ -427,17 +434,6 @@ const PymeInventory = () => {
         <View style={styles.sectionBlock}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Tus productos ({products.length})</Text>
-            <TouchableOpacity
-              style={styles.addCategoryPill}
-              onPress={() => {
-                setNewCategoryName('');
-                setCategoryError(null);
-                setAddCategoryVisible(true);
-              }}
-            >
-              <PlusIcon size={13} color={colors.primary} />
-              <Text style={styles.addCategoryPillText}>Categoría</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Buscador por nombre o SKU (mismo patrón que InformalInventory). */}
@@ -451,6 +447,19 @@ const PymeInventory = () => {
               onChangeText={setSearchQuery}
             />
           </View>
+
+          {/* "Agregar categoría" debajo del buscador. */}
+          <TouchableOpacity
+            style={styles.addCategoryPill}
+            onPress={() => {
+              setNewCategoryName('');
+              setCategoryError(null);
+              setAddCategoryVisible(true);
+            }}
+          >
+            <PlusIcon size={13} color={colors.primary} />
+            <Text style={styles.addCategoryPillText}>Agregar categoría</Text>
+          </TouchableOpacity>
 
           {loadingProducts ? (
             <View style={styles.loadingContainer}>
@@ -607,6 +616,7 @@ const PymeInventory = () => {
         showExpiration={!!config.caducidad}
         showCostPrice={categoryGroup === 'comida_preparada'}
         prefillBarcode={prefillBarcode}
+        showWeightControl={!!config.control_peso}
         onSave={handleSaveProduct}
         onDelete={handleDeleteProduct}
       />

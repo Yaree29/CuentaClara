@@ -18,6 +18,14 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 // necesidad de una secuencia consultada al backend.
 const generateBarcode = () => String(Date.now()).slice(-12);
 
+// Opciones fijas del selector de unidad de medida (unit_type) — reemplaza el
+// texto libre por un control simple cuando el negocio tiene control_peso activo.
+const WEIGHT_UNIT_OPTIONS = [
+  { value: 'kg', label: 'Kg' },
+  { value: 'lb', label: 'Libra' },
+  { value: 'unidad', label: 'Unidad' },
+];
+
 // ─── Reglas de validación ──────────────────────────────────────────────────────
 
 /** El precio debe ser un número positivo mayor que cero */
@@ -76,8 +84,12 @@ const validateExpirationDate = (val) => {
  *                   propia de ese grupo). Para el resto de categorías no aparece.
  *  prefillBarcode – string | null — código ya leído por el escáner al crear un
  *                   producto que no existía; rellena el campo Código de barras.
+ *  showWeightControl – boolean (business_inventory_config.control_peso) —
+ *                   muestra el selector de unidad de medida (kg/libra/unidad)
+ *                   para unit_type. Si el negocio no tiene este flag activo,
+ *                   el campo no aparece (unitType se guarda como null).
  */
-const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false, showCostPrice = false, prefillBarcode = null }) => {
+const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false, showCostPrice = false, prefillBarcode = null, showWeightControl = false }) => {
   const [name, setName]         = useState('');
   const [price, setPrice]       = useState('');
   const [costPrice, setCostPrice] = useState('');
@@ -88,6 +100,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   const [expirationDate, setExpirationDate] = useState('');
   const [barcode, setBarcode] = useState('');
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
+  const [unitType, setUnitType] = useState('');
 
   // Errores por campo
   const [nameError, setNameError]       = useState(null);
@@ -119,6 +132,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setPurchaseType('register_only');
       setExpirationDate(initialData.expirationDate ? initialData.expirationDate.slice(0, 10) : '');
       setBarcode(initialData.sku ?? '');
+      setUnitType(initialData.unitType ?? '');
     } else {
       setName('');
       setPrice('');
@@ -131,6 +145,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       // Al crear desde un escaneo "no encontrado", el código leído llega por
       // prefillBarcode y arranca ya cargado en el campo.
       setBarcode(prefillBarcode ?? '');
+      setUnitType('');
     }
   }, [initialData, visible, categories, prefillBarcode]);
 
@@ -218,6 +233,9 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       // El "Código de barras" se guarda en la columna sku (no hay columna
       // barcode separada — ver products.sku). null si quedó vacío.
       sku: barcode.trim() !== '' ? barcode.trim() : null,
+      // unit_type solo se captura si el negocio tiene control_peso activo;
+      // para el resto se omite (no se sobreescribe con null sin querer).
+      ...(showWeightControl ? { unitType: unitType || null } : {}),
       stock: stock !== '' ? parseInt(stock, 10) : null,
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
       purchaseType: purchaseType,
@@ -333,6 +351,26 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* ── Unidad de medida (solo si el negocio tiene "Control por peso" activo) ── */}
+              {showWeightControl && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Unidad de medida</Text>
+                  <View style={styles.purchaseTypeContainer}>
+                    {WEIGHT_UNIT_OPTIONS.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.purchaseTypePill, unitType === opt.value && styles.purchaseTypePillActive]}
+                        onPress={() => setUnitType(opt.value)}
+                      >
+                        <Text style={[styles.purchaseTypeText, unitType === opt.value && styles.purchaseTypeTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
 
               {/* ── Stock disponible + Stock mínimo ── */}
               <View style={{ flexDirection: 'row', gap: 12 }}>

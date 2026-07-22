@@ -13,7 +13,7 @@ import { StyleSheet } from 'react-native';
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const { profile, reloadProfile } = useProfile();
-  
+
   const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [businessName, setBusinessName] = useState(profile?.businessName || '');
@@ -50,7 +50,7 @@ const EditProfileScreen = () => {
       Alert.alert('Error', 'El nombre y el nombre del negocio son obligatorios.');
       return;
     }
-    
+
     setLoading(true);
     try {
       await authService.updateProfile({
@@ -86,7 +86,7 @@ const EditProfileScreen = () => {
         </View>
 
         <ScrollView contentContainerStyle={editStyles.container} showsVerticalScrollIndicator={false}>
-          
+
           <View style={editStyles.avatarSection}>
             <TouchableOpacity onPress={pickImage} style={editStyles.avatarContainer}>
               {avatarUri ? (

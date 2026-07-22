@@ -499,7 +499,7 @@ const RecipesScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Recetas" variant="default" />
+      <DashboardHeader title="Recetas" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

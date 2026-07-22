@@ -47,7 +47,7 @@ const SalesPyme = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}
     >
-      <DashboardHeader title="Ventas" variant="default" />
+      <DashboardHeader title="Ventas" />
 
       {/* SWITCH */}
       <View style={styles.tabContainer}>

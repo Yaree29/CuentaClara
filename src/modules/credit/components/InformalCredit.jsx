@@ -392,12 +392,6 @@ const InformalCredit = () => {
         }
       />
 
-      <View style={styles.fabContainer}>
-        <TouchableOpacity style={styles.fabButton} onPress={openAddModal}>
-          <PlusIcon size={28} color={colors.textButton} />
-        </TouchableOpacity>
-      </View>
-
       {/* ========== MODAL: Menú Contextual ========== */}
       <Modal visible={menuVisible} animationType="slide" transparent={true}>
         <TouchableWithoutFeedback onPress={closeMenu}>

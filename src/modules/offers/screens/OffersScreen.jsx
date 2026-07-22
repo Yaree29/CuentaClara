@@ -153,7 +153,7 @@ const OffersScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Gestor de Ofertas" variant="default" />
+      <DashboardHeader title="Gestor de Ofertas" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

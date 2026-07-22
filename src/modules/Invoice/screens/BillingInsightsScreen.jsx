@@ -41,12 +41,15 @@ const MarginValue = ({ hasMissingCost, margin }) => {
   );
 };
 
-const BillingInsightsScreen = () => {
+// embedded=true: se usa como subpestaña dentro de BillingScreen (MiRUC), que ya
+// aporta el SafeAreaView y el DashboardHeader — aquí se omiten para no duplicar.
+const BillingInsightsScreen = ({ embedded = false }) => {
   const { data, loading, error, rangeDays, setRangeDays } = useBillingInsights(30);
+  const Container = embedded ? View : SafeAreaView;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Ganancias y Márgenes" />
+    <Container style={styles.safeArea} edges={['top']}>
+      {!embedded && <DashboardHeader title="Ganancias y Márgenes" />}
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.segmented}>
@@ -138,7 +141,7 @@ const BillingInsightsScreen = () => {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Container>
   );
 };
 

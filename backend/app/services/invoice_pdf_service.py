@@ -6,10 +6,22 @@
 #            invoice_service.py para no mezclar la creación de facturas con
 #            el renderizado del documento.
 # =============================================================================
+import io
+import uuid
+import zipfile
+
 from app.database import supabase_admin
 from fpdf import FPDF
 
 SIGNED_URL_EXPIRES_IN = 3600  # 1 hora
+
+
+def _invoice_label(invoice: dict) -> str:
+    # Las ventas de la pestaña "Ventas" (POST /sales/quick) no reciben
+    # numeración fiscal (invoice_number queda NULL) — se rotulan por su id
+    # para que igual puedan generar/compartir su PDF. Las facturas fiscales
+    # (si existieran) conservan su número.
+    return invoice.get("invoice_number") or f"Venta #{invoice['id']}"
 
 
 def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
@@ -27,7 +39,7 @@ def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
 
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, f"Factura {invoice['invoice_number']}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, _invoice_label(invoice), new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Fecha: {invoice['created_at'][:10]}", new_x="LMARGIN", new_y="NEXT")
@@ -70,7 +82,10 @@ def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
     return bytes(pdf.output())
 
 
-def generate_invoice_pdf_url(business_id: str, invoice_id: int) -> str:
+def _build_invoice_pdf_bytes(business_id: str, invoice_id: int) -> tuple[bytes, str]:
+    """Genera los bytes del PDF de una factura y su nombre de archivo, sin
+    subirlo a Storage. Reutilizado tanto por la generación individual como por
+    el empaquetado en zip de varias facturas."""
     invoice_result = supabase_admin.table("invoices")\
         .select(
             "id, invoice_number, total, tax, created_at, customer_id, "
@@ -85,8 +100,6 @@ def generate_invoice_pdf_url(business_id: str, invoice_id: int) -> str:
         raise ValueError("Factura no encontrada")
 
     row = invoice_result.data[0]
-    if not row.get("invoice_number"):
-        raise ValueError("Esta factura no tiene numeración fiscal (fue creada como venta rápida)")
 
     customer = row.pop("customers", None)
     items = row.pop("invoice_items", []) or []
@@ -107,12 +120,53 @@ def generate_invoice_pdf_url(business_id: str, invoice_id: int) -> str:
     business = business_result.data[0] if business_result.data else {}
 
     pdf_bytes = _build_pdf_bytes(invoice, business)
+    # Nombre "seguro" para archivo/entrada de zip: "FAC-0001.pdf" o "Venta 12.pdf".
+    label = _invoice_label(invoice).replace("#", "").replace("/", "-").strip()
+    file_name = f"{label}.pdf"
+    return pdf_bytes, file_name
+
+
+def generate_invoice_pdf_url(business_id: str, invoice_id: int) -> str:
+    pdf_bytes, _ = _build_invoice_pdf_bytes(business_id, invoice_id)
     path = f"{business_id}/{invoice_id}.pdf"
 
     supabase_admin.storage.from_("invoices").upload(
         path,
         pdf_bytes,
         {"content-type": "application/pdf", "x-upsert": "true"},
+    )
+
+    signed = supabase_admin.storage.from_("invoices").create_signed_url(path, SIGNED_URL_EXPIRES_IN)
+    return signed["signedURL"]
+
+
+def generate_invoices_zip_url(business_id: str, invoice_ids: list[int]) -> str:
+    """Empaqueta los PDF de varias facturas en un único .zip (en memoria),
+    lo sube al bucket 'invoices' y devuelve una URL firmada para compartir.
+    Usado por la selección múltiple del historial (≥2 facturas)."""
+    if not invoice_ids:
+        raise ValueError("Debes seleccionar al menos una factura.")
+
+    buffer = io.BytesIO()
+    used_names: dict[str, int] = {}
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for invoice_id in invoice_ids:
+            pdf_bytes, file_name = _build_invoice_pdf_bytes(business_id, invoice_id)
+            # Evitar colisiones de nombre dentro del zip (dos "Venta 5.pdf" no
+            # pueden coexistir; muy improbable con ids, pero por robustez).
+            if file_name in used_names:
+                used_names[file_name] += 1
+                stem = file_name[:-4]
+                file_name = f"{stem} ({used_names[file_name]}).pdf"
+            else:
+                used_names[file_name] = 0
+            zf.writestr(file_name, pdf_bytes)
+
+    path = f"{business_id}/batch/{uuid.uuid4().hex}.zip"
+    supabase_admin.storage.from_("invoices").upload(
+        path,
+        buffer.getvalue(),
+        {"content-type": "application/zip", "x-upsert": "true"},
     )
 
     signed = supabase_admin.storage.from_("invoices").create_signed_url(path, SIGNED_URL_EXPIRES_IN)

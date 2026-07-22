@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from app.models.invoices import InvoiceCreateRequest
+from app.models.invoices import InvoiceCreateRequest, InvoicePdfBatchRequest
 from app.services import invoice_service, invoice_pdf_service
 from app.routers.auth import require_role
 from app.database import supabase_admin
@@ -71,6 +71,18 @@ def get_invoice_pdf(invoice_id: int, current_user: dict = Depends(require_role("
         url = invoice_pdf_service.generate_invoice_pdf_url(
             business_id=current_user["business_id"],
             invoice_id=invoice_id
+        )
+        return {"url": url}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/pdf-batch", summary="Empaquetar varias facturas en un .zip y obtener URL firmada para compartir")
+def get_invoices_pdf_batch(data: InvoicePdfBatchRequest, current_user: dict = Depends(require_role("owner", "admin"))):
+    try:
+        url = invoice_pdf_service.generate_invoices_zip_url(
+            business_id=current_user["business_id"],
+            invoice_ids=data.invoice_ids,
         )
         return {"url": url}
     except ValueError as e:

@@ -10,6 +10,37 @@ export default StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
+  /* ===================== Switch de subpestañas (Historial / Ganancias) =====================
+     Mismo look que el switch de la pestaña "Ventas" (salesPyme.style.js) para
+     mantener consistencia entre módulos PYME. */
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  tabTextActive: {
+    color: colors.textButton,
+    textAlign: 'center',
+  },
   hubContent: {
     paddingHorizontal: 16,
     paddingTop: 16,

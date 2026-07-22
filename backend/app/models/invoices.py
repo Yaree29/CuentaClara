@@ -1,6 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from decimal import Decimal
+
+
+# ─── Compartir PDFs en lote (selección múltiple del historial) ──────────────────
+
+class InvoicePdfBatchRequest(BaseModel):
+    invoice_ids: List[int]
+
+    @field_validator("invoice_ids")
+    @classmethod
+    def _non_empty(cls, value: List[int]) -> List[int]:
+        if not value:
+            raise ValueError("Debes seleccionar al menos una factura.")
+        return value
 
 
 # ─── Creación de factura fiscal (PYME) ──────────────────────────────────────────

@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
   unit                  VARCHAR(20)
 );
 
+-- produced_at (no created_at): distingue "cuándo se registró la fila" de
+-- "cuándo se produjo" — recipes_service.py (produce/list_production_history/
+-- profitability) usa produced_at para esta tabla en consecuencia.
 CREATE TABLE IF NOT EXISTS production_records (
   id                SERIAL PRIMARY KEY,
   business_id       UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -42,7 +45,7 @@ CREATE TABLE IF NOT EXISTS production_records (
   portions_produced DECIMAL(12,3) NOT NULL,
   total_cost        DECIMAL(12,2) NOT NULL,
   user_id           UUID REFERENCES users(id),
-  created_at        TIMESTAMPTZ DEFAULT NOW()
+  produced_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Habilita el motivo 'production' en inventory_movements para que el

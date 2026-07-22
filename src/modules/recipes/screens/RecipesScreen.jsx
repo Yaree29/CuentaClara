@@ -22,6 +22,7 @@ import useRecipes from '../hooks/useRecipes';
 import useRecipeForm from '../hooks/useRecipeForm';
 import styles from '../styles/recipesScreen.styles';
 import profileStyles from '../../profile/styles/profile.styles';
+import UnitTypeSelector from '../../inventory/components/UnitTypeSelector';
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const NO_DISPONIBLE = 'No disponible';
@@ -30,6 +31,10 @@ const NO_DISPONIBLE = 'No disponible';
 
 const RecipeFormModal = ({ visible, recipe, products, onClose, onSaved }) => {
   const form = useRecipeForm({ recipe, onSaved: () => { onSaved(); onClose(); } });
+  // Insumo cuyo dropdown de producto está abierto (uno a la vez) — evita que
+  // la lista de chips de todos los insumos se muestre siempre expandida y
+  // desordene la pantalla cuando hay varios insumos.
+  const [expandedIngredientId, setExpandedIngredientId] = useState(null);
 
   const estimatedCost = form.ingredients.reduce((total, ing) => {
     if (!ing.ingredientProductId || !ing.quantity) return total;
@@ -88,66 +93,107 @@ const RecipeFormModal = ({ visible, recipe, products, onClose, onSaved }) => {
             />
 
             <Text style={[styles.fieldLabel, { marginTop: 20 }]}>Insumos *</Text>
-            {form.ingredients.map((ingredient, index) => (
-              <View key={ingredient.id} style={styles.ingredientCard}>
-                <View style={styles.ingredientCardHeader}>
-                  <Text style={styles.ingredientBadge}>Insumo #{index + 1}</Text>
-                  <TouchableOpacity onPress={() => form.removeIngredient(ingredient.id)}>
-                    <Text style={styles.removeText}>Eliminar</Text>
+            {/* Filas apiladas, alineación consistente sin importar cuántos
+                insumos haya — antes cada fila mostraba SIEMPRE la grilla
+                completa de chips de producto, lo que desordenaba la pantalla
+                con muchos insumos. Ahora es un dropdown: solo se expande el
+                de la fila que se está editando. */}
+            {form.ingredients.map((ingredient, index) => {
+              const selectedProduct = products.find((p) => p.id === ingredient.ingredientProductId);
+              const isExpanded = expandedIngredientId === ingredient.id;
+              return (
+                <View key={ingredient.id} style={styles.ingredientCard}>
+                  <View style={styles.ingredientCardHeader}>
+                    <Text style={styles.ingredientBadge}>Insumo #{index + 1}</Text>
+                    <TouchableOpacity onPress={() => form.removeIngredient(ingredient.id)}>
+                      <Text style={styles.removeText}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.ingredientDropdownButton}
+                    onPress={() => setExpandedIngredientId(isExpanded ? null : ingredient.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ingredientDropdownText} numberOfLines={1}>
+                      {selectedProduct ? selectedProduct.name : 'Selecciona un producto...'}
+                    </Text>
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.textSecondary}
+                    />
                   </TouchableOpacity>
-                </View>
 
-                {products.length === 0 ? (
-                  <Text style={styles.emptyText}>No tienes productos registrados en Inventario.</Text>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.chipGrid}>
-                      {products.map((product) => (
-                        <TouchableOpacity
-                          key={product.id}
-                          style={[
-                            styles.chip,
-                            ingredient.ingredientProductId === product.id && styles.chipActive,
-                          ]}
-                          onPress={() => form.selectIngredientProduct(ingredient.id, product)}
-                        >
-                          <Text
+                  {isExpanded && (
+                    products.length === 0 ? (
+                      <Text style={styles.emptyText}>No tienes productos registrados en Inventario.</Text>
+                    ) : (
+                      <View style={styles.chipGrid}>
+                        {products.map((product) => (
+                          <TouchableOpacity
+                            key={product.id}
                             style={[
-                              styles.chipText,
-                              ingredient.ingredientProductId === product.id && styles.chipTextActive,
+                              styles.chip,
+                              ingredient.ingredientProductId === product.id && styles.chipActive,
                             ]}
+                            onPress={() => {
+                              form.selectIngredientProduct(ingredient.id, product);
+                              setExpandedIngredientId(null);
+                            }}
                           >
-                            {product.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                )}
+                            <Text
+                              style={[
+                                styles.chipText,
+                                ingredient.ingredientProductId === product.id && styles.chipTextActive,
+                              ]}
+                            >
+                              {product.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )
+                  )}
 
-                <View style={styles.quantityRow}>
-                  <View style={styles.quantityField}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={ingredient.quantity}
-                      onChangeText={(value) => form.updateIngredient(ingredient.id, 'quantity', value)}
-                      keyboardType="decimal-pad"
-                      placeholder="Cantidad"
-                      placeholderTextColor={colors.placeholder}
-                    />
+                  <View style={styles.quantityRow}>
+                    <View style={styles.quantityField}>
+                      <TextInput
+                        style={styles.textInput}
+                        value={ingredient.quantity}
+                        onChangeText={(value) => form.updateIngredient(ingredient.id, 'quantity', value)}
+                        keyboardType="decimal-pad"
+                        placeholder="Cantidad"
+                        placeholderTextColor={colors.placeholder}
+                      />
+                    </View>
+                    <View style={styles.unitField}>
+                      <UnitTypeSelector
+                        value={ingredient.unit}
+                        onChange={(value) => form.updateIngredient(ingredient.id, 'unit', value)}
+                        containerStyle={styles.unitSelectorRow}
+                        pillStyle={styles.unitChip}
+                        pillActiveStyle={styles.unitChipActive}
+                        textStyle={styles.unitChipText}
+                        textActiveStyle={styles.unitChipTextActive}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.unitField}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={ingredient.unit}
-                      onChangeText={(value) => form.updateIngredient(ingredient.id, 'unit', value)}
-                      placeholder="kg, g, ml…"
-                      placeholderTextColor={colors.placeholder}
-                    />
-                  </View>
+
+                  {/* Costo unitario real del insumo (products.cost_price) —
+                      autocompletado al elegir el producto, no editable: el
+                      backend siempre calcula el costo de la receta con el
+                      cost_price vigente del producto (recipes_service.py,
+                      _recipe_cost), recipe_ingredients no tiene columna
+                      propia de costo para guardar un valor manual distinto. */}
+                  {selectedProduct && (
+                    <Text style={styles.ingredientCostHint}>
+                      Costo unitario real: {money(selectedProduct.costPrice)}
+                    </Text>
+                  )}
                 </View>
-              </View>
-            ))}
+              );
+            })}
 
             <TouchableOpacity style={styles.secondaryButton} onPress={form.addIngredient}>
               <Text style={styles.secondaryButtonText}>+ Agregar insumo</Text>

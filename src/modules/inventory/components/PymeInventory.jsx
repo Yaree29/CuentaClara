@@ -14,7 +14,7 @@
 // =============================================================================
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlusIcon, PencilIcon, MagnifyingGlassIcon } from 'react-native-heroicons/solid';
@@ -23,20 +23,16 @@ import InventoryAlertWidget from './InventoryAlertWidget';
 import ProductScannerWidget from './ProductScannerWidget';
 import ProductFormModal from './ProductFormModal';
 import inventoryService from '../services/inventoryService';
-import useInventoryConfig, { FLAG_LABELS } from '../hooks/useInventoryConfig';
+import useInventoryConfig from '../hooks/useInventoryConfig';
 import styles from '../styles/pymeInventory.styles';
 import profileStyles from '../../profile/styles/profile.styles';
 
-// Flags que hoy solo tienen placeholder visual — sin funcionalidad propia
-// todavía en esta pantalla. "caducidad" y "mermas" salieron de esta lista:
-// ya tienen acceso funcional real (ver ExpiringProductsCard/WasteModal).
-// "escaner" tampoco está acá porque ya tiene un widget real: ProductScannerWidget.
-// "stock_predictivo" tampoco: ya tiene tarjeta real (ver PredictiveStockCard /
-// GET /inventory/stock/predictive). "control_peso" tampoco: ya controla un
-// campo real del formulario (selector de unidad kg/libra/unidad en
-// ProductFormModal, ver showWeightControl más abajo).
-const PLACEHOLDER_FLAGS = ['recetas', 'produccion'];
-
+// "Recetas" y "Producción" ya no tienen tarjeta placeholder aquí: son
+// redundantes con el módulo real de Recetas (Módulos → Recetas,
+// RecipesScreen.jsx), que ya cubre esa función por completo — mostrarlas acá
+// también solo duplicaba la entrada sin aportar nada. "caducidad"/"mermas"/
+// "escaner"/"stock_predictivo"/"control_peso" tampoco viven aquí: todas
+// tienen su propio acceso funcional real más abajo en esta pantalla.
 const PREDICTIVE_THRESHOLD_DAYS = 7;
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
@@ -48,13 +44,6 @@ const daysUntil = (isoDate) => {
   today.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 };
-
-const ConfigFlagPlaceholder = ({ flag }) => (
-  <View style={styles.flagCard}>
-    <Text style={styles.flagCardTitle}>{FLAG_LABELS[flag].label}</Text>
-    <Text style={styles.flagCardDescription}>{FLAG_LABELS[flag].description}</Text>
-  </View>
-);
 
 // ─── Modal "Registrar Merma" — producto + cantidad + motivo → stock/adjust ──
 
@@ -185,8 +174,8 @@ const WasteModal = ({ visible, onClose, products, onRegistered }) => {
 
 const PymeInventory = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { categoryGroup, config, loading: loadingConfig } = useInventoryConfig();
-  const activePlaceholderFlags = PLACEHOLDER_FLAGS.filter((flag) => config[flag]);
 
   const [alerts, setAlerts] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
@@ -252,13 +241,22 @@ const PymeInventory = () => {
   // Categorías reales (mismo servicio que useInformalInventory.js) — no se
   // derivan de `products` porque una categoría recién creada sin productos
   // todavía no aparecería en esa lista.
-  const [categories, setCategories] = useState([]);
+  // Se guarda el objeto completo (id, name, color) — antes solo se guardaba
+  // el nombre (categories.map(c => c.name)), así que aunque el fetch traía
+  // bien la categoría nueva, el color se descartaba antes de llegar a
+  // cualquier render, y además esta pantalla nunca renderizaba `categories`
+  // en ningún lado visualmente (solo se pasaba como prop al picker de
+  // ProductFormModal) — de ahí que nunca se vieran los chips.
+  const [categoryList, setCategoryList] = useState([]);
+  // Solo nombres, para el picker de ProductFormModal (espera string[]).
+  const categories = useMemo(() => categoryList.map((c) => c.name), [categoryList]);
+
   const fetchCategories = useCallback(async () => {
     try {
       const data = await inventoryService.getCategories();
-      setCategories(Array.isArray(data) ? data.map((c) => c.name) : []);
+      setCategoryList(Array.isArray(data) ? data : []);
     } catch (error) {
-      setCategories([]);
+      setCategoryList([]);
     }
   }, []);
 
@@ -325,12 +323,14 @@ const PymeInventory = () => {
       if (response.alreadyExists) {
         Alert.alert('Aviso', `La categoría "${response.category.name}" ya existe.`);
       } else {
-        // Actualización optimista — mismo patrón que
-        // useInformalInventory.addCategory: se agrega la categoría nueva
-        // directamente al estado local (en vez de esperar un refetch
-        // completo a GET /inventory/categories) para que la lista se
-        // refresque de inmediato sin depender de un segundo round-trip.
-        setCategories((prev) => [...prev, response.category.name].sort((a, b) => a.localeCompare(b)));
+        // Recarga real desde el backend (GET /inventory/categories) — no
+        // una suposición local de que el POST devolvió exactamente lo que se
+        // va a leer después. `categories` es el mismo state que se pasa como
+        // prop a ProductFormModal (categories={categories} en el JSX de más
+        // abajo), así que en cuanto esta llamada resuelve, React re-renderiza
+        // ProductFormModal con la lista ya actualizada — no hay copia vieja
+        // ni prop estática de por medio.
+        await fetchCategories();
       }
       setNewCategoryName('');
       setCategoryError(null);
@@ -461,6 +461,23 @@ const PymeInventory = () => {
             <Text style={styles.addCategoryPillText}>Agregar categoría</Text>
           </TouchableOpacity>
 
+          {/* Categorías ya existentes — antes se pedían/guardaban bien
+              (categoryList se puebla correcto desde GET /inventory/categories)
+              pero nunca se renderizaban en ningún lado de esta pantalla. */}
+          {categoryList.length > 0 && (
+            <View style={styles.categoryChipsRow}>
+              {categoryList.map((cat) => (
+                <View
+                  key={cat.id}
+                  style={[styles.categoryChip, { borderColor: cat.color || colors.border }]}
+                >
+                  <View style={[styles.categoryChipDot, { backgroundColor: cat.color || colors.primary }]} />
+                  <Text style={styles.categoryChipText}>{cat.name}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {loadingProducts ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
@@ -589,20 +606,16 @@ const PymeInventory = () => {
             )}
 
             {config.escaner && <ProductScannerWidget onCreateNew={handleScanCreateNew} />}
-
-            {activePlaceholderFlags.length > 0 && (
-              <View style={styles.flagsSection}>
-                <Text style={styles.flagsSectionTitle}>Configuraciones activas</Text>
-                {activePlaceholderFlags.map((flag) => (
-                  <ConfigFlagPlaceholder key={flag} flag={flag} />
-                ))}
-              </View>
-            )}
           </>
         )}
       </ScrollView>
 
-      <View style={styles.fabContainer}>
+      {/* bottom: 24 + insets.bottom — esta pantalla usa SafeAreaView
+          edges={['top']} (sin 'bottom'), así que sin sumar el inset real el
+          FAB se medía desde el borde absoluto de la pantalla, ignorando la
+          barra de navegación del sistema en Android (gestual o de 3 botones)
+          y quedando tapado/apretado contra ella. */}
+      <View style={[styles.fabContainer, { bottom: 24 + insets.bottom }]}>
         <TouchableOpacity style={styles.fabButton} activeOpacity={0.85} onPress={openAddProduct}>
           <PlusIcon size={26} color={colors.textWhite} />
         </TouchableOpacity>

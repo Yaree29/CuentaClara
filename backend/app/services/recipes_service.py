@@ -290,7 +290,9 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
         "portions_produced": float(portions_to_produce),
         "total_cost": float(total_cost),
         "user_id": user_id,
-        "created_at": _now_iso(),
+        # La columna real en production_records es produced_at, no created_at
+        # (a diferencia de recipes/inventory_movements, que sí usan created_at).
+        "produced_at": _now_iso(),
     }
     record_result = supabase_admin.table("production_records").insert(record_payload).execute()
     if not record_result.data:
@@ -320,7 +322,9 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
         "recipe_id": recipe_id,
         "portions_produced": float(portions_to_produce),
         "total_cost": float(total_cost),
-        "created_at": production_record.get("created_at"),
+        # Se expone como "created_at" en la respuesta (el frontend ya lo lee
+        # así) aunque la columna real en production_records sea produced_at.
+        "created_at": production_record.get("produced_at"),
     }
 
 
@@ -331,16 +335,16 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
 def list_production_history(business_id: str, recipe_id: int = None, date_from: str = None, date_to: str = None) -> list:
     """Historial de production_records, filtrable por receta y/o fecha."""
     query = supabase_admin.table("production_records") \
-        .select("id, recipe_id, portions_produced, total_cost, user_id, created_at") \
+        .select("id, recipe_id, portions_produced, total_cost, user_id, produced_at") \
         .eq("business_id", business_id)
     if recipe_id is not None:
         query = query.eq("recipe_id", recipe_id)
     if date_from:
-        query = query.gte("created_at", date_from)
+        query = query.gte("produced_at", date_from)
     if date_to:
-        query = query.lte("created_at", date_to)
+        query = query.lte("produced_at", date_to)
 
-    result = query.order("created_at", desc=True).execute()
+    result = query.order("produced_at", desc=True).execute()
     rows = result.data or []
     if not rows:
         return []
@@ -355,7 +359,9 @@ def list_production_history(business_id: str, recipe_id: int = None, date_from: 
         "recipe_name": recipes_by_id.get(r["recipe_id"], "Receta eliminada"),
         "portions_produced": float(r["portions_produced"]),
         "total_cost": float(r["total_cost"]),
-        "created_at": r["created_at"],
+        # Se expone como "created_at" (contrato ya usado por RecipesScreen.jsx)
+        # aunque la columna real sea produced_at.
+        "created_at": r["produced_at"],
     } for r in rows]
 
 
@@ -415,7 +421,7 @@ def profitability(business_id: str, recipe_id: int) -> dict:
         .select("total_cost, portions_produced") \
         .eq("business_id", business_id) \
         .eq("recipe_id", recipe_id) \
-        .order("created_at", desc=True) \
+        .order("produced_at", desc=True) \
         .limit(1) \
         .execute()
 

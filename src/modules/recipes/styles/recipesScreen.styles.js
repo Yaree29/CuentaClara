@@ -268,6 +268,29 @@ export default StyleSheet.create({
     fontWeight: '700',
     color: colors.danger,
   },
+  ingredientDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 8,
+  },
+  ingredientDropdownText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginRight: 8,
+  },
+  ingredientCostHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
   quantityRow: {
     flexDirection: 'row',
     gap: 8,
@@ -275,6 +298,34 @@ export default StyleSheet.create({
   },
   quantityField: { flex: 1.4 },
   unitField: { flex: 1 },
+  // Selector kg/libra/unidad del insumo (UnitTypeSelector) — pills más
+  // compactas que las de producto/final porque comparten fila con la
+  // cantidad; se envuelven en 2 líneas si no caben en una.
+  unitSelectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  unitChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  unitChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '15',
+  },
+  unitChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  unitChipTextActive: {
+    color: colors.primary,
+  },
 
   /* ===================== Modal ===================== */
   modalOverlay: {

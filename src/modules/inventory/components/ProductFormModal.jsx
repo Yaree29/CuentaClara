@@ -40,6 +40,15 @@ const validateNonNegativeInt = (val, fieldLabel) => {
   return null;
 };
 
+/** Fecha de vencimiento opcional, formato YYYY-MM-DD */
+const EXPIRATION_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const validateExpirationDate = (val) => {
+  if (val === '') return null;
+  if (!EXPIRATION_DATE_RE.test(val)) return 'Usa el formato AAAA-MM-DD.';
+  if (Number.isNaN(new Date(val).getTime())) return 'Fecha inválida.';
+  return null;
+};
+
 // ─── Componente ────────────────────────────────────────────────────────────────
 
 /**
@@ -52,8 +61,11 @@ const validateNonNegativeInt = (val, fieldLabel) => {
  *  onSave         – (productData) => void
  *  onDelete       – (id) => void
  *  categories     – string[]  (categorías del negocio cargadas desde Supabase)
+ *  showExpiration – boolean (business_inventory_config.caducidad) — muestra el
+ *                   campo opcional de fecha de vencimiento cuando el negocio
+ *                   tiene ese flag activo.
  */
-const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [] }) => {
+const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false }) => {
   const [name, setName]         = useState('');
   const [price, setPrice]       = useState('');
   const [costPrice, setCostPrice] = useState('');
@@ -61,6 +73,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   const [stock, setStock]       = useState('');
   const [minStock, setMinStock] = useState('');
   const [purchaseType, setPurchaseType] = useState('register_only');
+  const [expirationDate, setExpirationDate] = useState('');
 
   // Errores por campo
   const [nameError, setNameError]       = useState(null);
@@ -68,6 +81,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   const [costPriceError, setCostPriceError] = useState(null);
   const [stockError, setStockError]     = useState(null);
   const [minStockError, setMinStockError] = useState(null);
+  const [expirationDateError, setExpirationDateError] = useState(null);
 
   const clearErrors = () => {
     setNameError(null);
@@ -75,6 +89,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     setCostPriceError(null);
     setStockError(null);
     setMinStockError(null);
+    setExpirationDateError(null);
   };
 
   // Llenar / limpiar al abrir
@@ -88,6 +103,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setStock(initialData.stock !== null && initialData.stock !== undefined ? initialData.stock.toString() : '');
       setMinStock(initialData.minStock !== null && initialData.minStock !== undefined ? initialData.minStock.toString() : '');
       setPurchaseType('register_only');
+      setExpirationDate(initialData.expirationDate ? initialData.expirationDate.slice(0, 10) : '');
     } else {
       setName('');
       setPrice('');
@@ -96,6 +112,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setStock('');
       setMinStock('');
       setPurchaseType('register_only');
+      setExpirationDate('');
     }
   }, [initialData, visible, categories]);
 
@@ -143,6 +160,12 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     setMinStockError(validateNonNegativeInt(cleaned, 'El stock mínimo'));
   };
 
+  const handleExpirationDateChange = (val) => {
+    const cleaned = val.replace(/[^0-9-]/g, '');
+    setExpirationDate(cleaned);
+    setExpirationDateError(validateExpirationDate(cleaned));
+  };
+
   // ─── Guardar ─────────────────────────────────────────────────────────────────
 
   const handleSave = () => {
@@ -156,14 +179,16 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     const cpErr = validateCostPrice(costPrice);
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
+    const edErr = showExpiration ? validateExpirationDate(expirationDate) : null;
 
     setNameError(nErr);
     setPriceError(pErr);
     setCostPriceError(cpErr);
     setStockError(sErr);
     setMinStockError(msErr);
+    setExpirationDateError(edErr);
 
-    if (nErr || pErr || cpErr || sErr || msErr) return; // hay errores → no guardar
+    if (nErr || pErr || cpErr || sErr || msErr || edErr) return; // hay errores → no guardar
 
     onSave({
       name: name.trim(),
@@ -173,10 +198,11 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       stock: stock !== '' ? parseInt(stock, 10) : null,
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
       purchaseType: purchaseType,
+      ...(showExpiration ? { expirationDate: expirationDate !== '' ? expirationDate : null } : {}),
     });
   };
 
-  const hasErrors = !!nameError || !!priceError || !!costPriceError || !!stockError || !!minStockError;
+  const hasErrors = !!nameError || !!priceError || !!costPriceError || !!stockError || !!minStockError || !!expirationDateError;
   const insets = useSafeAreaInsets();
 
   // ─── Render ───────────────────────────────────────────────────────────────────
@@ -314,6 +340,22 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                       </Text>
                     </TouchableOpacity>
                   </View>
+                </View>
+              )}
+
+              {/* ── Fecha de vencimiento (solo si el negocio tiene caducidad activa) ── */}
+              {showExpiration && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Fecha de vencimiento</Text>
+                  <TextInput
+                    style={[styles.formInput, expirationDateError && styles.inputError]}
+                    value={expirationDate}
+                    onChangeText={handleExpirationDateChange}
+                    keyboardType="numbers-and-punctuation"
+                    placeholder="Opcional — AAAA-MM-DD"
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  {expirationDateError ? <Text style={styles.errorText}>{expirationDateError}</Text> : null}
                 </View>
               )}
 

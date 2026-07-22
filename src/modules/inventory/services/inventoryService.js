@@ -33,6 +33,7 @@ const mapProduct = (row) => ({
   minStock: Number(row.min_stock || 0),
   isLowStock: !!row.is_low_stock,
   updatedAt: row.updated_at,
+  expirationDate: row.expiration_date || null,
 });
 
 const inventoryService = {
@@ -86,6 +87,7 @@ const inventoryService = {
       unit: productData.unit || null,
       min_stock: Number(productData.minStock || 0),
       purchase_type: productData.purchaseType || 'register_only',
+      expiration_date: productData.expirationDate || null,
     };
 
     const data = await apiRequest('/inventory/products', {
@@ -111,6 +113,7 @@ const inventoryService = {
         : {}),
       ...(productData.unit !== undefined ? { unit: productData.unit } : {}),
       ...(productData.minStock !== undefined ? { min_stock: Number(productData.minStock) } : {}),
+      ...(productData.expirationDate !== undefined ? { expiration_date: productData.expirationDate } : {}),
     };
 
     const data = await apiRequest(`/inventory/products/${productId}`, {

@@ -83,6 +83,7 @@ def _map_product(inv_row: dict) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv_row.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 
@@ -138,7 +139,7 @@ def list_products(business_id: str) -> list:
     negocio aparezca aunque su fila de inventario embebida venga vacía.
     """
     products_result = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id") \
+        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id, expiration_date") \
         .eq("business_id", business_id) \
         .eq("is_active", True) \
         .execute()
@@ -191,6 +192,7 @@ def list_products(business_id: str) -> list:
                 "cost_price": prod.get("cost_price"),
                 "unit_type": prod.get("unit_type"),
                 "is_active": prod.get("is_active"),
+                "expiration_date": prod.get("expiration_date"),
                 "product_categories": cat,
             },
         }))
@@ -232,6 +234,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "cost_price": float(data.cost_price) if data.cost_price is not None else 0,
         "unit_type": data.unit_type or None,
         "is_active": True,
+        "expiration_date": data.expiration_date.isoformat() if data.expiration_date else None,
         "assistant_id": data.assistant_id,
         "assistant_name": assistant_name,
     }
@@ -319,6 +322,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 
@@ -341,6 +345,8 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         product_payload["sku"] = data.sku
     if data.unit_type is not None:
         product_payload["unit_type"] = data.unit_type
+    if data.expiration_date is not None:
+        product_payload["expiration_date"] = data.expiration_date.isoformat()
 
     if product_payload:
         prod_result = supabase_admin.table("products") \
@@ -385,7 +391,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
 
     # Re-fetch producto para devolver datos actualizados
     prod = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type") \
+        .select("id, name, sku, price, cost_price, unit_type, expiration_date") \
         .eq("id", product_id) \
         .execute()
     product = prod.data[0] if prod.data else {}
@@ -402,6 +408,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 

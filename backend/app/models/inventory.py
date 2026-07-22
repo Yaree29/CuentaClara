@@ -100,6 +100,10 @@ class ProductUpdateRequest(BaseModel):
     unit: Optional[str] = None
     min_stock: Optional[Decimal] = None
     expiration_date: Optional[date] = None
+    # Solo aplica cuando `stock` SUBE respecto al actual (entró mercancía):
+    #   "use_gains"     → se pagó con dinero del negocio → registra gasto
+    #   "register_only" → solo se corrige el conteo      → sin gasto
+    purchase_type: Optional[str] = None
 
     @field_validator("name")
     @classmethod

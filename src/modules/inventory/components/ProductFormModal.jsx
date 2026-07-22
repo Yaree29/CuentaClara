@@ -168,6 +168,16 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
 
   // ─── Guardar ─────────────────────────────────────────────────────────────────
 
+  // Unidades que esta edición SUMA al stock actual. Solo cuando entra
+  // mercancía tiene sentido preguntar si salió plata del negocio: bajar el
+  // stock (una merma, un conteo a la baja) nunca es un gasto.
+  const previousStock = initialData ? Number(initialData.stock) || 0 : 0;
+  const typedStock = stock !== '' ? parseInt(stock, 10) : 0;
+  const addedUnits = Number.isFinite(typedStock) ? typedStock - previousStock : 0;
+
+  // Al crear, cualquier stock inicial cuenta como mercancía que entra.
+  const isAddingStock = initialData ? addedUnits > 0 : typedStock > 0;
+
   const handleSave = () => {
     // Ejecutar todas las validaciones antes de guardar
     const nErr  = !name.trim()
@@ -176,7 +186,20 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         ? 'El nombre es demasiado corto.'
         : null;
     const pErr  = validatePrice(price);
-    const cpErr = validateCostPrice(costPrice);
+
+    // Si dice que pagó la mercancía, el costo deja de ser opcional: es el dato
+    // con el que se calcula cuánto dinero salió. Sin él el gasto se estimaba
+    // con el precio de VENTA e inflaba los reportes (90 unidades que se venden
+    // a $99 figuraban como $8910 gastados).
+    const costoRequerido =
+      isAddingStock &&
+      purchaseType === 'use_gains' &&
+      (costPrice === '' || parseFloat(costPrice) <= 0);
+
+    const cpErr = costoRequerido
+      ? 'Escribe cuánto te costó cada unidad para poder registrar el gasto.'
+      : validateCostPrice(costPrice);
+
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
     const edErr = showExpiration ? validateExpirationDate(expirationDate) : null;
@@ -306,10 +329,18 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                 </View>
               </View>
 
-              {/* ── ¿Cómo adquiriste este producto? ── */}
-              {!initialData && (
+              {/* ── ¿Cómo adquiriste este producto? ──
+                  Al crear se pregunta por el stock inicial. Al editar se
+                  pregunta solo si esta edición SUMA unidades: antes, subir la
+                  cantidad disponible no preguntaba nada y la mercancía entraba
+                  sin dejar movimiento ni gasto. */}
+              {isAddingStock && (
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>¿Cómo adquiriste este producto?</Text>
+                  <Text style={styles.formLabel}>
+                    {initialData
+                      ? `Vas a añadir ${addedUnits} unidad${addedUnits !== 1 ? 'es' : ''}. ¿Cómo las conseguiste?`
+                      : '¿Cómo adquiriste este producto?'}
+                  </Text>
                   <View style={styles.purchaseTypeContainer}>
                     <TouchableOpacity
                       style={[
@@ -344,6 +375,18 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  {/* Adelanta cuánto se va a descontar, para que el número no
+                      sea una sorpresa en el reporte. */}
+                  {purchaseType === 'use_gains' && (
+                    <Text style={styles.purchaseHint}>
+                      {costPrice !== '' && parseFloat(costPrice) > 0
+                        ? `Se registrará un gasto de $${(
+                            (initialData ? addedUnits : typedStock) * parseFloat(costPrice)
+                          ).toFixed(2)} (${initialData ? addedUnits : typedStock} × $${parseFloat(costPrice).toFixed(2)} de costo).`
+                        : 'Escribe el Costo de Producción para calcular el gasto.'}
+                    </Text>
+                  )}
                 </View>
               )}
 

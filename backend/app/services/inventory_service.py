@@ -12,7 +12,7 @@ dado que la autenticación ya fue validada en el router.
 """
 
 from app.database import supabase_admin
-from app.services import notifications_service
+from app.services import notifications_service, cash_service
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -24,6 +24,67 @@ from typing import Optional
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _current_cash_session_id(business_id: str) -> Optional[int]:
+    """Id de la caja abierta, o None si no hay ninguna.
+
+    Nunca lanza: reponer stock no puede fallar porque la caja esté cerrada.
+    Si no hay sesión, el gasto se registra igual pero sin vincular.
+    """
+    try:
+        session = cash_service.get_open_session(business_id)
+        return session["id"] if session else None
+    except Exception as e:
+        print(f"[inventory] No se pudo leer la caja abierta: {e}")
+        return None
+
+
+def _register_stock_expense(
+    business_id: str,
+    user_id: str,
+    quantity,
+    cost_price,
+    price,
+    description: str,
+) -> None:
+    """Registra el gasto por mercancía que entró al inventario.
+
+    Único lugar donde se decide CUÁNTO vale ese gasto. Antes había dos
+    criterios distintos conviviendo: la creación de producto multiplicaba por
+    el PRECIO DE VENTA (inflando el gasto — 90 peras a $99 de venta figuraban
+    como $8910 gastados) y la reposición por el costo. El gasto es lo que salió
+    de caja, así que manda el costo.
+
+    Si el producto no tiene costo cargado se cae al precio como única
+    referencia y se deja constancia en el log: es preferible un gasto estimado
+    de más a que la compra no quede registrada, que es lo que pedía el usuario.
+    """
+    qty = Decimal(str(quantity or 0))
+    if qty <= 0:
+        return
+
+    unit_cost = Decimal(str(cost_price or 0))
+
+    if unit_cost <= 0:
+        unit_cost = Decimal(str(price or 0))
+        print(
+            f"[inventory] '{description}': producto sin costo cargado, "
+            f"el gasto se estima con el precio de venta (${float(unit_cost):.2f}/u)."
+        )
+
+    amount = float(qty * unit_cost)
+
+    supabase_admin.table("expenses").insert({
+        "business_id": business_id,
+        "amount": amount,
+        "description": description,
+        # Sin cash_session_id el gasto no aparece en el Registro de Ventas
+        # de la sesión; queda solo en los reportes por fecha.
+        "cash_session_id": _current_cash_session_id(business_id),
+        "user_id": user_id,
+        "created_at": _now_iso(),
+    }).execute()
 
 
 def _get_or_create_category(business_id: str, category_name: str) -> Optional[int]:
@@ -287,14 +348,14 @@ def create_product(business_id: str, user_id: str, data) -> dict:
 
         # Si se compró con dinero de las ganancias, registrar gasto en caja
         if getattr(data, "purchase_type", None) == "use_gains":
-            expense_amount = float(data.initial_stock) * float(data.price)
-            supabase_admin.table("expenses").insert({
-                "business_id": business_id,
-                "amount": expense_amount,
-                "description": f"Compra inicial stock: {data.name}",
-                "user_id": user_id,
-                "created_at": _now_iso(),
-            }).execute()
+            _register_stock_expense(
+                business_id=business_id,
+                user_id=user_id,
+                quantity=data.initial_stock,
+                cost_price=getattr(data, "cost_price", None),
+                price=data.price,
+                description=f"Compra inicial stock: {data.name}",
+            )
 
     stock = inv.get("quantity")
     min_stock = Decimal(str(inv.get("min_stock") or 0))
@@ -326,11 +387,27 @@ def create_product(business_id: str, user_id: str, data) -> dict:
     }
 
 
-def update_product(business_id: str, product_id: int, data) -> dict:
+def update_product(business_id: str, product_id: int, data, user_id: str = None) -> dict:
     """
     Actualiza nombre/precio/categoría del producto y stock/min_stock del inventario.
     Solo actualiza los campos que vengan en el payload (patch semántico).
+
+    Si el stock SUBE, se registra el movimiento de entrada correspondiente y,
+    cuando data.purchase_type == "use_gains", también el gasto en caja.
     """
+    # Estado previo del producto: hace falta el nombre y el costo para poder
+    # describir y valorar el gasto si esta edición suma mercancía.
+    current = supabase_admin.table("products") \
+        .select("id, name, price, cost_price") \
+        .eq("id", product_id) \
+        .eq("business_id", business_id) \
+        .execute()
+
+    if not current.data:
+        raise ValueError(f"Producto {product_id} no encontrado o no pertenece al negocio.")
+
+    current_product = current.data[0]
+
     # Construir payload de producto solo con campos presentes
     product_payload = {}
     if data.name is not None:
@@ -373,6 +450,12 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         .eq("business_id", business_id) \
         .execute()
 
+    # Cuánto stock había antes, para saber si esta edición SUMA mercancía.
+    previous_qty = None
+    if existing_inv.data:
+        prev_raw = existing_inv.data[0].get("quantity")
+        previous_qty = Decimal(str(prev_raw)) if prev_raw is not None else None
+
     if existing_inv.data:
         inv_id = existing_inv.data[0]["id"]
         inv_result = supabase_admin.table("inventory") \
@@ -384,6 +467,42 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         inv_payload.update({"business_id": business_id, "product_id": product_id})
         inv_result = supabase_admin.table("inventory").insert(inv_payload).execute()
         inv = inv_result.data[0]
+
+    # ── Entró mercancía al editar el producto ────────────────────────────────
+    # Antes, subir "Cant. Disponible" pisaba quantity en silencio: no quedaba
+    # movimiento (no aparecía en Actividades Recientes) ni gasto, aunque el
+    # dueño hubiera pagado esa mercancía de su bolsillo.
+    if data.stock is not None and previous_qty is not None:
+        added = Decimal(str(data.stock)) - previous_qty
+
+        if added > 0:
+            bought_with_gains = data.purchase_type == "use_gains"
+            reason = "purchase" if bought_with_gains else "manual"
+
+            supabase_admin.table("inventory_movements").insert({
+                "business_id": business_id,
+                "product_id": product_id,
+                "type": "in" if bought_with_gains else "adjust",
+                "quantity": float(added),
+                "reason": reason,
+                "user_id": user_id,
+                "created_at": _now_iso(),
+            }).execute()
+
+            if bought_with_gains:
+                # El costo puede venir en esta misma edición o estar ya cargado
+                # en el producto. Antes se descartaba el gasto cuando daba 0
+                # (producto con costo 0.00): la compra desaparecía sin aviso.
+                cost = data.cost_price if data.cost_price is not None else current_product.get("cost_price")
+
+                _register_stock_expense(
+                    business_id=business_id,
+                    user_id=user_id,
+                    quantity=added,
+                    cost_price=cost,
+                    price=data.price if data.price is not None else current_product.get("price"),
+                    description=f"Reposición de stock: {current_product.get('name') or 'producto'}",
+                )
 
     stock = inv.get("quantity")
     min_stock = Decimal(str(inv.get("min_stock") or 0))

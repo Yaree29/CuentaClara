@@ -17,6 +17,23 @@ export default StyleSheet.create({
     borderColor: colors.border,
   },
 
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  customersBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '15',
+    borderWidth: 1,
+    borderColor: colors.primary + '35',
+  },
+
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -370,6 +387,79 @@ export default StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.textPrimary,
+  },
+
+  /* --- Lista de clientes (CustomersModal) --- */
+  customerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+
+  customerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  customerInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+
+  customerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+
+  customerMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+
+  customerMetaMuted: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+
+  customerDebt: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.danger,
+    marginTop: 3,
+  },
+
+  customerNoDebt: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.success,
+    marginTop: 3,
+  },
+
+  customerActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+
+  customerActionBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+  },
+
+  customerSeparator: {
+    height: 1,
+    backgroundColor: colors.border,
   },
 
   formGroup: { marginBottom: 16 },

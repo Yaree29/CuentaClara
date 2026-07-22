@@ -294,6 +294,14 @@ export default StyleSheet.create({
     color: colors.primary,
     fontWeight: '700' },
 
+  /* Adelanto del gasto que se va a registrar */
+  purchaseHint: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+
   /* --- Estilos del Selector de Compra --- */
   purchaseTypeContainer: {
     flexDirection: 'row',

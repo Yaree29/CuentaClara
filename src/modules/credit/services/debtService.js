@@ -77,6 +77,14 @@ const debtService = {
     });
   },
 
+  // Baja lógica: el backend marca is_active=false y conserva el historial.
+  // Devuelve 400 si el cliente todavía tiene fiados con saldo pendiente.
+  deleteCustomer: async (customerId) => {
+    return apiRequest(`/credit/customers/${customerId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // --- Deudas / Fiado ---
   // Devuelve por defecto las deudas abiertas (pending, partial, overdue)
   getDebts: async (status = null) => {

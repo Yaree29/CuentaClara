@@ -70,6 +70,62 @@ def update_customer(business_id: str, customer_id: int, data) -> dict:
     return result.data[0]
 
 
+def deactivate_customer(business_id: str, customer_id: int) -> dict:
+    """Da de baja un cliente (soft delete vía is_active=False).
+
+    NO se borra la fila. Dos razones:
+      · debts.customer_id es ON DELETE CASCADE (ver 15_fix_debts_cascade.sql),
+        así que un DELETE real se llevaría por delante todo el historial de
+        fiados y abonos de ese cliente, sin aviso.
+      · El propio schema documenta is_active como "soft delete: desactivar sin
+        perder historial".
+
+    Además se bloquea la baja si el cliente todavía debe plata: eliminar a
+    alguien con saldo pendiente equivale a perder el registro de esa deuda.
+    """
+    existing = supabase_admin.table("customers")\
+        .select("id, name, is_active")\
+        .eq("id", customer_id)\
+        .eq("business_id", business_id)\
+        .execute()
+    if not existing.data:
+        raise ValueError("Cliente no encontrado")
+
+    customer = existing.data[0]
+
+    # Deudas abiertas del cliente (las pagadas/canceladas no bloquean)
+    open_debts = supabase_admin.table("debts")\
+        .select("remaining_amount")\
+        .eq("business_id", business_id)\
+        .eq("customer_id", customer_id)\
+        .in_("status", ["pending", "partial", "overdue"])\
+        .execute()
+
+    pending_total = sum(
+        float(d.get("remaining_amount") or 0) for d in (open_debts.data or [])
+    )
+
+    if pending_total > 0:
+        raise ValueError(
+            f"{customer['name']} todavía debe ${pending_total:.2f}. "
+            "Salda o cancela sus fiados antes de eliminarlo."
+        )
+
+    result = supabase_admin.table("customers")\
+        .update({
+            "is_active": False,
+            "updated_at": datetime.utcnow().isoformat(),
+        })\
+        .eq("id", customer_id)\
+        .eq("business_id", business_id)\
+        .execute()
+
+    if not result.data:
+        raise ValueError("No se pudo eliminar el cliente")
+
+    return result.data[0]
+
+
 # ── Deudas ────────────────────────────────────────────────────────────────────
 
 def list_debts(business_id: str, status: str = None) -> list:

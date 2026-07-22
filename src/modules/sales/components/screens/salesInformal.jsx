@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 // 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import styles from '../styles/salesInformal.style';
 import inventoryService from '../../../inventory/services/inventoryService';
 import debtService, { buildDebtDescription } from '../../../credit/services/debtService';
 import billingService from '../../../Invoice/services/billingService';
+import expensesService from '../../services/expensesService';
 import LinkCustomerModal from '../LinkCustomerModal';
 import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon,XMarkIcon} from 'react-native-heroicons/solid';
 
@@ -43,6 +45,8 @@ const SalesInformal = () => {
   const [salesHistory, setSalesHistory] = useState([]);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  // Detalle de los gastos del período (hoy: compras y reposiciones de stock)
+  const [expenseDetail, setExpenseDetail] = useState([]);
 
   const [linkedCustomer, setLinkedCustomer] = useState(null); // {id, name} | null — null = venta al contado
   const [linkModalVisible, setLinkModalVisible] = useState(false);
@@ -59,40 +63,79 @@ const SalesInformal = () => {
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setProductsLoading(true);
-      try {
-        const data = await inventoryService.getProducts();
-        setProducts(data || []);
-      } catch (err) {
-        console.error('Error al cargar productos para venta:', err);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProducts();
+  // Cargas extraídas a useCallback para poder reusarlas desde el
+  // pull-to-refresh. Antes vivían dentro de sus useEffect y no había forma de
+  // volver a pedirlas: los productos se cargaban una sola vez al montar, así
+  // que reponer stock desde Inventario no se reflejaba acá hasta reiniciar.
+  const loadProducts = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setProductsLoading(true);
+    try {
+      const data = await inventoryService.getProducts();
+      setProducts(data || []);
+    } catch (err) {
+      console.error('Error al cargar productos para venta:', err);
+    } finally {
+      if (!silent) setProductsLoading(false);
+    }
   }, []);
+
+  const loadReportData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setSalesHistoryLoading(true);
+    try {
+      const [invoices, profits, expensesData] = await Promise.all([
+        billingService.getInvoices(null, { limit: 30 }),
+        fetchProfitsAndExpenses(dateFrom, dateTo),
+        // Detalle de los gastos del período: hasta ahora solo se mostraba el
+        // total agregado, sin decir en qué se fue esa plata.
+        expensesService
+          .getExpenses({ dateFrom, dateTo, limit: 50 })
+          .catch((e) => {
+            console.error('Error al cargar gastos:', e);
+            return [];
+          }),
+      ]);
+      setSalesHistory(Array.isArray(invoices) ? invoices : []);
+      setTotalExpenses(Number(profits?.expenses) || 0);
+      setExpenseDetail(Array.isArray(expensesData) ? expensesData : []);
+    } catch (err) {
+      console.error('Error al cargar datos de reportes:', err);
+    } finally {
+      if (!silent) setSalesHistoryLoading(false);
+    }
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   useEffect(() => {
     if (activeTab !== 'history') return;
-    const loadReportData = async () => {
-      setSalesHistoryLoading(true);
-      try {
-        const [invoices, profits] = await Promise.all([
-          billingService.getInvoices(null, { limit: 30 }),
-          fetchProfitsAndExpenses(dateFrom, dateTo),
-        ]);
-        setSalesHistory(Array.isArray(invoices) ? invoices : []);
-        setTotalExpenses(Number(profits?.expenses) || 0);
-      } catch (err) {
-        console.error('Error al cargar datos de reportes:', err);
-      } finally {
-        setSalesHistoryLoading(false);
-      }
-    };
     loadReportData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  // Al volver a la pantalla (ej. tras añadir stock en Inventario) se refrescan
+  // los productos en silencio, sin spinner, para no parpadear la lista.
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts({ silent: true });
+    }, [loadProducts])
+  );
+
+  // Pull-to-refresh: recarga lo que corresponde a la pestaña visible.
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadProducts({ silent: true }),
+        activeTab === 'history' ? loadReportData({ silent: true }) : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeTab, loadProducts, loadReportData]);
 
     {/* aumentar cantidad en el carrito */}
   const handleQuickAdd = (amount) => {
@@ -222,6 +265,15 @@ const SalesInformal = () => {
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+            title="Actualizando..."
+          />
+        }
       >
 
           {/* PANTALLA VENTAS */}
@@ -719,34 +771,60 @@ const SalesInformal = () => {
           const salesTotal = salesHistory.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.total), 0);
           const fiadoTotal = salesHistory.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + Number(inv.total), 0);
 
+          const balance = salesTotal - totalExpenses;
+          const balancePositivo = balance >= 0;
+
           return (
             <>
-              {/* RESUMEN */}
-              <View style={styles.historySummary}>
-                <View style={styles.summaryCardIncome}>
-                  <Text style={styles.summaryLabel}>Ventas</Text>
-                  <Text style={styles.summaryIncome}>{salesCount}</Text>
-                </View>
-                <View style={styles.summaryCardExpense}>
-                  <Text style={styles.summaryLabel}>Fiadas</Text>
-                  <Text style={styles.summaryExpense}>{fiadoCount}</Text>
-                </View>
+              {/* BALANCE DEL PERÍODO — el número que resume todo.
+                  Antes había que restar mentalmente ventas menos gastos: los
+                  tres montos vivían en filas de 14px del mismo peso. */}
+              <View style={styles.heroCard}>
+                <Text style={styles.heroLabel}>Balance de los últimos 30 días</Text>
+                <Text
+                  style={[
+                    styles.heroAmount,
+                    { color: balancePositivo ? colors.success : colors.danger },
+                  ]}
+                >
+                  {balancePositivo ? '' : '-'}${Math.abs(balance).toFixed(2)}
+                </Text>
+                <Text style={styles.heroHint}>
+                  {balancePositivo
+                    ? 'Entró más dinero del que salió.'
+                    : 'Saliste más dinero del que entró.'}
+                </Text>
               </View>
 
-              {/* EVALUACIÓN DE VENTAS */}
-              <View style={styles.evaluationCard}>
-                <Text style={styles.evaluationTitle}>Evaluación de Ventas</Text>
-                <View style={styles.evaluationRow}>
-                  <Text style={styles.evaluationLabel}>Total Ventas:</Text>
-                  <Text style={styles.evaluationValue}>${salesTotal.toFixed(2)}</Text>
+              {/* DESGLOSE — cada monto con su conteo debajo */}
+              <View style={styles.kpiRow}>
+                <View style={styles.kpiTile}>
+                  <View style={[styles.kpiDot, { backgroundColor: colors.success }]} />
+                  <Text style={styles.kpiLabel}>Ventas</Text>
+                  <Text style={styles.kpiValue}>${salesTotal.toFixed(2)}</Text>
+                  <Text style={styles.kpiMeta}>
+                    {salesCount} venta{salesCount !== 1 ? 's' : ''}
+                  </Text>
                 </View>
-                <View style={styles.evaluationRow}>
-                  <Text style={styles.evaluationLabel}>Total Gastos:</Text>
-                  <Text style={[styles.evaluationValue, { color: '#DC2626' }]}>${totalExpenses.toFixed(2)}</Text>
+
+                <View style={styles.kpiTile}>
+                  <View style={[styles.kpiDot, { backgroundColor: colors.danger }]} />
+                  <Text style={styles.kpiLabel}>Gastos</Text>
+                  <Text style={styles.kpiValue}>${totalExpenses.toFixed(2)}</Text>
+                  <Text style={styles.kpiMeta}>
+                    {expenseDetail.length} compra{expenseDetail.length !== 1 ? 's' : ''}
+                  </Text>
                 </View>
-                <View style={styles.evaluationRow}>
-                  <Text style={styles.evaluationLabel}>Total Fiado:</Text>
-                  <Text style={[styles.evaluationValue, { color: '#EF4444' }]}>${fiadoTotal.toFixed(2)}</Text>
+
+                {/* Por cobrar NO es una pérdida: es plata que te deben. Antes
+                    salía en rojo, el mismo color que los gastos. */}
+                <View style={styles.kpiTile}>
+                  <View style={[styles.kpiDot, { backgroundColor: colors.warning }]} />
+                  <Text style={styles.kpiLabel}>Por cobrar</Text>
+                  <Text style={styles.kpiValue}>${fiadoTotal.toFixed(2)}</Text>
+                  <Text style={styles.kpiMeta}>
+                    {fiadoCount} fiado{fiadoCount !== 1 ? 's' : ''}
+                  </Text>
                 </View>
               </View>
 
@@ -765,23 +843,87 @@ const SalesInformal = () => {
                     Aún no tienes ventas. El historial se mostrará aquí cuando registres una.
                   </Text>
                 ) : (
-                  salesHistory.map((invoice) => (
-                    <View key={invoice.id} style={styles.historyCard}>
-                      <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={styles.historyTitle} numberOfLines={1}>
-                          {itemsSummary(invoice)}
-                        </Text>
-                        <Text style={styles.historyDate}>
-                          {statusLabel(invoice)} · {formatDate(invoice.created_at)}
+                  salesHistory.map((invoice) => {
+                    // Un fiado no está "mal": es una venta cuyo cobro quedó
+                    // pendiente. Va en ámbar, no en el rojo de los gastos.
+                    const esFiado = invoice.status === 'pending';
+
+                    return (
+                      <View key={invoice.id} style={styles.historyCard}>
+                        <View style={{ flex: 1, marginRight: 10 }}>
+                          <Text style={styles.historyTitle} numberOfLines={1}>
+                            {itemsSummary(invoice)}
+                          </Text>
+
+                          <View style={styles.historyMetaRow}>
+                            <View
+                              style={[
+                                styles.historyBadge,
+                                { backgroundColor: (esFiado ? colors.warning : colors.success) + '1A' },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.historyBadgeText,
+                                  { color: esFiado ? '#92400E' : '#166534' },
+                                ]}
+                              >
+                                {statusLabel(invoice)}
+                              </Text>
+                            </View>
+                            <Text style={styles.historyDate}>{formatDate(invoice.created_at)}</Text>
+                          </View>
+                        </View>
+
+                        <Text style={esFiado ? styles.historyPending : styles.historyIncome}>
+                          ${Number(invoice.total).toFixed(2)}
                         </Text>
                       </View>
-                      <Text style={invoice.status === 'pending' ? styles.historyExpense : styles.historyIncome}>
-                        ${Number(invoice.total).toFixed(2)}
-                      </Text>
-                    </View>
-                  ))
+                    );
+                  })
                 )}
               </View>
+
+              {/* COMPRAS Y REPOSICIONES DE MERCANCÍA
+                  Salidas de dinero del período. Antes solo se veía el total
+                  agregado en "Total Gastos", sin decir en qué se fue la plata. */}
+              {!salesHistoryLoading && expenseDetail.length > 0 && (
+                <>
+                  <Text style={styles.reportTitle}>
+                    Compras de Mercancía
+                  </Text>
+
+                  <View style={styles.historyContainer}>
+                    {expenseDetail.map((exp) => (
+                      <View key={exp.id} style={styles.historyCard}>
+                        <View style={{ flex: 1, marginRight: 10 }}>
+                          <Text style={styles.historyTitle} numberOfLines={1}>
+                            {exp.description || 'Gasto sin descripción'}
+                          </Text>
+
+                          <View style={styles.historyMetaRow}>
+                            <View
+                              style={[
+                                styles.historyBadge,
+                                { backgroundColor: colors.danger + '1A' },
+                              ]}
+                            >
+                              <Text style={[styles.historyBadgeText, { color: '#991B1B' }]}>
+                                Salida de caja
+                              </Text>
+                            </View>
+                            <Text style={styles.historyDate}>{formatDate(exp.created_at)}</Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.historyExpense}>
+                          -${(Number(exp.amount) || 0).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
             </>
           );
         })()}

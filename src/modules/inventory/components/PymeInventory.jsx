@@ -15,9 +15,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { PlusIcon, PencilIcon } from 'react-native-heroicons/solid';
-import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 import colors from '../../../theme/colors';
 import InventoryAlertWidget from './InventoryAlertWidget';
 import ProductScannerWidget from './ProductScannerWidget';
@@ -25,6 +25,7 @@ import ProductFormModal from './ProductFormModal';
 import inventoryService from '../services/inventoryService';
 import useInventoryConfig, { FLAG_LABELS } from '../hooks/useInventoryConfig';
 import styles from '../styles/pymeInventory.styles';
+import profileStyles from '../../profile/styles/profile.styles';
 
 // Flags que hoy solo tienen placeholder visual — sin funcionalidad propia
 // todavía en esta pantalla. "caducidad" y "mermas" salieron de esta lista:
@@ -177,6 +178,7 @@ const WasteModal = ({ visible, onClose, products, onRegistered }) => {
 };
 
 const PymeInventory = () => {
+  const navigation = useNavigation();
   const { config, loading: loadingConfig } = useInventoryConfig();
   const activePlaceholderFlags = PLACEHOLDER_FLAGS.filter((flag) => config[flag]);
 
@@ -295,7 +297,15 @@ const PymeInventory = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Inventario Pyme" />
+      {/* Header con botón "atrás" — misma lógica que StrategicAnalysisScreen.jsx,
+          reutilizando profile.styles.js (topBar/backButton/headerTitle/headerPlaceholder). */}
+      <View style={profileStyles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={profileStyles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={profileStyles.headerTitle}>Inventario</Text>
+        <View style={profileStyles.headerPlaceholder} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

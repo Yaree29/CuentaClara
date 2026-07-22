@@ -7,25 +7,48 @@ export default StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background, // #F5F5F0 - Blanco hueso
+  },
+  // Contenido con el padding horizontal — separado de mainContainer para que
+  // el header (topBar de profile.styles.js) quede a todo el ancho, sin
+  // heredar este padding. marginTop: separación visual respecto al header.
+  content: {
     paddingHorizontal: 16,
+    marginTop: 20,
   },
-  header: {
-    paddingTop: 50, // Cambiado de marginTop a paddingTop para que el fondo no se corte arriba
+  // Banner indicativo — mismo patrón "hero" que PymeInventory.jsx
+  // (heroKicker/heroTitle/heroSubtitle), aclara que esta pantalla muestra un
+  // resumen y que el detalle completo vive en cada módulo.
+  banner: {
+    backgroundColor: colors.card,
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginBottom: 20,
-    paddingBottom: 16,
-    backgroundColor: colors.card, // Fondo que cubre el espacio
-    marginHorizontal: -16, // Anula el paddingHorizontal del mainContainer para llegar a los bordes
-    alignItems: 'center', // Centra el contenido horizontalmente
-    justifyContent: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
-  headerTitle: {
-    fontSize: 28,
+  bannerKicker: {
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '800',
-    color: colors.textPrimary, // Azul muy oscuro/Pizarra para contraste
-    textAlign: 'center', // Asegura que las letras estén en el centro
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
+  bannerTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 6,
+    lineHeight: 26,
+  },
+  bannerSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: 8,
+    lineHeight: 19,
+  },
+  // El header con botón "atrás" ahora reutiliza profile.styles.js
+  // (topBar/backButton/headerTitle/headerPlaceholder) — mismo patrón que
+  // AppSettingsScreen.jsx — en vez de un header propio sin navegación.
   // ==========================================
   // ESTADOS DE CARGA
   // ==========================================
@@ -56,7 +79,7 @@ export default StyleSheet.create({
     color: colors.sectionTitle,
     marginBottom: 16,
     paddingLeft: 4,
-    textAlign: 'center',
+    textAlign: 'left',
   },
 
   cardsRow: {

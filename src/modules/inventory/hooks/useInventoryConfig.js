@@ -34,7 +34,7 @@ export const FLAGS_BY_CATEGORY_GROUP = {
 export const FLAG_LABELS = {
   control_peso: {
     label: 'Control por peso',
-    description: 'Función pendiente: todavía no afecta cómo se vende ni se registra stock por peso (kg, g, lb) en Ventas.',
+    description: 'Habilita el selector de unidad de medida (kg/libra/unidad) al crear o editar un producto.',
   },
   caducidad: { label: 'Caducidad', description: 'Seguimiento de fechas de vencimiento por producto.' },
   mermas: { label: 'Mermas', description: 'Registrar pérdidas y desperdicio de inventario.' },
@@ -46,10 +46,10 @@ export const FLAG_LABELS = {
     label: 'Producción',
     description: 'Función pendiente en esta pantalla — las órdenes de producción viven en Módulos > Recetas.',
   },
-  escaner: { label: 'Escáner', description: 'Lectura por SKU para buscar productos (simulación, sin cámara todavía).' },
+  escaner: { label: 'Escáner', description: 'Lectura de código de barras por cámara, con búsqueda manual por SKU como respaldo.' },
   stock_predictivo: {
     label: 'Stock predictivo',
-    description: 'Función pendiente: todavía no existe ninguna proyección real de quiebres de stock a futuro.',
+    description: 'Proyección de días estimados hasta agotar stock, según el consumo promedio de ventas de los últimos 30 días.',
   },
 };
 
@@ -82,7 +82,17 @@ const useInventoryConfig = () => {
     fetchAll();
   }, [fetchAll]);
 
-  const visibleFlags = FLAGS_BY_CATEGORY_GROUP[categoryGroup] || [];
+  // Base según category_group (defaults automáticos, sin tocar). "Escáner"
+  // se suma a la lista de visibles para cualquier negocio con inventario
+  // avanzado (cualquier grupo con al menos un flag propio) aunque no sea el
+  // default de su categoría — el dueño puede prenderlo manualmente. Los
+  // grupos sin flags propios (servicios/general, sin inventario avanzado)
+  // se quedan sin ninguno, "Escáner" incluido.
+  const baseFlags = FLAGS_BY_CATEGORY_GROUP[categoryGroup] || [];
+  const visibleFlags =
+    baseFlags.length > 0 && !baseFlags.includes('escaner')
+      ? [...baseFlags, 'escaner']
+      : baseFlags;
 
   // Actualización optimista con rollback si el PATCH falla — mismo criterio
   // que handleToggleBlocked en TeamScreen.jsx.

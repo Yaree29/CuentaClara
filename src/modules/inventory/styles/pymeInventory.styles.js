@@ -130,6 +130,92 @@ export default StyleSheet.create({
     paddingVertical: 8,
   },
 
+  /* ===================== Buscador + acción "Nueva categoría" ===================== */
+  addCategoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '12',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    marginBottom: 12,
+  },
+  addCategoryPillText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 46,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+
+  /* ===================== Modal "Agregar categoría" ===================== */
+  addCatOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  addCatCard: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 24,
+  },
+  addCatTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  addCatActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  addCatCancelBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  addCatCancelText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  addCatConfirmBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  addCatConfirmText: {
+    color: colors.textButton,
+    fontWeight: '700',
+  },
+
   /* ===================== Lista de productos (CRUD) ===================== */
   productListCard: {
     flexDirection: 'row',

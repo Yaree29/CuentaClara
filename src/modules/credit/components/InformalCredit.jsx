@@ -8,6 +8,8 @@ import {
   XMarkIcon,
 } from 'react-native-heroicons/solid';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInformalCredit, SORT_CATEGORIES } from '../hooks/useInformalCredit';
 import { buildDebtDescription } from '../services/debtService';
 import CustomersModal from './CustomersModal';
@@ -31,6 +33,14 @@ const InformalCredit = () => {
     customersWithStats, isCustomersModalVisible, openCustomersModal, closeCustomersModal,
     editingCustomer, setEditingCustomer, saveCustomer, removeCustomer,
   } = useInformalCredit();
+
+  // Los modales de esta pantalla son bottom-sheets: sin este inset, su botón
+  // de acción (Registrar Abono / Confirmar Pago / Guardar) queda tapado por la
+  // barra de navegación de Android. Mismo patrón que ProductFormModal.jsx —
+  // requiere además navigationBarTranslucent en cada <Modal>, si no el inset
+  // llega en 0 dentro del modal.
+  const insets = useSafeAreaInsets();
+  const sheetPadding = { paddingBottom: 24 + insets.bottom };
 
   // --- Estados del Formulario ---
   const [formClientName, setFormClientName] = useState('');
@@ -448,12 +458,29 @@ const InformalCredit = () => {
         }
       />
 
+      {/* ========== FAB: Anotar nuevo fiado ==========
+          Se había perdido en un refactor previo: openAddModal quedó
+          destructurado del hook pero sin ningún disparador en la UI, así que
+          no había forma de crear un fiado (pese a que el estado vacío decía
+          "Toca el botón + para anotar un nuevo fiado"). Mismo patrón/estilos
+          que el FAB de Inventario informal. */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.fabButton}
+          activeOpacity={0.8}
+          onPress={openAddModal}
+          accessibilityLabel="Anotar nuevo fiado"
+        >
+          <PlusIcon size={28} color={colors.textWhite} />
+        </TouchableOpacity>
+      </View>
+
       {/* ========== MODAL: Menú Contextual ========== */}
-      <Modal visible={menuVisible} animationType="slide" transparent={true}>
+      <Modal visible={menuVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={closeMenu}>
         <TouchableWithoutFeedback onPress={closeMenu}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 40, elevation: 10 }}>
+              <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 24 + insets.bottom, elevation: 10 }}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
                   {menuCredit ? menuCredit.clientName : 'Opciones'}
                 </Text>
@@ -486,9 +513,9 @@ const InformalCredit = () => {
       </Modal>
 
       {/* ========== MODAL: Crear / Editar Fiado ========== */}
-      <Modal visible={isFormModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isFormModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={() => setIsFormModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, sheetPadding]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingCredit ? 'Editar Fiado' : 'Anotar Nuevo Fiado'}
@@ -498,7 +525,16 @@ const InformalCredit = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            {/* KeyboardAwareScrollView (no ScrollView): desplaza el contenido
+                para que el campo enfocado quede visible sobre el teclado —
+                antes el teclado tapaba lo que se estaba escribiendo. Mismo
+                componente y configuración que ProductFormModal.jsx. */}
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              enableOnAndroid={true}
+              extraScrollHeight={20}
+            >
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Nombre del Cliente *</Text>
                 <TextInput style={styles.formInput} value={formClientName} onChangeText={setFormClientName} />
@@ -606,15 +642,15 @@ const InformalCredit = () => {
                   {editingCredit ? 'Actualizar Fiado' : 'Registrar Deuda'}
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+            </KeyboardAwareScrollView>
           </View>
         </View>
       </Modal>
 
       {/* ========== MODAL: Registrar Pago ========== */}
-      <Modal visible={isPaymentModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isPaymentModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={() => setIsPaymentModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, sheetPadding]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Registrar Pago</Text>
               <TouchableOpacity onPress={() => setIsPaymentModalVisible(false)}>
@@ -703,9 +739,9 @@ const InformalCredit = () => {
       </Modal>
 
       {/* ========== MODAL: Detalle del Fiado ========== */}
-      <Modal visible={isDetailModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isDetailModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={closeDetailModal}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+          <View style={[styles.modalContent, { maxHeight: "85%" }, sheetPadding]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Resumen del Fiado</Text>
               <TouchableOpacity onPress={closeDetailModal}>
@@ -850,9 +886,9 @@ const InformalCredit = () => {
       </Modal>
 
       {/* ========== MODAL: Añadir / Editar Nota ========== */}
-      <Modal visible={isNoteModalVisible} animationType="slide" transparent={true}>
+      <Modal visible={isNoteModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} navigationBarTranslucent={true} onRequestClose={closeNoteModal}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, sheetPadding]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {noteCredit?.notes ? 'Editar Nota' : 'Añadir Nota'}

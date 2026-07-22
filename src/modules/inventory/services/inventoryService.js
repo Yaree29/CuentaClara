@@ -151,6 +151,15 @@ const inventoryService = {
     return apiRequest('/inventory/stock/low');
   },
 
+  /**
+   * Proyección de quiebre de stock: productos con menos de `thresholdDays`
+   * días estimados de stock restante según su consumo promedio diario de
+   * los últimos 30 días (ventas reales, inventory_movements reason='sale').
+   */
+  getPredictiveStock: async (thresholdDays = 7) => {
+    return apiRequest(`/inventory/stock/predictive?threshold_days=${thresholdDays}`);
+  },
+
   getMovements: async (limit = 50) => {
     return apiRequest(`/inventory/movements?limit=${limit}`);
   },

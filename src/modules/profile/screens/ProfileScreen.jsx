@@ -216,12 +216,16 @@ const ProfileScreen = () => {
 
           {/* Cuerpo del Menú (fusionado desde SettingsScreen.jsx) */}
           <View style={styles.bodyContainer}>
-            {/* Equipo, Modo Asistente y Aplicación son exclusivos de PYME: el
-                modo informal no maneja asistentes ni esos ajustes, así que
-                mostrarlos solo llevaba a pantallas sin uso. En informal esta
-                sección queda únicamente con Notificaciones. */}
-            <MenuSection title="Ajustes de Negocio">
-              {isPyme && (
+            {/* "Ajustes de Negocio" es exclusiva de PYME. El informal no maneja
+                asistentes ni esos ajustes, y tampoco tiene notificaciones que
+                configurar: las alertas existentes avisan al dueño de lo que hace
+                un ASISTENTE (ver notifications_service.notify_owner_of_assistant_action)
+                y en informal el dueño hace todo él mismo, así que la pantalla no
+                le ofrecía nada. Al quitar Notificaciones, esta sección se queda
+                sin un solo ítem en informal — por eso se oculta entera en vez de
+                dejar un encabezado vacío. */}
+            {isPyme && (
+              <MenuSection title="Ajustes de Negocio">
                 <MenuItem
                   icon="people-outline"
                   label="Equipo"
@@ -230,18 +234,16 @@ const ProfileScreen = () => {
                   iconColor={colors.primary}
                   onPress={() => navigation.navigate('TeamScreen')}
                 />
-              )}
-              {isPyme && profile?.role === 'owner' && (
-                <MenuItem
-                  icon="time-outline"
-                  label="Horario de Ventas"
-                  subLabel="Define cuándo se puede abrir la caja y vender"
-                  iconBgStyle={styles.iconContainerBusiness}
-                  iconColor={colors.primary}
-                  onPress={() => navigation.navigate('SalesSchedule')}
-                />
-              )}
-              {isPyme && (
+                {profile?.role === 'owner' && (
+                  <MenuItem
+                    icon="time-outline"
+                    label="Horario de Ventas"
+                    subLabel="Define cuándo se puede abrir la caja y vender"
+                    iconBgStyle={styles.iconContainerBusiness}
+                    iconColor={colors.primary}
+                    onPress={() => navigation.navigate('SalesSchedule')}
+                  />
+                )}
                 <MenuItem
                   icon="people-circle-outline"
                   label="Entrar a Modo Asistente"
@@ -250,17 +252,14 @@ const ProfileScreen = () => {
                   iconColor={colors.primary}
                   onPress={handleEnterAssistantMode}
                 />
-              )}
-              <MenuItem
-                icon="notifications-outline"
-                label="Notificaciones"
-                subLabel="Alertas y avisos"
-                iconBgStyle={styles.iconContainerBusiness}
-                iconColor={colors.primary}
-                isLast={!isPyme}
-                onPress={() => navigation.navigate('NotificationSettings')}
-              />
-              {isPyme && (
+                <MenuItem
+                  icon="notifications-outline"
+                  label="Notificaciones"
+                  subLabel="Alertas y avisos"
+                  iconBgStyle={styles.iconContainerBusiness}
+                  iconColor={colors.primary}
+                  onPress={() => navigation.navigate('NotificationSettings')}
+                />
                 <MenuItem
                   icon="apps-outline"
                   label="Aplicación"
@@ -270,8 +269,8 @@ const ProfileScreen = () => {
                   isLast={true}
                   onPress={() => navigation.navigate('AppSettingsScreen')}
                 />
-              )}
-            </MenuSection>
+              </MenuSection>
+            )}
 
             {userType === 'informal' && (
               <MenuSection title="Tipo de Cuenta">

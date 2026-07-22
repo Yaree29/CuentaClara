@@ -22,6 +22,7 @@ from app.models.inventory import (
 from app.models.credit import DebtCreate
 from app.models.business import SalesScheduleUpdate
 from app.models.cash import CashSessionOpenRequest, CashSessionCloseRequest
+from app.models.invoices import InvoicePdfBatchRequest
 
 
 def _product(**overrides):
@@ -177,3 +178,17 @@ class TestPU14MontosCaja:
         with pytest.raises(ValidationError) as exc:
             CashSessionCloseRequest(counted_amount=Decimal("-1"))
         assert "no puede ser negativo" in str(exc.value)
+
+
+# ── PU-15: Validación de lote de PDFs a compartir (InvoicePdfBatchRequest) ──
+class TestPU15LotePdf:
+    def test_pu15_01_lista_valida(self):
+        assert InvoicePdfBatchRequest(invoice_ids=[1, 2, 3]).invoice_ids == [1, 2, 3]
+
+    def test_pu15_02_una_sola_valida(self):
+        assert InvoicePdfBatchRequest(invoice_ids=[7]).invoice_ids == [7]
+
+    def test_pu15_03_lista_vacia_rechazada(self):
+        with pytest.raises(ValidationError) as exc:
+            InvoicePdfBatchRequest(invoice_ids=[])
+        assert "al menos una factura" in str(exc.value)

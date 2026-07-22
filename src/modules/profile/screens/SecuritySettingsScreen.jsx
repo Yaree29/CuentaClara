@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -27,17 +27,20 @@ const SecuritySettingsScreen = () => {
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [is2FAEnabled, setIs2FAEnabled] = useState(user?.mfa_enabled ?? user?.is2FAEnabled ?? false);
 
-  useEffect(() => {
-    checkBiometricStatus();
-  }, []);
-
-  // Re-verifica el estado del 2FA cada vez que la pantalla recupera el foco.
-  // Así, al volver de Token2FA tras activar/desactivar, el switch refleja el
-  // estado real sin pasar un callback onSuccess por params (React Navigation
-  // marca las funciones en params como no serializables y lo advierte).
+  // Re-verifica el estado de 2FA y de huella cada vez que la pantalla recupera
+  // el foco. Así, al volver de Token2FA tras activar/desactivar, el switch
+  // refleja el estado real sin pasar un callback onSuccess por params (React
+  // Navigation marca las funciones en params como no serializables y lo
+  // advierte).
+  //
+  // La huella se leía solo al montar (useEffect([])): como la pantalla queda
+  // montada en el stack, al salir y volver el switch podía quedarse mostrando
+  // el valor viejo de la bandera. Esto solo refresca lo que se PINTA — no
+  // altera la lógica de activar/desactivar ni el desbloqueo biométrico.
   useFocusEffect(
     useCallback(() => {
       checkMfaStatus();
+      checkBiometricStatus();
     }, [])
   );
 

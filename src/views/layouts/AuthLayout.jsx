@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,20 +91,30 @@ const AuthLayout = ({ children, title, subtitle, showBack = false, onBack }) => 
           mueve ni se recorta. Lo único que se desplaza es el contenido
           del formulario dentro del ScrollView interno. */}
       <View style={styles.cardArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.cardKeyboardView}
+        {/* KeyboardAwareScrollView en vez de KeyboardAvoidingView: en Android
+            behavior="height" no desplazaba el contenido, así que al enfocar
+            los últimos campos (p.ej. "Nombre del negocio" en el registro) el
+            teclado los tapaba. Este componente —ya usado en
+            ProductFormModal.jsx— desplaza el scroll para dejar el campo
+            enfocado visible sobre el teclado.
+
+            paddingBottom + insets.bottom: sin esto el último bloque (el enlace
+            "¿Ya tienes cuenta? Inicia sesión") quedaba debajo de la barra de
+            navegación de Android (edgeToEdgeEnabled en app.json). */}
+        <KeyboardAwareScrollView
+          contentContainerStyle={[
+            styles.cardScrollContent,
+            { paddingBottom: 32 + insets.bottom },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          bounces={false}
+          overScrollMode="never"
         >
-          <ScrollView
-            contentContainerStyle={styles.cardScrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            overScrollMode="never"
-          >
-            {children}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          {children}
+        </KeyboardAwareScrollView>
       </View>
     </View>
   );

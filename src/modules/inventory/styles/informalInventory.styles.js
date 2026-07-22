@@ -268,6 +268,32 @@ export default StyleSheet.create({
     height: 48,
     color: colors.textPrimary },
 
+  /* Botones "Generar" / "Escanear" del campo Código de barras */
+  barcodeActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+
+  barcodeActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '12',
+  },
+
+  barcodeActionText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -63,6 +63,19 @@ const billingService = {
   },
 
   /**
+   * Empaqueta los PDF de varias facturas en un único .zip en el backend y
+   * devuelve una URL firmada para compartir. Usado por la selección múltiple
+   * del historial (2 o más facturas).
+   * @param {number[]} invoiceIds — IDs de las facturas seleccionadas
+   */
+  getInvoicesPdfBatchUrl: async (invoiceIds) => {
+    return apiRequest('/invoices/pdf-batch', {
+      method: 'POST',
+      body: JSON.stringify({ invoice_ids: invoiceIds }),
+    });
+  },
+
+  /**
    * Ganancias y márgenes reales (cruza invoice_items con products.cost_price)
    * en un rango de fechas: totales, desglose por factura y por producto
    * vendido. Solo owner/admin (ver require_role en el backend).

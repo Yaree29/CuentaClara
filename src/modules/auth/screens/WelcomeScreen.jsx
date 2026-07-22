@@ -1,5 +1,10 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
+// SafeAreaView debe venir de react-native-safe-area-context: el de 'react-native'
+// es un no-op en Android (solo aplica en iOS), así que el enlace inferior
+// "¿Ya tienes una cuenta? Inicia sesión" quedaba debajo de la barra de
+// navegación del sistema (app.json tiene edgeToEdgeEnabled).
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import colors from '../../../theme/colors';
 import styles from '../styles/welcome.styles';
@@ -32,7 +37,7 @@ const WelcomeScreen = ({ navigation }) => {
         <Rect x="0" y="0" width="400" height="800" fill="url(#welcomeGradient)" />
       </Svg>
 
-      <SafeAreaView style={styles.content}>
+      <SafeAreaView style={styles.content} edges={['top', 'bottom']}>
         <View style={styles.centerBlock}>
           <Image
             source={require('../../../utils/images/icon.png')}

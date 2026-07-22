@@ -112,10 +112,10 @@ export default StyleSheet.create({
   /* --- Lista de Fiados --- */
   listContainer: {
     padding: 16,
-    // 200: además del tab bar, esta pantalla tiene un FAB flotante propio
-    // (fabContainer, bottom:80 + 56 de alto) — el padding tiene que cubrir
-    // ambas capas para que el último ítem no quede detrás del botón.
-    paddingBottom: 200,
+    // Holgado porque esta pantalla tiene un FAB flotante propio
+    // (fabContainer, bottom:20 + 56 de alto): el padding tiene que cubrirlo
+    // para que el último ítem de la lista no quede detrás del botón.
+    paddingBottom: 120,
   },
 
   /* --- Empty state --- */
@@ -339,12 +339,15 @@ export default StyleSheet.create({
   },
 
   /* --- Botón Flotante (FAB) --- */
-  // bottom:80 = altura del tab bar (72, MainNavigator.jsx) + 8 de margen —
-  // antes bottom:20 quedaba tapado por el tab bar. Mismo cálculo que
-  // src/components/ui/goblalFAB.jsx.
+  // bottom:20, igual que el FAB de Inventario informal
+  // (informalInventory.styles.js). El tab bar de MainNavigator NO es
+  // position:absolute — ocupa su propio espacio y ya reserva insets.bottom —,
+  // así que el área de la pantalla termina encima de él y no hace falta
+  // compensar su altura aquí (el antiguo bottom:80 dejaba el FAB flotando
+  // demasiado alto).
   fabContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     right: 16,
   },
 

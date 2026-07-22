@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -64,9 +64,8 @@ const SalesInformal = () => {
   }, []);
 
   // Cargas extraídas a useCallback para poder reusarlas desde el
-  // pull-to-refresh. Antes vivían dentro de sus useEffect y no había forma de
-  // volver a pedirlas: los productos se cargaban una sola vez al montar, así
-  // que reponer stock desde Inventario no se reflejaba acá hasta reiniciar.
+  // pull-to-refresh. `silent` evita el spinner en las recargas de fondo, para
+  // que la lista no parpadee cada vez que se vuelve a la pantalla.
   const loadProducts = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setProductsLoading(true);
     try {
@@ -104,9 +103,19 @@ const SalesInformal = () => {
     }
   }, [dateFrom, dateTo]);
 
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+  // Se recarga en CADA foco de la pantalla, no solo al montar: las pestañas del
+  // navegador quedan montadas, así que con un useEffect([]) un producto recién
+  // creado en Inventario no aparecía aquí hasta reiniciar la app por completo.
+  //
+  // La primera vez muestra spinner; las siguientes son silenciosas para no
+  // parpadear la lista al volver de otra pestaña.
+  const hasLoadedProductsRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts({ silent: hasLoadedProductsRef.current });
+      hasLoadedProductsRef.current = true;
+    }, [loadProducts])
+  );
 
   useEffect(() => {
     if (activeTab !== 'history') return;
@@ -198,6 +207,11 @@ const SalesInformal = () => {
       setSelectedProducts([]);
       setSelectedProduct(null);
       setLinkedCustomer(null);
+
+      // La venta descontó inventario en el backend: sin esto, el stock que se
+      // muestra en el selector queda con el valor previo hasta cambiar de
+      // pantalla y volver.
+      loadProducts();
     } catch (err) {
       Alert.alert('Error', error || 'No se pudo registrar la venta');
     }
@@ -792,8 +806,17 @@ const SalesInformal = () => {
                 <Text style={styles.heroHint}>
                   {balancePositivo
                     ? 'Entró más dinero del que salió.'
-                    : 'Saliste más dinero del que entró.'}
+                    : 'Salió más dinero del que entró.'}
                 </Text>
+
+                {/* El fiado NO se suma al balance a propósito: todavía no es
+                    dinero recibido, así que incluirlo inflaría la ganancia con
+                    plata que aún te deben. */}
+                {fiadoTotal > 0 && (
+                  <Text style={styles.heroHint}>
+                    No incluye ${fiadoTotal.toFixed(2)} en fiados por cobrar.
+                  </Text>
+                )}
               </View>
 
               {/* DESGLOSE — cada monto con su conteo debajo */}
@@ -826,6 +849,7 @@ const SalesInformal = () => {
                     {fiadoCount} fiado{fiadoCount !== 1 ? 's' : ''}
                   </Text>
                 </View>
+
               </View>
 
               <Text style={styles.reportTitle}>

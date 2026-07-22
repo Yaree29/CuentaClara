@@ -120,7 +120,7 @@ export default StyleSheet.create({
   // src/components/ui/goblalFAB.jsx.
   bottomFloatContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     left: 16,
     right: 16 },
 
@@ -195,7 +195,7 @@ export default StyleSheet.create({
   // bottom:80 = altura del tab bar (72, MainNavigator.jsx) + 8 de margen.
   fabContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 20,
     right: 16,
     alignItems: 'flex-end',
   },

@@ -68,6 +68,20 @@ class TestPU08PrecioProducto:
             _product(price=Decimal("-5"))
         assert "mayor a $0.00" in str(exc.value)
 
+    def test_pu08_04_dos_decimales_aceptados(self):
+        assert _product(price=Decimal("12.34")).price == Decimal("12.34")
+
+    def test_pu08_05_tres_decimales_rechazados(self):
+        # Es dinero: 12.345 no es un importe representable.
+        with pytest.raises(ValidationError) as exc:
+            _product(price=Decimal("12.345"))
+        assert "2 decimales" in str(exc.value)
+
+    def test_pu08_06_costo_con_tres_decimales_rechazado(self):
+        with pytest.raises(ValidationError) as exc:
+            _product(cost_price=Decimal("1.005"))
+        assert "2 decimales" in str(exc.value)
+
 
 # ── PU-09: Validación de stock no negativo (ProductCreateRequest.stock_non_negative) ──
 class TestPU09StockProducto:
@@ -125,14 +139,32 @@ class TestPU11MontoFiado:
 # ── PU-12: Validación de movimiento de inventario (StockAdjustRequest) ──
 class TestPU12MovimientoInventario:
     def test_pu12_01_movimiento_valido(self):
-        m = StockAdjustRequest(product_id=1, quantity=Decimal("5"), reason="purchase")
+        # reason="purchase" exige unit_cost (regla añadida junto al registro
+        # automático del gasto por reposición de stock).
+        m = StockAdjustRequest(
+            product_id=1, quantity=Decimal("5"), reason="purchase", unit_cost=Decimal("2.50")
+        )
         assert m.quantity == Decimal("5")
         assert m.reason == "purchase"
 
     def test_pu12_02_cantidad_cero_rechazada(self):
         with pytest.raises(ValidationError) as exc:
-            StockAdjustRequest(product_id=1, quantity=Decimal("0"), reason="purchase")
+            StockAdjustRequest(
+                product_id=1, quantity=Decimal("0"), reason="purchase", unit_cost=Decimal("2.50")
+            )
         assert "no puede ser cero" in str(exc.value)
+
+    def test_pu12_04_compra_sin_costo_unitario_rechazada(self):
+        with pytest.raises(ValidationError) as exc:
+            StockAdjustRequest(product_id=1, quantity=Decimal("5"), reason="purchase")
+        assert "Costo unitario" in str(exc.value)
+
+    def test_pu12_05_costo_unitario_con_tres_decimales_rechazado(self):
+        with pytest.raises(ValidationError) as exc:
+            StockAdjustRequest(
+                product_id=1, quantity=Decimal("5"), reason="purchase", unit_cost=Decimal("2.505")
+            )
+        assert "2 decimales" in str(exc.value)
 
     def test_pu12_03_razon_invalida_rechazada(self):
         with pytest.raises(ValidationError) as exc:

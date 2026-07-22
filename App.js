@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 
 import { supabase } from './src/services/supabaseClient';
 import biometricService from './src/modules/auth/services/biometricService';
+import { startRecovery, endRecovery, isRecoveryInProgress } from './src/modules/auth/utils/recoveryState';
 import { AuthProvider } from './src/views/providers/AuthProvider';
 import { UserTypeProvider } from './src/views/providers/UserTypeProvider';
 import RootNavigator from './src/views/navigation/RootNavigator';
@@ -40,6 +41,11 @@ const handleRecoveryUrl = async (url) => {
   if (url === lastRecoveryUrl) return;
   lastRecoveryUrl = url;
 
+  // Se marca ANTES de setSession: esa llamada emite SIGNED_IN y, sin esta
+  // bandera, la sesión de recuperación se trataba como un login normal (se
+  // re-vinculaba la huella y AuthProvider podía saltar al stack principal).
+  startRecovery();
+
   const accessToken = getParam(url, 'access_token');
   const refreshToken = getParam(url, 'refresh_token');
 
@@ -53,6 +59,7 @@ const handleRecoveryUrl = async (url) => {
         ? description.replace(/\+/g, ' ')
         : 'Este enlace de recuperación ya venció o ya se usó. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
     );
+    endRecovery();
     return;
   }
 
@@ -64,6 +71,7 @@ const handleRecoveryUrl = async (url) => {
     // Se muestra el mensaje real: un texto genérico aquí hacía imposible
     // distinguir un enlace vencido de un fallo de red.
     Alert.alert('No se pudo abrir el enlace', error.message || 'Intenta solicitar la recuperación de nuevo.');
+    endRecovery();
     return;
   }
 
@@ -94,6 +102,13 @@ export default function App() {
     // que la huella siga funcionando la próxima vez que se abra la app.
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Durante una recuperación de contraseña NO se toca la huella: esa
+            // sesión nace de un enlace de correo, no de que alguien haya
+            // demostrado ser el dueño del dispositivo. Sincronizarla aquí hacía
+            // que, tras recuperar la contraseña, el botón de huella del login
+            // entrara a la cuenta recuperada sin escribir la contraseña nueva.
+            if (isRecoveryInProgress()) return;
+
             if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && session?.refresh_token) {
                 biometricService.syncStoredRefreshToken(session.refresh_token);
             }

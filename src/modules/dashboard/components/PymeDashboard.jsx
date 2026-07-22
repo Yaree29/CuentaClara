@@ -62,6 +62,30 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
     }
   }, [setDailyTotals]);
 
+  // ── Meta mensual ───────────────────────────────────────────────────────────
+  // Estas declaraciones van ANTES de los callbacks que las usan: al estar
+  // debajo, `goalDraft` y `fetchMonthIncome` quedaban en zona muerta temporal
+  // al evaluarse los arrays de dependencias durante el render, y handleSaveGoal
+  // acababa leyendo un valor indefinido (el modal avisaba "monto mayor a 0"
+  // aunque hubieras escrito 6000).
+  const [monthIncome, setMonthIncome] = useState(0);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [goalDraft, setGoalDraft] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  // Acumulado del MES (1 del mes → hoy), para medir la meta mensual. Es una
+  // consulta aparte de la del día: /sales/profits acepta rango.
+  const fetchMonthIncome = useCallback(async () => {
+    const now = new Date();
+    const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    try {
+      const data = await salesService.getProfitsAndExpenses(firstDay, todayISO());
+      setMonthIncome(Number(data?.income) || 0);
+    } catch {
+      // Sin conexión o rol sin permiso: se conserva el último valor conocido.
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchDailyTotals();
@@ -82,7 +106,11 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
   // `settings` entero (ver business_service.update_business_config), así que se
   // envía fusionado con lo que ya había para no borrar el resto de ajustes.
   const handleSaveGoal = useCallback(async () => {
-    const value = Number(String(goalDraft).replace(',', '.'));
+    // goalDraft ya viene solo con dígitos (ver el TextInput): antes se hacía
+    // replace(',', '.') sobre el texto crudo, así que un separador de MILES se
+    // convertía en decimal y "6,000" (o "6.000") se guardaba como 6 — de ahí
+    // que las metas altas parecieran no aceptarse.
+    const value = Number(goalDraft);
     if (!Number.isFinite(value) || value <= 0) {
       Alert.alert('Meta inválida', 'Escribe un monto mayor a 0.');
       return;
@@ -100,24 +128,6 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
       setSavingGoal(false);
     }
   }, [goalDraft, config, reload]);
-
-  // Acumulado del MES (1 del mes → hoy), para medir la meta mensual. Es una
-  // consulta aparte de la del día: /sales/profits acepta rango.
-  const [monthIncome, setMonthIncome] = useState(0);
-  const [goalModalVisible, setGoalModalVisible] = useState(false);
-  const [goalDraft, setGoalDraft] = useState('');
-  const [savingGoal, setSavingGoal] = useState(false);
-
-  const fetchMonthIncome = useCallback(async () => {
-    const now = new Date();
-    const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    try {
-      const data = await salesService.getProfitsAndExpenses(firstDay, todayISO());
-      setMonthIncome(Number(data?.income) || 0);
-    } catch {
-      // Sin conexión o rol sin permiso: se conserva el último valor conocido.
-    }
-  }, []);
 
   const [todayIncome, setTodayIncome] = useState(0);
 
@@ -347,7 +357,9 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
             <TouchableOpacity
               style={styles.goalEditButton}
               onPress={() => {
-                setGoalDraft(String(monthlyGoal));
+                // Se redondea por si quedó guardada una meta decimal por el
+                // bug anterior de separadores (p.ej. 6 en vez de 6000).
+                setGoalDraft(String(Math.round(monthlyGoal)));
                 setGoalModalVisible(true);
               }}
             >
@@ -431,13 +443,17 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
               ¿Cuánto quieres vender este mes? Verás tu avance en el inicio.
             </Text>
 
+            {/* Solo dígitos (number-pad, sin "." ni ","): una meta mensual se
+                expresa en unidades enteras y admitir separadores volvía
+                ambiguo si "6.000" son seis mil o seis. Al filtrarlos aquí,
+                escribir "6,000" queda como 6000 en vez de convertirse en 6. */}
             <TextInput
               style={styles.goalModalInput}
-              placeholder="Ej: 1500"
+              placeholder="Ej: 6000"
               placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
+              keyboardType="number-pad"
               value={goalDraft}
-              onChangeText={setGoalDraft}
+              onChangeText={(val) => setGoalDraft(val.replace(/[^0-9]/g, ''))}
             />
 
             <View style={styles.goalModalActions}>

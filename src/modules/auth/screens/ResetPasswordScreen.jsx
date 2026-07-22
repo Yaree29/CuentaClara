@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import AuthLayout from '../../../views/layouts/AuthLayout';
 import styles from '../styles/recoveryOptions.styles';
 import { supabase } from '../../../services/supabaseClient';
 import { validatePassword } from '../utils/validation';
+import biometricService from '../services/biometricService';
+import { endRecovery } from '../utils/recoveryState';
 
 // Destino del deep link cuentaclara://reset-password. Para cuando se abre esta
 // pantalla, App.js ya canjeó el `code` del enlace por una sesión de recuperación
@@ -12,6 +14,11 @@ const ResetPasswordScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Si el usuario abandona la pantalla sin completar el cambio, se levanta la
+  // bandera igualmente: dejarla activa bloquearía la sincronización de la
+  // huella durante el resto de la vida de la app.
+  useEffect(() => endRecovery, []);
 
   const handleUpdate = async () => {
     const validation = validatePassword(password);
@@ -41,8 +48,17 @@ const ResetPasswordScreen = ({ navigation }) => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      // La huella queda desvinculada: el refresh token guardado pertenece a una
+      // sesión anterior a este cambio de contraseña, y permitir entrar con
+      // huella dejaría un atajo que nunca exige la contraseña nueva (quien
+      // recupera la clave, por definición, no la sabía). Se vuelve a ofrecer
+      // activarla tras el primer login normal.
+      await biometricService.disableBiometric();
+
       // Cerrar la sesión de recuperación para forzar un login limpio con la nueva clave.
       await supabase.auth.signOut();
+      endRecovery();
+
       Alert.alert(
         'Contraseña actualizada',
         'Tu contraseña se cambió correctamente. Inicia sesión con la nueva.',

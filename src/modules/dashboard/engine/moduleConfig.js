@@ -56,9 +56,11 @@ const moduleConfig = {
       activity: false,
     },
 
+    // Solo 'new_product': 'inventory_entry' ("Entrada Inventario") navegaba a
+    // la MISMA pantalla (PymeInventory) y hacía exactamente lo mismo, así que
+    // en Acciones Rápidas aparecían dos botones distintos para una sola acción.
     quickActions: [
       'new_product',
-      'inventory_entry',
     ],
   },
 

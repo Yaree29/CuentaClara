@@ -8,9 +8,15 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { XMarkIcon } from 'react-native-heroicons/solid';
+import { XMarkIcon, CameraIcon, SparklesIcon } from 'react-native-heroicons/solid';
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
+import BarcodeScannerModal from './BarcodeScannerModal';
+
+// Código de barras autogenerado: timestamp de 12 dígitos (numérico, así puede
+// imprimirse/leerse como CODE128). Simple y único en la práctica — evita la
+// necesidad de una secuencia consultada al backend.
+const generateBarcode = () => String(Date.now()).slice(-12);
 
 // ─── Reglas de validación ──────────────────────────────────────────────────────
 
@@ -64,8 +70,14 @@ const validateExpirationDate = (val) => {
  *  showExpiration – boolean (business_inventory_config.caducidad) — muestra el
  *                   campo opcional de fecha de vencimiento cuando el negocio
  *                   tiene ese flag activo.
+ *  showCostPrice  – boolean — muestra "Costo de Producción" (cost_price) solo
+ *                   cuando el negocio es category_group === 'comida_preparada'
+ *                   (el costo alimenta el cálculo de recetas, una función
+ *                   propia de ese grupo). Para el resto de categorías no aparece.
+ *  prefillBarcode – string | null — código ya leído por el escáner al crear un
+ *                   producto que no existía; rellena el campo Código de barras.
  */
-const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false }) => {
+const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false, showCostPrice = false, prefillBarcode = null }) => {
   const [name, setName]         = useState('');
   const [price, setPrice]       = useState('');
   const [costPrice, setCostPrice] = useState('');
@@ -74,6 +86,8 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   const [minStock, setMinStock] = useState('');
   const [purchaseType, setPurchaseType] = useState('register_only');
   const [expirationDate, setExpirationDate] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
 
   // Errores por campo
   const [nameError, setNameError]       = useState(null);
@@ -104,6 +118,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setMinStock(initialData.minStock !== null && initialData.minStock !== undefined ? initialData.minStock.toString() : '');
       setPurchaseType('register_only');
       setExpirationDate(initialData.expirationDate ? initialData.expirationDate.slice(0, 10) : '');
+      setBarcode(initialData.sku ?? '');
     } else {
       setName('');
       setPrice('');
@@ -113,8 +128,11 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setMinStock('');
       setPurchaseType('register_only');
       setExpirationDate('');
+      // Al crear desde un escaneo "no encontrado", el código leído llega por
+      // prefillBarcode y arranca ya cargado en el campo.
+      setBarcode(prefillBarcode ?? '');
     }
-  }, [initialData, visible, categories]);
+  }, [initialData, visible, categories, prefillBarcode]);
 
   // Si categorías cargan después de abrir el modal
   useEffect(() => {
@@ -176,7 +194,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         ? 'El nombre es demasiado corto.'
         : null;
     const pErr  = validatePrice(price);
-    const cpErr = validateCostPrice(costPrice);
+    const cpErr = showCostPrice ? validateCostPrice(costPrice) : null;
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
     const edErr = showExpiration ? validateExpirationDate(expirationDate) : null;
@@ -193,8 +211,13 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     onSave({
       name: name.trim(),
       price: parseFloat(price),
-      costPrice: costPrice !== '' ? parseFloat(costPrice) : null,
+      // Solo se envía cost_price cuando el campo está visible para este negocio
+      // (comida_preparada); para el resto se omite y no se sobreescribe.
+      ...(showCostPrice ? { costPrice: costPrice !== '' ? parseFloat(costPrice) : null } : {}),
       category: category || null,
+      // El "Código de barras" se guarda en la columna sku (no hay columna
+      // barcode separada — ver products.sku). null si quedó vacío.
+      sku: barcode.trim() !== '' ? barcode.trim() : null,
       stock: stock !== '' ? parseInt(stock, 10) : null,
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
       purchaseType: purchaseType,
@@ -264,18 +287,51 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                 {priceError ? <Text style={styles.errorText}>{priceError}</Text> : null}
               </View>
 
-              {/* ── Costo (insumo, usado por Recetas) ── */}
+              {/* ── Costo de producción (solo comida_preparada — insumo para Recetas) ── */}
+              {showCostPrice && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Costo de Producción ($)</Text>
+                  <TextInput
+                    style={[styles.formInput, costPriceError && styles.inputError]}
+                    value={costPrice}
+                    onChangeText={handleCostPriceChange}
+                    keyboardType="decimal-pad"
+                    placeholder="Opcional — para calcular costo de recetas"
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  {costPriceError ? <Text style={styles.errorText}>{costPriceError}</Text> : null}
+                </View>
+              )}
+
+              {/* ── Código de barras (columna sku): generar automático o escanear/teclear ── */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Costo de Producción ($)</Text>
+                <Text style={styles.formLabel}>Código de barras (SKU)</Text>
                 <TextInput
-                  style={[styles.formInput, costPriceError && styles.inputError]}
-                  value={costPrice}
-                  onChangeText={handleCostPriceChange}
-                  keyboardType="decimal-pad"
-                  placeholder="Opcional — para calcular costo de recetas"
+                  style={styles.formInput}
+                  value={barcode}
+                  onChangeText={setBarcode}
+                  placeholder="Opcional — escanéalo, genéralo o escríbelo"
                   placeholderTextColor={colors.placeholder}
+                  autoCapitalize="characters"
                 />
-                {costPriceError ? <Text style={styles.errorText}>{costPriceError}</Text> : null}
+                <View style={styles.barcodeActionsRow}>
+                  <TouchableOpacity
+                    style={styles.barcodeActionBtn}
+                    onPress={() => setBarcode(generateBarcode())}
+                    activeOpacity={0.85}
+                  >
+                    <SparklesIcon size={16} color={colors.primary} />
+                    <Text style={styles.barcodeActionText}>Generar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.barcodeActionBtn}
+                    onPress={() => setBarcodeScannerVisible(true)}
+                    activeOpacity={0.85}
+                  >
+                    <CameraIcon size={16} color={colors.primary} />
+                    <Text style={styles.barcodeActionText}>Escanear</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* ── Stock disponible + Stock mínimo ── */}
@@ -404,6 +460,16 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
             </KeyboardAwareScrollView>
         </View>
       </View>
+
+      {/* Escáner para rellenar el campo Código de barras con la cámara. */}
+      <BarcodeScannerModal
+        visible={barcodeScannerVisible}
+        onClose={() => setBarcodeScannerVisible(false)}
+        onScanned={(code) => {
+          setBarcode(code);
+          setBarcodeScannerVisible(false);
+        }}
+      />
     </Modal>
   );
 };

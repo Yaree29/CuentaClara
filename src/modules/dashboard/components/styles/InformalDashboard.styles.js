@@ -88,6 +88,51 @@ export default StyleSheet.create({
     fontWeight: '600',
   },
 
+  /* --- Filas de producto dentro de la alerta de stock --- */
+  stockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingVertical: 5,
+  },
+  stockRowName: {
+    flex: 1,
+    color: '#78350F',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stockBadgeCritical: {
+    backgroundColor: colors.danger,
+  },
+  stockBadgeTextCritical: {
+    color: '#FFFFFF',
+  },
+  stockBannerFooter: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+
+  /* --- Banner de "todo en orden" (sin productos por reponer) --- */
+  stockOkBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  stockOkText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+
   /* --- TARJETA PRINCIPAL --- */
   mainCard: {
     backgroundColor: colors.salesDisplayBackground,

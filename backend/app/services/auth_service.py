@@ -372,7 +372,12 @@ def login_user(email: str, password: str):
         .execute()
 
     if not profile.data:
-        raise ValueError("Usuario no encontrado en el sistema")
+        # Credenciales válidas en Supabase Auth pero sin fila en public.users
+        # (cuenta a medio crear). Hacia afuera se responde igual que una
+        # contraseña equivocada: decir "el usuario no existe" confirmaría que
+        # ese correo sí está registrado. El detalle real queda en el log.
+        print(f"[login_user] Auth OK pero sin perfil en public.users: {auth_user_id}")
+        raise ValueError("Credenciales incorrectas")
 
     user_data = profile.data[0]
 

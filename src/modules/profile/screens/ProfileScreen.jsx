@@ -38,6 +38,7 @@ const ProfileScreen = () => {
   const navigation = useNavigation();
   const { profile, loading, logout } = useProfile();
   const userType = profile?.userType || 'informal';
+  const isPyme = userType === 'pyme';
   const setLogin = useAuthStore((state) => state.setLogin);
   const enableAssistantMode = useAssistantModeStore((state) => state.enableMode);
 
@@ -215,16 +216,22 @@ const ProfileScreen = () => {
 
           {/* Cuerpo del Menú (fusionado desde SettingsScreen.jsx) */}
           <View style={styles.bodyContainer}>
+            {/* Equipo, Modo Asistente y Aplicación son exclusivos de PYME: el
+                modo informal no maneja asistentes ni esos ajustes, así que
+                mostrarlos solo llevaba a pantallas sin uso. En informal esta
+                sección queda únicamente con Notificaciones. */}
             <MenuSection title="Ajustes de Negocio">
-              <MenuItem
-                icon="people-outline"
-                label="Equipo"
-                subLabel="Gestionar colaboradores"
-                iconBgStyle={styles.iconContainerBusiness}
-                iconColor={colors.primary}
-                onPress={() => navigation.navigate('TeamScreen')}
-              />
-              {userType === 'pyme' && profile?.role === 'owner' && (
+              {isPyme && (
+                <MenuItem
+                  icon="people-outline"
+                  label="Equipo"
+                  subLabel="Gestionar colaboradores"
+                  iconBgStyle={styles.iconContainerBusiness}
+                  iconColor={colors.primary}
+                  onPress={() => navigation.navigate('TeamScreen')}
+                />
+              )}
+              {isPyme && profile?.role === 'owner' && (
                 <MenuItem
                   icon="time-outline"
                   label="Horario de Ventas"
@@ -234,7 +241,7 @@ const ProfileScreen = () => {
                   onPress={() => navigation.navigate('SalesSchedule')}
                 />
               )}
-              {userType === 'pyme' && (
+              {isPyme && (
                 <MenuItem
                   icon="people-circle-outline"
                   label="Entrar a Modo Asistente"
@@ -250,17 +257,20 @@ const ProfileScreen = () => {
                 subLabel="Alertas y avisos"
                 iconBgStyle={styles.iconContainerBusiness}
                 iconColor={colors.primary}
+                isLast={!isPyme}
                 onPress={() => navigation.navigate('NotificationSettings')}
               />
-              <MenuItem
-                icon="apps-outline"
-                label="Aplicación"
-                subLabel="Personalización y ajustes"
-                iconBgStyle={styles.iconContainerBusiness}
-                iconColor={colors.primary}
-                isLast={true}
-                onPress={() => navigation.navigate('AppSettingsScreen')}
-              />
+              {isPyme && (
+                <MenuItem
+                  icon="apps-outline"
+                  label="Aplicación"
+                  subLabel="Personalización y ajustes"
+                  iconBgStyle={styles.iconContainerBusiness}
+                  iconColor={colors.primary}
+                  isLast={true}
+                  onPress={() => navigation.navigate('AppSettingsScreen')}
+                />
+              )}
             </MenuSection>
 
             {userType === 'informal' && (

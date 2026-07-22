@@ -3,6 +3,27 @@ import useAuthStore from '../../../store/useAuthStore';
 import authService from '../services/authService';
 import biometricService from '../services/biometricService';
 
+// Único mensaje que ve el usuario ante un login fallido. No distingue si el
+// correo no existe, si la contraseña no coincide o si la cuenta está
+// incompleta: todos esos casos comparten esta respuesta.
+const GENERIC_LOGIN_ERROR = 'Correo o contraseña incorrectos.';
+
+// Un fallo es "de credenciales" si el servidor respondió rechazando el acceso.
+// Los errores de red o de servidor caído no entran acá: a esos se les deja su
+// mensaje real, porque le sirve al usuario y no revela nada de la cuenta.
+const isCredentialsError = (err) => {
+  const msg = (err?.message || '').toLowerCase();
+
+  return (
+    msg.includes('credencial') ||
+    msg.includes('invalid login') ||
+    msg.includes('contraseña') ||
+    msg.includes('usuario no encontrado') ||
+    msg.includes('email not confirmed') ||
+    msg.includes('401')
+  );
+};
+
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -20,7 +41,12 @@ export const useAuth = () => {
       setLogin(response.user, response.token);
       return response;
     } catch (err) {
-      setError(err.message || 'Credenciales invalidas');
+      // Mensaje único para CUALQUIER fallo de autenticación. No se propaga
+      // err.message: distinguir "ese correo no existe" de "la contraseña no
+      // coincide" le confirma a un atacante qué correos están registrados.
+      // Los problemas que no son de credenciales (sin internet, servidor
+      // caído) sí conservan su mensaje, porque ahí no hay nada que filtrar.
+      setError(isCredentialsError(err) ? GENERIC_LOGIN_ERROR : (err.message || GENERIC_LOGIN_ERROR));
       throw err;
     } finally {
       setLoading(false);

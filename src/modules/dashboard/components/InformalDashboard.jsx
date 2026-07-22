@@ -213,24 +213,54 @@ const InformalDashboard = ({ onTodayIncomeChange } = {}) => {
         )}
       </View>
 
-      {/* ALERTA DE INVENTARIO */}
-      {lowStockProducts.length > 0 && (
-        <View style={[styles.stockBanner, { marginTop: 20, marginBottom: 4 }]}>
+      {/* STOCK DE PRODUCTOS
+          Se muestra siempre (también cuando no hay nada por reponer) para que
+          el usuario sepa que la app le vigila el stock, no solo cuando algo
+          anda mal. */}
+      <Text style={styles.sectionTitle}>Stock de Productos</Text>
+      {lowStockProducts.length === 0 ? (
+        <View style={styles.stockOkBanner}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          <Text style={styles.stockOkText}>
+            Todo en orden. Ningún producto está por agotarse.
+          </Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.stockBanner}
+          onPress={() => goToTab('inventory')}
+          activeOpacity={0.7}
+        >
           <View style={styles.stockBannerHeader}>
             <Ionicons name="alert-circle" size={20} color={colors.warning} />
             <Text style={styles.stockBannerTitle}>
-              Alerta de Inventario ({lowStockProducts.length} producto{lowStockProducts.length !== 1 ? 's' : ''} bajo{lowStockProducts.length !== 1 ? 's' : ''})
+              {lowStockProducts.length} producto{lowStockProducts.length !== 1 ? 's' : ''} por reponer
             </Text>
           </View>
-          <View style={styles.stockItemsContainer}>
-            {lowStockProducts.map((prod, idx) => (
-              <View key={`low-${prod.product_id ?? idx}`} style={styles.stockBadge}>
-                <Text style={styles.stockBadgeText}>{prod.product_name}</Text>
+
+          {lowStockProducts.map((prod, idx) => {
+            const stock = Number(prod.current_stock) || 0;
+            const agotado = stock <= 0;
+            const unidad = prod.unit ? ` ${prod.unit}` : '';
+
+            return (
+              <View key={`low-${prod.product_id ?? idx}`} style={styles.stockRow}>
+                <Text style={styles.stockRowName} numberOfLines={1}>
+                  {prod.product_name || 'Producto sin nombre'}
+                </Text>
+                <View style={[styles.stockBadge, agotado && styles.stockBadgeCritical]}>
+                  <Text style={[styles.stockBadgeText, agotado && styles.stockBadgeTextCritical]}>
+                    {agotado ? 'Agotado' : `Quedan ${stock}${unidad}`}
+                  </Text>
+                </View>
               </View>
-            ))}
-          </View>
-        </View>
+            );
+          })}
+
+          <Text style={styles.stockBannerFooter}>Toca para ir a Inventario →</Text>
+        </TouchableOpacity>
       )}
+
     </ScrollView>
   );
 };

@@ -6,7 +6,6 @@ import AuthLayout from '../../../views/layouts/AuthLayout';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../../../theme/colors';
 import styles from '../styles/Login.styles';
-import { validateEmail, validatePassword } from '../utils/validation';
 import biometricService from '../services/biometricService';
 import mfaService from '../services/mfaService';
 
@@ -88,19 +87,19 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.valid) {
-      setEmailError(emailValidation.error);
-      setPasswordError('');
-      Alert.alert('Correo inválido', emailValidation.error);
-      return;
-    }
-
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      setPasswordError(passwordValidation.error);
+    // En el login NO se validan las reglas de complejidad de la contraseña
+    // (mayúscula, número, carácter especial). Esas son reglas de REGISTRO:
+    // aquí la contraseña ya existe. Aplicarlas revelaba qué parte falló y, de
+    // paso, publicaba la política de contraseñas sin haber consultado al
+    // servidor. Solo se comprueba que los campos no vengan vacíos; cualquier
+    // otro fallo se responde con un único mensaje genérico.
+    if (!email.trim() || !password) {
       setEmailError('');
-      Alert.alert('Contraseña inválida', passwordValidation.error);
+      setPasswordError('');
+      Alert.alert(
+        'Datos incompletos',
+        'Escribe tu correo y tu contraseña para ingresar.'
+      );
       return;
     }
 

@@ -579,25 +579,64 @@ def list_movements(business_id: str, limit: int = 50) -> list:
 
 
 def list_low_stock(business_id: str) -> list:
-    """Devuelve los productos cuyo stock actual <= min_stock (alertas)."""
-    result = supabase_admin.table("inventory") \
-        .select("""
-            id, quantity, min_stock, unit,
-            products ( id, name, sku, is_active )
-        """) \
+    """Devuelve los productos cuyo stock actual <= min_stock (alertas).
+
+    Igual que list_products, NO se usa el embebido `products(...)` desde
+    `inventory`: el SDK 1.2.0 lo devuelve vacío cuando la relación no está
+    cacheada, y entonces las alertas salían sin nombre de producto (la tarjeta
+    del dashboard mostraba solo "Quedan 2", sin decir de qué). Se hacen dos
+    consultas y se arma el join en memoria.
+    """
+    inv_result = supabase_admin.table("inventory") \
+        .select("id, product_id, quantity, min_stock, unit") \
         .eq("business_id", business_id) \
         .execute()
 
+    inv_rows = inv_result.data or []
+    if not inv_rows:
+        return []
+
+    product_ids = [r["product_id"] for r in inv_rows if r.get("product_id") is not None]
+    if not product_ids:
+        return []
+
+    products_result = supabase_admin.table("products") \
+        .select("id, name, sku, is_active") \
+        .eq("business_id", business_id) \
+        .in_("id", product_ids) \
+        .execute()
+
+    products_by_id = {p["id"]: p for p in (products_result.data or [])}
+
     alerts = []
-    for row in (result.data or []):
-        product = row.get("products") or {}
-        if isinstance(product, list):
-            product = product[0] if product else {}
+    for row in inv_rows:
+        product = products_by_id.get(row.get("product_id"))
+
+        # Sin producto (borrado o de otro negocio) no hay nada que reponer.
+        # Antes esta fila pasaba igual y generaba una alerta sin nombre.
+        if not product:
+            continue
         if not product.get("is_active", True):
             continue
         qty = row.get("quantity")
         min_s = Decimal(str(row.get("min_stock") or 0))
-        if qty is not None and min_s > 0 and Decimal(str(qty)) <= min_s:
+
+        if qty is None:
+            # quantity NULL = servicio sin stock que controlar
+            continue
+
+        qty_dec = Decimal(str(qty))
+
+        # Dos motivos para alertar:
+        #   1. Está por debajo del mínimo configurado (requiere min_stock > 0).
+        #   2. Está agotado. Un producto en cero hay que reponerlo SIEMPRE,
+        #      haya configurado o no un stock mínimo. Antes se exigía
+        #      min_stock > 0 para todo, así que los negocios que nunca llenaron
+        #      ese campo (queda en 0 por defecto) no recibían ni una alerta.
+        below_min = min_s > 0 and qty_dec <= min_s
+        out_of_stock = qty_dec <= 0
+
+        if below_min or out_of_stock:
             alerts.append({
                 "product_id": product.get("id"),
                 "product_name": product.get("name"),
@@ -608,7 +647,10 @@ def list_low_stock(business_id: str) -> list:
                 "deficit": float(min_s - Decimal(str(qty))),
             })
 
-    return sorted(alerts, key=lambda x: x["deficit"], reverse=True)
+    # Agotados primero (son los más urgentes, y su déficit puede ser 0 si el
+    # producto no tenía mínimo configurado); dentro de cada grupo, mayor
+    # déficit primero.
+    return sorted(alerts, key=lambda x: (x["current_stock"] > 0, -x["deficit"]))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

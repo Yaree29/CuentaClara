@@ -20,6 +20,7 @@ Rutas:
   Stock / Movimientos
     POST   /inventory/stock/adjust          — entrada compra / ajuste / pérdida / devolución
     GET    /inventory/stock/low             — productos por debajo del stock mínimo
+    GET    /inventory/stock/predictive      — proyección de días hasta quiebre de stock
 
   Configuración interna
     GET    /inventory/config                — flags actuales (control_peso, caducidad, etc.)
@@ -223,6 +224,29 @@ def list_movements(
         return inventory_service.list_movements(
             business_id=current_user["business_id"],
             limit=max(1, min(limit, 200)),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stock/predictive", summary="Proyección simple de quiebre de stock")
+def predictive_stock(
+    threshold_days: int = 7,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Heurística simple: consumo promedio diario de los últimos 30 días
+    (inventory_movements con reason='sale') por producto, y días estimados
+    hasta agotar el stock actual (current_stock / consumo_promedio_diario).
+
+    Solo devuelve productos con estimated_days <= threshold_days (default 7),
+    ordenados de menor a mayor urgencia. Productos sin ventas recientes (no
+    hay consumo con qué proyectar) quedan fuera del resultado.
+    """
+    try:
+        return inventory_service.get_predictive_stock(
+            business_id=current_user["business_id"],
+            threshold_days=threshold_days,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

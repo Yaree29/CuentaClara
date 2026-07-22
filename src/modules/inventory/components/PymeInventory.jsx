@@ -31,7 +31,11 @@ import profileStyles from '../../profile/styles/profile.styles';
 // todavía en esta pantalla. "caducidad" y "mermas" salieron de esta lista:
 // ya tienen acceso funcional real (ver ExpiringProductsCard/WasteModal).
 // "escaner" tampoco está acá porque ya tiene un widget real: ProductScannerWidget.
-const PLACEHOLDER_FLAGS = ['control_peso', 'recetas', 'produccion', 'stock_predictivo'];
+// "stock_predictivo" tampoco: ya tiene tarjeta real (ver PredictiveStockCard /
+// GET /inventory/stock/predictive).
+const PLACEHOLDER_FLAGS = ['control_peso', 'recetas', 'produccion'];
+
+const PREDICTIVE_THRESHOLD_DAYS = 7;
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 
@@ -188,6 +192,9 @@ const PymeInventory = () => {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
+  const [predictiveStock, setPredictiveStock] = useState([]);
+  const [loadingPredictive, setLoadingPredictive] = useState(true);
+
   const [formModalVisible, setFormModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [wasteModalVisible, setWasteModalVisible] = useState(false);
@@ -215,6 +222,18 @@ const PymeInventory = () => {
     }
   }, []);
 
+  const fetchPredictiveStock = useCallback(async () => {
+    setLoadingPredictive(true);
+    try {
+      const data = await inventoryService.getPredictiveStock(PREDICTIVE_THRESHOLD_DAYS);
+      setPredictiveStock(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setPredictiveStock([]);
+    } finally {
+      setLoadingPredictive(false);
+    }
+  }, []);
+
   // Categorías reales (mismo servicio que useInformalInventory.js) — no se
   // derivan de `products` porque una categoría recién creada sin productos
   // todavía no aparecería en esa lista.
@@ -233,7 +252,8 @@ const PymeInventory = () => {
       fetchAlerts();
       fetchProducts();
       fetchCategories();
-    }, [fetchAlerts, fetchProducts, fetchCategories])
+      fetchPredictiveStock();
+    }, [fetchAlerts, fetchProducts, fetchCategories, fetchPredictiveStock])
   );
 
   const totalAlerts = alerts.length;
@@ -263,7 +283,7 @@ const PymeInventory = () => {
         await inventoryService.createProduct(null, data);
       }
       closeProductForm();
-      await Promise.all([fetchProducts(), fetchAlerts()]);
+      await Promise.all([fetchProducts(), fetchAlerts(), fetchPredictiveStock()]);
     } catch (error) {
       Alert.alert('Error', error.message || 'No se pudo guardar el producto.');
     }
@@ -281,7 +301,7 @@ const PymeInventory = () => {
 
   const handleWasteRegistered = async () => {
     setWasteModalVisible(false);
-    await Promise.all([fetchProducts(), fetchAlerts()]);
+    await Promise.all([fetchProducts(), fetchAlerts(), fetchPredictiveStock()]);
   };
 
   // "Productos por vencer": expiration_date real (products.expiration_date)
@@ -419,6 +439,47 @@ const PymeInventory = () => {
                     ))
                   )}
                 </View>
+              </View>
+            )}
+
+            {/* ── Stock predictivo: días estimados hasta quiebre (reemplaza el placeholder) ── */}
+            {config.stock_predictivo && (
+              <View style={styles.sectionBlock}>
+                <View style={styles.sectionRow}>
+                  <Text style={styles.sectionTitle}>Stock predictivo</Text>
+                </View>
+                {loadingPredictive ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : (
+                  <View style={styles.expiringCard}>
+                    {predictiveStock.length === 0 ? (
+                      <Text style={styles.emptyText}>
+                        Ningún producto se quedará sin stock en los próximos {PREDICTIVE_THRESHOLD_DAYS} días.
+                      </Text>
+                    ) : (
+                      predictiveStock.map((item, index) => (
+                        <View
+                          key={item.product_id}
+                          style={[styles.expiringRow, index === predictiveStock.length - 1 && styles.expiringRowLast]}
+                        >
+                          <Text style={styles.expiringName}>{item.product_name}</Text>
+                          <Text
+                            style={[
+                              styles.expiringDate,
+                              item.estimated_days <= 2 ? styles.expiringDateDanger : styles.expiringDateWarning,
+                            ]}
+                          >
+                            {item.estimated_days === 0
+                              ? 'Se agota hoy'
+                              : `~${item.estimated_days} d restantes`}
+                          </Text>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                )}
               </View>
             )}
 

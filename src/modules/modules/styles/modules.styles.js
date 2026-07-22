@@ -10,20 +10,17 @@ export default StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
-  topBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-  },
+  // Espacio entre el header (DashboardHeader, con logo/avatar) y la primera
+  // tarjeta (Análisis Estratégico) — antes ese espacio lo daba el título
+  // "Herramientas" que se quitó de esta pantalla.
   bodyContainer: {
-    paddingTop: 16,
+    paddingTop: 20,
+  },
+  sectionSeparator: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: 16,
+    marginVertical: 16,
   },
   menuSection: {
     marginBottom: 20,
@@ -36,7 +33,7 @@ export default StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 8,
-    marginLeft: 4,
+    marginHorizontal: 20,
   },
   menuSectionContent: {
     backgroundColor: colors.card,
@@ -90,6 +87,109 @@ export default StyleSheet.create({
   },
   activateText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
+
+  /* =====================
+     GRID "HERRAMIENTAS"
+  ===================== */
+  featuredCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    padding: 18,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  featuredIconContainer: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  featuredTextContainer: {
+    flex: 1,
+  },
+  featuredLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textButton,
+  },
+  featuredSubLabel: {
+    fontSize: 12,
+    color: colors.textButton,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  toolCard: {
+    width: '48%',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 12,
+    minHeight: 120,
+  },
+  toolIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  toolLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.rowLabel,
+  },
+  toolSubLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 3,
+    lineHeight: 15,
+  },
+  activateMoreCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 4,
+  },
+  activateMoreText: {
+    flex: 1,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.primary,
   },

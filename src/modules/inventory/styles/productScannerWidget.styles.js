@@ -54,6 +54,47 @@ export default StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  modeSwitch: {
+    flexDirection: 'row',
+    backgroundColor: colors.cardSecondary,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 14,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  modeButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  modeButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  modeButtonTextActive: {
+    color: colors.textButton,
+  },
+  cameraFrame: {
+    width: '100%',
+    height: 220,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginBottom: 10,
+  },
+  cameraView: {
+    width: '100%',
+    height: '100%',
+  },
   cornerLine: {
     position: 'absolute',
     top: 14,

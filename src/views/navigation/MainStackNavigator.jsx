@@ -25,6 +25,7 @@ import TipsScreen from '../../modules/tips/screens/TipsScreen';
 import OffersScreen from '../../modules/offers/screens/OffersScreen';
 import PymeInventory from '../../modules/inventory/components/PymeInventory';
 import StrategicAnalysisScreen from '../../modules/analytics/screens/StrategicAnalysisScreen';
+import ActivateModulesScreen from '../../modules/modules/screens/ActivateModulesScreen';
 import BillingHistoryScreen from '../../modules/Invoice/screens/BillingHistoryScreen';
 import BillingInsightsScreen from '../../modules/Invoice/screens/BillingInsightsScreen';
 
@@ -64,6 +65,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="offers" component={OffersScreen} />
       <Stack.Screen name="PymeInventory" component={PymeInventory} />
       <Stack.Screen name="StrategicAnalysis" component={StrategicAnalysisScreen} />
+      <Stack.Screen name="ActivateModules" component={ActivateModulesScreen} />
       <Stack.Screen name="BillingHistory" component={BillingHistoryScreen} />
       <Stack.Screen name="BillingInsights" component={BillingInsightsScreen} />
     </Stack.Navigator>

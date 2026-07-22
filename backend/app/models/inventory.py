@@ -5,6 +5,25 @@ from datetime import date
 import re
 
 
+# ─── Dinero ────────────────────────────────────────────────────────────────────
+
+MAX_MONEY_DECIMALS = 2
+
+
+def _check_money_decimals(v: Optional[Decimal], label: str) -> Optional[Decimal]:
+    """Un importe en moneda no puede tener más de 2 decimales. El frontend ya lo
+    limita al escribir (ProductFormModal.jsx), pero la validación real vive aquí:
+    sin ella, un cliente que llame la API directamente podía guardar precios como
+    12.3456 y el resto de la app los arrastraba en totales y PDFs."""
+    if v is None:
+        return v
+    exponent = v.as_tuple().exponent
+    # exponent es int para valores finitos; NaN/Infinity traen un str ('n','F').
+    if isinstance(exponent, int) and -exponent > MAX_MONEY_DECIMALS:
+        raise ValueError(f"{label} no puede tener más de {MAX_MONEY_DECIMALS} decimales.")
+    return v
+
+
 # ─── Categorías ────────────────────────────────────────────────────────────────
 
 class CategoryCreateRequest(BaseModel):
@@ -70,14 +89,14 @@ class ProductCreateRequest(BaseModel):
     def price_positive(cls, v: Decimal) -> Decimal:
         if v <= 0:
             raise ValueError("El precio debe ser mayor a $0.00.")
-        return v
+        return _check_money_decimals(v, "El precio")
 
     @field_validator("cost_price")
     @classmethod
     def cost_price_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v < 0:
             raise ValueError("El costo no puede ser negativo.")
-        return v
+        return _check_money_decimals(v, "El costo")
 
     @field_validator("initial_stock")
     @classmethod
@@ -125,14 +144,14 @@ class ProductUpdateRequest(BaseModel):
     def price_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v <= 0:
             raise ValueError("El precio debe ser mayor a $0.00.")
-        return v
+        return _check_money_decimals(v, "El precio")
 
     @field_validator("cost_price")
     @classmethod
     def cost_price_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v < 0:
             raise ValueError("El costo no puede ser negativo.")
-        return v
+        return _check_money_decimals(v, "El costo")
 
     @field_validator("stock")
     @classmethod
@@ -203,7 +222,7 @@ class StockAdjustRequest(BaseModel):
     def unit_cost_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v < 0:
             raise ValueError("El costo unitario no puede ser negativo.")
-        return v
+        return _check_money_decimals(v, "El costo unitario")
 
     @model_validator(mode="after")
     def unit_cost_required_for_purchase(self):

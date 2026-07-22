@@ -40,14 +40,11 @@ const actionCatalog = {
     route: 'PymeInventory',
   },
 
-  inventory_entry: {
-    id: 'inventory_entry',
-    title: 'Entrada Inventario',
-    subtitle: 'Registrar ingreso',
-    icon: ArchiveBoxIcon,
-    color: '#0891B2',
-    route: 'PymeInventory',
-  },
+  // 'inventory_entry' ("Entrada Inventario / Registrar ingreso") se eliminó:
+  // apuntaba a la misma ruta que new_product (PymeInventory) y hacía lo mismo,
+  // así que el dashboard mostraba dos botones para una única acción. Se quita
+  // del catálogo, no solo de moduleConfig, para que no vuelva a añadirse por
+  // error. La acción de inventario en Acciones Rápidas es 'new_product'.
 
   inventory_adjustment: {
     id: 'inventory_adjustment',

@@ -6,6 +6,7 @@ import useAuthStore from '../../store/useAuthStore';
 import useBlueprintStore from '../../store/useBlueprintStore';
 import { ASSISTANT_MODE_ACTIVE_FLAG } from '../../store/useAssistantModeStore';
 import authService from '../../modules/auth/services/authService';
+import { isRecoveryInProgress } from '../../modules/auth/utils/recoveryState';
 
 const AuthContext = createContext({});
 
@@ -54,6 +55,17 @@ export const AuthProvider = ({ children }) => {
         const currentSession = await authService.getCurrentSession();
 
         if (!isMounted) return;
+
+        // Si la app se abrió por el enlace de recuperación, la sesión que
+        // encuentra getCurrentSession() es la de recuperación (App.js ya hizo
+        // setSession). Tratarla como un login normal metía al usuario al stack
+        // principal en vez de mostrarle "Nueva contraseña" — una carrera entre
+        // este efecto y el manejo del deep link. Se deja la sesión intacta (la
+        // necesita updateUser) pero NO se marca como autenticado.
+        if (isRecoveryInProgress()) {
+          setLogout();
+          return;
+        }
 
         if (currentSession?.user) {
           setLogin(currentSession.user, currentSession.token);

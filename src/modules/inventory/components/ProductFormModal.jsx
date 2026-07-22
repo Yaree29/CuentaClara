@@ -21,11 +21,32 @@ const generateBarcode = () => String(Date.now()).slice(-12);
 
 // ─── Reglas de validación ──────────────────────────────────────────────────────
 
+/**
+ * Limpia un importe mientras se escribe: solo dígitos, un único punto decimal y
+ * como máximo 2 decimales (es dinero). Antes solo se filtraban los caracteres
+ * no numéricos, así que se podían guardar precios como 12.34567.
+ */
+const MAX_MONEY_DECIMALS = 2;
+
+const cleanMoneyInput = (val) => {
+  const cleaned = String(val).replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+  const dotIndex = cleaned.indexOf('.');
+  if (dotIndex === -1) return cleaned;
+  return cleaned.slice(0, dotIndex + 1 + MAX_MONEY_DECIMALS);
+};
+
+/** Decimales de más — red de seguridad para valores precargados al editar. */
+const hasTooManyDecimals = (val) => {
+  const [, decimals = ''] = String(val).split('.');
+  return decimals.length > MAX_MONEY_DECIMALS;
+};
+
 /** El precio debe ser un número positivo mayor que cero */
 const validatePrice = (val) => {
   const n = parseFloat(val);
   if (val === '' || isNaN(n)) return 'El precio es obligatorio.';
   if (n <= 0) return 'El precio debe ser mayor a $0.00.';
+  if (hasTooManyDecimals(val)) return 'El precio admite máximo 2 decimales.';
   return null;
 };
 
@@ -35,6 +56,7 @@ const validateCostPrice = (val) => {
   const n = parseFloat(val);
   if (isNaN(n)) return 'El costo debe ser un número.';
   if (n < 0) return 'El costo no puede ser negativo.';
+  if (hasTooManyDecimals(val)) return 'El costo admite máximo 2 decimales.';
   return null;
 };
 
@@ -180,14 +202,15 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
   };
 
   const handlePriceChange = (val) => {
-    // Solo permitir dígitos y un punto decimal
-    const cleaned = val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    // Dígitos, un solo punto y máximo 2 decimales — el recorte ocurre al
+    // escribir, así que el tercer decimal directamente no entra.
+    const cleaned = cleanMoneyInput(val);
     setPrice(cleaned);
     setPriceError(validatePrice(cleaned));
   };
 
   const handleCostPriceChange = (val) => {
-    const cleaned = val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    const cleaned = cleanMoneyInput(val);
     setCostPrice(cleaned);
     setCostPriceError(validateCostPrice(cleaned));
   };

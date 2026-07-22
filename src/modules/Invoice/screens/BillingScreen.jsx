@@ -8,6 +8,7 @@ import {
   ChartBarIcon,
   InformationCircleIcon,
 } from 'react-native-heroicons/outline';
+import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 import { useBilling } from '../hooks/useBilling';
 import styles from '../styles/billing.styles';
 import colors from '../../../theme/colors';
@@ -355,9 +356,9 @@ const BillingScreen = () => {
 
   return (
     <SafeAreaView style={styles.hubScreen} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.hubContent}>
-        <Text style={styles.hubTitle}>MiRUC</Text>
+      <DashboardHeader title="MiRUC" />
 
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.hubContent}>
         <TouchableOpacity style={styles.heroCta} onPress={() => setFormVisible(true)} activeOpacity={0.85}>
           <View style={styles.heroCtaIconWrap}>
             <DocumentPlusIcon size={28} color={colors.textWhite} />

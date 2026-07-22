@@ -38,6 +38,12 @@ export const buildDashboard = ({
 
   const rawSettings = businessData?.settings || {};
 
+  // Se quitaron salesFormat/useBarcodes/wasteMargin/basicReports/
+  // unitOfMeasure/useDigitalScale/simplifiedInventory: se leían de vuelta
+  // en summaryRules.js pero solo como passthrough hacia goal/finance/
+  // business/status, objetos que PymeDashboard.jsx nunca destructura ni
+  // renderiza — datos guardados sin ningún efecto visual real (ver
+  // auditoría). Quedan solo los que sí cambian algo visible o de negocio.
   const settings = {
     taxRate: Number(
       rawSettings.taxRate ??
@@ -49,29 +55,8 @@ export const buildDashboard = ({
     manageTips:
       rawSettings.manageTips === 'Sí',
 
-    salesFormat:
-      rawSettings.salesFormat || 'Mostrador',
-
-    useBarcodes:
-      rawSettings.useBarcodes === 'Sí',
-
-    wasteMargin:
-      Number(rawSettings.wasteMargin ?? 0),
-
-    basicReports:
-      rawSettings.basicReports === 'Sí',
-
-    unitOfMeasure:
-      rawSettings.unitOfMeasure || 'Kg',
-
-    useDigitalScale:
-      rawSettings.useDigitalScale === 'Sí',
-
     employeeCommission:
       rawSettings.employeeCommission === 'Sí',
-
-    simplifiedInventory:
-      rawSettings.simplifiedInventory === 'Sí',
 
     sellPhysicalProducts:
       rawSettings.sellPhysicalProducts === 'Sí',

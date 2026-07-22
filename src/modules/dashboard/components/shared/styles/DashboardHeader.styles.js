@@ -12,6 +12,10 @@ import colors from '../../../../../theme/colors';
 const AVATAR_SIZE = 36;
 const ACTIONS_SLOT_MIN_WIDTH = 40;
 
+// Avatar más grande, solo para la fila de saludo (showGreeting) de
+// HomeScreen.jsx — necesita más presencia junto al saludo de 2 líneas.
+const GREETING_AVATAR_SIZE = 48;
+
 export default StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
@@ -58,5 +62,65 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
+  },
+
+  /* ===================== showGreeting (HomeScreen) ===================== */
+  // Contenedor propio (no headerContainer) — más separación respecto a la
+  // barra de notificaciones, exclusiva de esta fila de saludo.
+  headerContainerGreeting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: Platform.OS === 'ios' ? 20 : 22,
+    backgroundColor: colors.card,
+    shadowColor: colors.shadowCard,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  greetingTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  // Variantes propias del Header (NO reutilizar welcomeTitle/welcomeSubtitle
+  // de InformalDashboard.styles.js — esas están pensadas para el bloque de
+  // bienvenida de ancho completo que vivía dentro del scroll, fontSize 38,
+  // demasiado grande para la fila fija del header junto al avatar).
+  headerGreetingTitle: {
+    color: colors.greeting,
+    fontSize: 20,
+    letterSpacing: -0.3,
+  },
+  headerGreetingTitleRegular: {
+    fontWeight: '400',
+  },
+  headerGreetingTitleBold: {
+    fontWeight: '700',
+  },
+  headerGreetingSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 6,
+  },
+  avatarContainerLarge: {
+    width: GREETING_AVATAR_SIZE,
+    height: GREETING_AVATAR_SIZE,
+    borderRadius: GREETING_AVATAR_SIZE / 2,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImageLarge: {
+    width: GREETING_AVATAR_SIZE,
+    height: GREETING_AVATAR_SIZE,
+    borderRadius: GREETING_AVATAR_SIZE / 2,
+  },
+  avatarInitialLarge: {
+    color: colors.textWhite,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

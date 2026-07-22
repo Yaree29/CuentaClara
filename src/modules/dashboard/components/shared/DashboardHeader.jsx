@@ -12,20 +12,34 @@
 //            solo layout para que el tamaño del avatar y de la letra del
 //            título sea idéntico en todos los módulos y no haya sobresaltos
 //            visuales al cambiar de pestaña.
+//
+//            showGreeting=true (solo HomeScreen.jsx): reemplaza el título
+//            plano por el saludo dinámico que antes vivía en
+//            DashboardGreeting.jsx (bloque aparte, dentro del scroll de cada
+//            dashboard) — misma lógica (hook useDashboardGreeting, sin
+//            duplicarla), ahora en la fila fija del Header, con el avatar
+//            más grande alineado a la derecha en vez de a la izquierda.
+//
+//            Con un asistente operando el dispositivo (Modo Asistente), el
+//            ícono de perfil se quita por completo en ambas variantes — no
+//            solo se deshabilita — porque llevaría a "Mi Perfil" con la
+//            sesión del dueño (el asistente no tiene sesión propia, ver
+//            assistants_service.py).
 // =============================================================================
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import colors from '../../../../theme/colors';
 import styles from './styles/DashboardHeader.styles';
 import useAuthStore from '../../../../store/useAuthStore';
 import useAssistantModeStore from '../../../../store/useAssistantModeStore';
+import useDashboardGreeting from './DashboardGreeting';
 
 // rightActions: nodo opcional con los botones/acciones propias de la pantalla
 // (ej. filtro, búsqueda). Se renderiza dentro de un slot de tamaño fijo para
 // que, tenga o no contenido, el título y el avatar no se muevan de pantalla
-// a pantalla.
-const DashboardHeader = ({ title, rightActions = null }) => {
+// a pantalla. Ignorado cuando showGreeting=true (esa fila solo tiene saludo
+// + avatar, sin acciones extra).
+const DashboardHeader = ({ title, rightActions = null, showGreeting = false, todayIncome = 0 }) => {
   const navigation = useNavigation();
 
   const user = useAuthStore((state) => state.user);
@@ -38,6 +52,44 @@ const DashboardHeader = ({ title, rightActions = null }) => {
   // propia, ver assistants_service.py). Sin el ícono, no hay forma de entrar
   // ahí desde la UI mientras un asistente esté activo.
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
+
+  // El hook se llama siempre (reglas de hooks) — el cálculo es barato incluso
+  // cuando showGreeting=false y no se usa su resultado. compact=true: el
+  // header tiene mucho menos ancho que el bloque de bienvenida de ancho
+  // completo, así que siempre usa las frases cortas sin importar la
+  // longitud del nombre del negocio.
+  const { firstName, subtitle } = useDashboardGreeting(todayIncome, true);
+
+  if (showGreeting) {
+    return (
+      <View style={styles.headerContainerGreeting}>
+        <View style={styles.greetingTextWrap}>
+          <Text style={styles.headerGreetingTitle} numberOfLines={1}>
+            <Text style={styles.headerGreetingTitleRegular}>¡Hola, </Text>
+            <Text style={styles.headerGreetingTitleBold}>{firstName}</Text>
+            <Text style={styles.headerGreetingTitleRegular}>!</Text>
+          </Text>
+          <Text style={styles.headerGreetingSubtitle} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        </View>
+
+        {!activeAssistant && (
+          <TouchableOpacity
+            style={styles.avatarContainerLarge}
+            onPress={() => navigation.navigate('profile')}
+            activeOpacity={0.7}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImageLarge} />
+            ) : (
+              <Text style={styles.avatarInitialLarge}>{initial}</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.headerContainer}>

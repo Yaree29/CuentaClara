@@ -14,7 +14,6 @@ import SummaryCard from "./shared/SummaryCard";
 import AlertCard from "./shared/AlertCard";
 import GoalProgressCard from "./shared/GoalProgressCard";
 import QuickActions from "./shared/QuickActions";
-import DashboardGreeting from "./shared/DashboardGreeting";
 import { buildDashboard } from "../engine/dashboardEngine";
 import { formatMoney } from "../helpers/currency";
 
@@ -32,7 +31,7 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 // se muestra como número — igual que antes en buildSummaryCards).
 const SECONDARY_CURRENCY_IDS = ["cash", "expenses"];
 
-const PymeDashboard = () => {
+const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
 
   const user = useAuthStore((state) => state.user);
   const preferences = useAuthStore((state) => state.preferences) || {};
@@ -90,6 +89,13 @@ const PymeDashboard = () => {
     );
     setTodayIncome(income);
   }, [dailySales, dailyTotals]);
+
+  // Reporta el ingreso del día hacia arriba (HomeScreen.jsx) — ahí lo usa el
+  // saludo de DashboardHeader.jsx (showGreeting), que vive fuera de este
+  // ScrollView.
+  useEffect(() => {
+    onTodayIncomeChange?.(todayIncome);
+  }, [todayIncome, onTodayIncomeChange]);
 
   const dashboard = useMemo(() => {
 
@@ -158,9 +164,6 @@ const PymeDashboard = () => {
         />
       }
     >
-      {/* BIENVENIDA */}
-        <DashboardGreeting todayIncome={todayIncome} />
-
       {/*Banner resumen*/}
       <View style={styles.heroCard}>
         <Text style={styles.heroTitle}>Ventas del Día</Text>

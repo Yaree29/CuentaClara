@@ -18,8 +18,6 @@ import AssistantSelectScreen from '../../modules/assistants/screens/AssistantSel
 // MainNavigator.jsx). Se registran como screens de stack para poder
 // navegarlos con navigation.navigate() sin ocupar espacio en el tab bar.
 import PurchasesScreen from '../../modules/purchases/screens/PurchasesScreen';
-import StaffScreen from '../../modules/staff/screens/StaffScreen';
-import CashScreen from '../../modules/cash/screens/CashScreen';
 import ServicesScreen from '../../modules/business_services/screens/ServicesScreen';
 import RecipesScreen from '../../modules/recipes/screens/RecipesScreen';
 import CommissionsScreen from '../../modules/commissions/screens/CommissionsScreen';
@@ -59,8 +57,6 @@ const MainStackNavigator = () => {
 
       {/* Módulos PYME, navegables desde ModulesScreen */}
       <Stack.Screen name="purchases" component={PurchasesScreen} />
-      <Stack.Screen name="staff" component={StaffScreen} />
-      <Stack.Screen name="cash" component={CashScreen} />
       <Stack.Screen name="services" component={ServicesScreen} />
       <Stack.Screen name="recipes" component={RecipesScreen} />
       <Stack.Screen name="commissions" component={CommissionsScreen} />

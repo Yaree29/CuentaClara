@@ -49,10 +49,10 @@ export const buildSummaryCards = ({
       value: Number(totalSales),
       type: 'currency',
       currency,
-      subtitle:
-        settings.salesFormat === 'Mesa'
-          ? 'Ventas por mesas'
-          : 'Ventas del día',
+      // 'Mesa' nunca fue una opción real de settings.salesFormat (las
+      // opciones eran Mostrador/Delivery/Ambos) — esa rama nunca se activaba.
+      // salesFormat se quitó del registro (ver auditoría), subtítulo fijo.
+      subtitle: 'Ventas del día',
       icon: BanknotesIcon,
       color: colors.success,
     },
@@ -73,10 +73,11 @@ export const buildSummaryCards = ({
       id: 'transactions',
       title: 'Movimientos',
       value: Number(totalTransactions),
-      subtitle:
-        settings.basicReports
-          ? 'Con reportes'
-          : 'Registrados',
+      // basicReports se quitó del registro (ver auditoría): esta tarjeta
+      // ("Movimientos") además ni siquiera se renderiza en PymeDashboard.jsx
+      // (se descarta explícitamente ahí), así que el subtítulo condicional
+      // nunca era visible.
+      subtitle: 'Registrados',
       icon: ArrowTrendingUpIcon,
       color: colors.warning,
     },
@@ -127,10 +128,6 @@ export const buildGoal = ({
       Math.max(target - current, 0),
     taxRate:
       settings.taxRate,
-    salesFormat:
-      settings.salesFormat,
-    unitOfMeasure:
-      settings.unitOfMeasure,
     icon:
       TrophyIcon,
   };
@@ -155,12 +152,6 @@ export const buildFinance = ({
       settings.taxRate,
     manageTips:
       settings.manageTips,
-    salesFormat:
-      settings.salesFormat,
-    unitOfMeasure:
-      settings.unitOfMeasure,
-    simplifiedInventory:
-      settings.simplifiedInventory,
   };
 };
 
@@ -255,18 +246,8 @@ export const buildBusiness = ({
       businessData?.primary_color || null,
     taxRate:
       settings.taxRate,
-    salesFormat:
-      settings.salesFormat,
-    unitOfMeasure:
-      settings.unitOfMeasure,
     manageTips:
       settings.manageTips,
-    useBarcodes:
-      settings.useBarcodes,
-    useDigitalScale:
-      settings.useDigitalScale,
-    simplifiedInventory:
-      settings.simplifiedInventory,
     sellPhysicalProducts:
       settings.sellPhysicalProducts,
     transformsRawMaterial:
@@ -319,14 +300,6 @@ export const buildStatus = ({
       "es",
     taxRate:
       settings.taxRate,
-    salesFormat:
-      settings.salesFormat,
-    useBarcodes:
-      settings.useBarcodes,
-    useDigitalScale:
-      settings.useDigitalScale,
-    simplifiedInventory:
-      settings.simplifiedInventory,
     employeeCommission:
       settings.employeeCommission,
   };

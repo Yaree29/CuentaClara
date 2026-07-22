@@ -1,57 +1,80 @@
-// =============================================================================
-// CREADO: 2026-07-19
-// Propósito: Pantalla placeholder para el Análisis Estratégico, accesible
-//            desde ModulesScreen. Sigue el mismo patrón que CashScreen.jsx /
-//            StaffScreen.jsx, usando los tokens de colors.js.
-// =============================================================================
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
-import colors from '../../../theme/colors';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import styles from '../styles/StrategicAnalysisScreen.styles';
+import VentasSection from '../utils/VentasSection';
+import FinanzasSection from '../utils/FinanzasSection';
+import InventarioSection from '../utils/InventarioSection';
+import ServiciosSection from '../utils/ServiciosSection';
+import { getStrategicAnalysis } from '../services/strategicAnalysisService';
 
 const StrategicAnalysisScreen = () => {
+  const [analysisData, setAnalysisData] = useState(null);
+
+  const userPermissions = {
+    canViewVentas: true,
+    canViewFinanzas: true,
+    canViewInventario: true,
+    canViewServicios: true,
+  };
+
+
+  useEffect(() => {
+    const loadAnalysis = async () => {
+      const response = await getStrategicAnalysis();
+      setAnalysisData(response);
+    };
+    loadAnalysis();
+  }, []);
+
+  if (!analysisData) {
+    return (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingText}>
+        Cargando reportes...
+      </Text>
+    </View>
+    );
+  }
+
   return (
-    <MainLayout>
-      <View style={styles.container}>
-        <Text style={styles.icon}>📊</Text>
-        <Text style={styles.title}>Análisis Estratégico</Text>
-        <Text style={styles.subtitle}>Próximamente</Text>
-        <Text style={styles.description}>
-          Aquí podrás ver indicadores clave, tendencias y proyecciones para tomar mejores decisiones de negocio.
+    <ScrollView
+      style={styles.mainContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          Reportes y Analíticas
         </Text>
       </View>
-    </MainLayout>
+
+      {userPermissions.canViewVentas && (
+        <VentasSection
+          data={analysisData.ventas}
+        />
+      )}
+
+      {userPermissions.canViewFinanzas && (
+        <FinanzasSection
+          data={analysisData.finanzas}
+        />
+      )}
+
+      {userPermissions.canViewInventario && (
+        <InventarioSection
+          data={analysisData.inventario}
+        />
+      )}
+
+      {userPermissions.canViewServicios && (
+        <ServiciosSection
+          data={analysisData.servicios}
+        />
+      )}
+
+      <View style={styles.footerSpacing} />
+    </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-});
 
 export default StrategicAnalysisScreen;

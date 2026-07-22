@@ -14,11 +14,14 @@ const registerService = {
     return apiRequestPublic('/auth/categories');
   },
 
-  // Plantillas de industria para el paso 3 del registro PYME
- /* getTemplates: async () => {
+  // Plantillas de industria para el paso 3 del registro PYME — determinan
+  // industry_template_id (y por lo tanto category_group / flags de
+  // inventario en el backend). No confundir con getCategories(), que lee
+  // la tabla genérica `categories`, sin relación con category_group.
+  getTemplates: async () => {
     return apiRequestPublic('/auth/templates');
   },
-*/
+
   register: async (form) => {
     const {
       name,
@@ -29,10 +32,10 @@ const registerService = {
       businessName,
       profileType,
       categoryId,
-      //industryTemplateId,
+      industryTemplateId,
       address,
       nit,
-      logoUrl,
+      logoBase64,
       settings,
       businessType,
       avgPrice,
@@ -53,6 +56,14 @@ const registerService = {
     // en settings junto a la metadata de onboarding — no tienen columna propia.
     const mergedSettings = {
       ...(settings || {}),
+      // auth_service.py lee estos dos en snake_case (sell_physical_products/
+      // transforms_raw_material) para decidir modules_to_activate en
+      // 'servicios'/'comida_preparada' — el formulario los captura en
+      // camelCase (sellPhysicalProducts/transformsRawMaterial), así que se
+      // agregan aquí también en snake_case. Mismo patrón que business_type/
+      // avg_price justo abajo.
+      sell_physical_products: settings?.sellPhysicalProducts === 'Sí',
+      transforms_raw_material: settings?.transformsRawMaterial === 'Sí',
       ...(isInformal
         ? {
             business_type: businessType || null,
@@ -70,11 +81,11 @@ const registerService = {
         password,
         phone: phone || null,
         category_id: categoryId || null,
-        //industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
+        industry_template_id: industryTemplateId || null, // null = informal, usa módulos por defecto
         ui_mode: uiMode,
         address: address && address.trim() ? address.trim() : null,
-        tax_id: nit || form.taxId || null,
-        logo_url: logoUrl || null,
+        tax_id: nit || null,
+        logo_base64: logoBase64 || null,
         settings: mergedSettings,
         tax_enabled: !!taxEnabled,
       }),

@@ -1,29 +1,80 @@
-// =============================================================================
-// CREADO: 2026-07-19
-// Propósito: Pantalla placeholder para el Análisis Estratégico, accesible
-//            desde ModulesScreen. Sigue el mismo patrón que CashScreen.jsx /
-//            StaffScreen.jsx, usando los tokens de colors.js.
-// =============================================================================
-import React from 'react';
-import { View, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import styles from '../styles/strategicAnalysisScreen.styles';
+import VentasSection from '../utils/VentasSection';
+import FinanzasSection from '../utils/FinanzasSection';
+import InventarioSection from '../utils/InventarioSection';
+import ServiciosSection from '../utils/ServiciosSection';
+import { getStrategicAnalysis } from '../services/strategicAnalysisService';
 
 const StrategicAnalysisScreen = () => {
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Análisis Estratégico" />
+  const [analysisData, setAnalysisData] = useState(null);
 
-      <View style={styles.container}>
-        <Text style={styles.icon}>📊</Text>
-        <Text style={styles.subtitle}>Próximamente</Text>
-        <Text style={styles.description}>
-          Aquí podrás ver indicadores clave, tendencias y proyecciones para tomar mejores decisiones de negocio.
+  const userPermissions = {
+    canViewVentas: true,
+    canViewFinanzas: true,
+    canViewInventario: true,
+    canViewServicios: true,
+  };
+
+
+  useEffect(() => {
+    const loadAnalysis = async () => {
+      const response = await getStrategicAnalysis();
+      setAnalysisData(response);
+    };
+    loadAnalysis();
+  }, []);
+
+  if (!analysisData) {
+    return (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingText}>
+        Cargando reportes...
+      </Text>
+    </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.mainContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          Reportes y Analíticas
         </Text>
       </View>
-    </SafeAreaView>
+
+      {userPermissions.canViewVentas && (
+        <VentasSection
+          data={analysisData.ventas}
+        />
+      )}
+
+      {userPermissions.canViewFinanzas && (
+        <FinanzasSection
+          data={analysisData.finanzas}
+        />
+      )}
+
+      {userPermissions.canViewInventario && (
+        <InventarioSection
+          data={analysisData.inventario}
+        />
+      )}
+
+      {userPermissions.canViewServicios && (
+        <ServiciosSection
+          data={analysisData.servicios}
+        />
+      )}
+
+      <View style={styles.footerSpacing} />
+    </ScrollView>
   );
 };
+
 
 export default StrategicAnalysisScreen;

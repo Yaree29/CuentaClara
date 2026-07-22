@@ -5,8 +5,8 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
-  ScrollView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XMarkIcon } from 'react-native-heroicons/solid';
 import styles from '../styles/informalInventory.styles';
@@ -216,22 +216,26 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       navigationBarTranslucent={true}
       onRequestClose={onClose}
     >
-      {/* Misma estructura que el modal de fiado (InformalCredit): overlay a
-          pantalla completa + contenido anclado abajo, SIN KeyboardAvoidingView.
-          El adjustResize nativo de Android (AndroidManifest) sube el contenido
-          sobre el teclado; meter un KeyboardAvoidingView aquí peleaba con ese
-          resize y despegaba el formulario del borde inferior. */}
+      {/* Modal bottom-sheet: overlay a pantalla completa + contenido anclado
+          abajo. KeyboardAwareScrollView desplaza el contenido para que el
+          campo enfocado quede visible sobre el teclado, sin pelear con el
+          adjustResize nativo de Android. */}
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             {/* Encabezado */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={styles.modalTitle}>{initialData ? 'Editar Producto' : 'Nuevo Producto'}</Text>
+              <Text style={styles.modalTitle}>{initialData ? 'Editar Producto' : 'Producto Nuevo'}</Text>
               <TouchableOpacity onPress={onClose}>
                 <XMarkIcon size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              enableOnAndroid={true}
+              extraScrollHeight={20}
+            >
 
               {/* ── Nombre ── */}
               <View style={styles.formGroup}>
@@ -262,7 +266,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
 
               {/* ── Costo (insumo, usado por Recetas) ── */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Costo ($)</Text>
+                <Text style={styles.formLabel}>Costo de Producción ($)</Text>
                 <TextInput
                   style={[styles.formInput, costPriceError && styles.inputError]}
                   value={costPrice}
@@ -397,7 +401,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                   <Text style={styles.deleteBtnText}>Eliminar producto</Text>
                 </TouchableOpacity>
               )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </View>
       </View>
     </Modal>

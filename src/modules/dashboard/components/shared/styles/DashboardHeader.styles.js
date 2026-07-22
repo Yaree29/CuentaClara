@@ -84,20 +84,24 @@ export default StyleSheet.create({
     flex: 1,
     paddingRight: 12,
   },
-  greetingTitle: {
+  // Variantes propias del Header (NO reutilizar welcomeTitle/welcomeSubtitle
+  // de InformalDashboard.styles.js — esas están pensadas para el bloque de
+  // bienvenida de ancho completo que vivía dentro del scroll, fontSize 38,
+  // demasiado grande para la fila fija del header junto al avatar).
+  headerGreetingTitle: {
     color: colors.greeting,
-    fontSize: 22,
+    fontSize: 20,
     letterSpacing: -0.3,
   },
-  greetingTitleRegular: {
+  headerGreetingTitleRegular: {
     fontWeight: '400',
   },
-  greetingTitleBold: {
+  headerGreetingTitleBold: {
     fontWeight: '700',
   },
-  greetingSubtitle: {
+  headerGreetingSubtitle: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     marginTop: 6,
   },

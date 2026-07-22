@@ -18,6 +18,25 @@ import {
   getPasswordStrength
 } from '../utils/validation';
 
+// Traduce el category_group de la plantilla de industria elegida (ver
+// auth_service.py) al nombre de la categoría genérica (tabla `categories`),
+// para resolver su id real. No son la misma tabla: industry_templates tiene
+// muchas más filas que categories (1-5), así que nunca se puede reusar el id
+// de la plantilla como category_id directamente.
+const CATEGORY_GROUP_TO_NAME = {
+  alimentos: 'Alimentos',
+  servicios: 'Servicios',
+  comercio: 'Comercio',
+  comida_preparada: 'Restaurante',
+  general: 'General',
+};
+
+const resolveCategoryId = (categoryGroup, categories) => {
+  const name = CATEGORY_GROUP_TO_NAME[categoryGroup] || CATEGORY_GROUP_TO_NAME.general;
+  const match = categories.find((c) => c.name === name);
+  return match ? match.id : null;
+};
+
 const RegisterScreen = ({ navigation }) => {
   const setLogin = useAuthStore((state) => state.setLogin);
   const { linkBiometricSession, isBiometricAvailable } = useAuth();
@@ -64,6 +83,7 @@ const RegisterScreen = ({ navigation }) => {
   });
 
   const [templates, setTemplates] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [logoUri, setLogoUri] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -274,12 +294,14 @@ const RegisterScreen = ({ navigation }) => {
     let mounted = true;
     (async () => {
       try {
-        const [tmplData, biometricEnabled] = await Promise.all([
+        const [tmplData, catData, biometricEnabled] = await Promise.all([
           registerService.getTemplates(),
+          registerService.getCategories(),
           isBiometricAvailable(),
         ]);
         if (mounted) {
           setTemplates(tmplData);
+          setCategories(catData);
           setBiometricAvailable(biometricEnabled);
         }
       } catch (e) {
@@ -500,7 +522,7 @@ const RegisterScreen = ({ navigation }) => {
                         key={t.id}
                         onPress={() => {
                           updateField('industryTemplateId', t.id);
-                          updateField('categoryId', t.id); 
+                          updateField('categoryId', resolveCategoryId(t.category_group, categories));
                           setTemplatePickerOpen(false);
                         }}
                         style={styles.dropdownItem}

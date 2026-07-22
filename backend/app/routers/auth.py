@@ -166,7 +166,7 @@ def get_categories():
 @router.get("/templates", summary="Plantillas de industria para registro PYME")
 def get_templates():
     result = supabase_admin.table("industry_templates")\
-        .select("id, name, icon, default_modules")\
+        .select("id, name, icon, default_modules, category_group")\
         .order("id")\
         .execute()
     return result.data

@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // Hook compartido para el sistema de flags de "Configuración de Inventario"
 // (control_peso, caducidad, mermas, recetas, produccion, escaner,
-// stock_predictivo). Lo consumen tanto SettingsScreen.jsx (toggles editables)
+// stock_predictivo). Lo consumen tanto AppSettingsScreen.jsx (toggles editables)
 // como PymeInventory.jsx (mostrar/ocultar secciones), para que ambos lean del
 // mismo estado sin duplicar las llamadas a businessService/inventoryService.
 //

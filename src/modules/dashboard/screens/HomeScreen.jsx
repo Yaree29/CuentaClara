@@ -35,7 +35,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <DashboardHeader variant="home" />
+      <DashboardHeader title="Inicio" />
       {renderDashboard()}
     </SafeAreaView>
   );

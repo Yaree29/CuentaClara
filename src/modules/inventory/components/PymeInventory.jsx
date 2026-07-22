@@ -59,7 +59,7 @@ const PymeInventory = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Inventario Pyme" variant="default" />
+      <DashboardHeader title="Inventario Pyme" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

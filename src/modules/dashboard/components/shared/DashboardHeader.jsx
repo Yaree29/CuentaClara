@@ -40,19 +40,22 @@ const DashboardHeader = ({ title, rightActions = null, showGreeting = false, tod
   const initial = (user?.name || user?.business?.name || 'U').charAt(0).toUpperCase();
 
   // El hook se llama siempre (reglas de hooks) — el cálculo es barato incluso
-  // cuando showGreeting=false y no se usa su resultado.
-  const { firstName, subtitle } = useDashboardGreeting(todayIncome);
+  // cuando showGreeting=false y no se usa su resultado. compact=true: el
+  // header tiene mucho menos ancho que el bloque de bienvenida de ancho
+  // completo, así que siempre usa las frases cortas sin importar la
+  // longitud del nombre del negocio.
+  const { firstName, subtitle } = useDashboardGreeting(todayIncome, true);
 
   if (showGreeting) {
     return (
       <View style={styles.headerContainerGreeting}>
         <View style={styles.greetingTextWrap}>
-          <Text style={styles.greetingTitle} numberOfLines={1}>
-            <Text style={styles.greetingTitleRegular}>¡Hola, </Text>
-            <Text style={styles.greetingTitleBold}>{firstName}</Text>
-            <Text style={styles.greetingTitleRegular}>!</Text>
+          <Text style={styles.headerGreetingTitle} numberOfLines={1}>
+            <Text style={styles.headerGreetingTitleRegular}>¡Hola, </Text>
+            <Text style={styles.headerGreetingTitleBold}>{firstName}</Text>
+            <Text style={styles.headerGreetingTitleRegular}>!</Text>
           </Text>
-          <Text style={styles.greetingSubtitle} numberOfLines={1}>
+          <Text style={styles.headerGreetingSubtitle} numberOfLines={2}>
             {subtitle}
           </Text>
         </View>

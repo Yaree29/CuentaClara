@@ -149,7 +149,7 @@ const SettingsScreen = () => {
                 subLabel="Alertas y avisos"
                 iconBgStyle={styles.iconContainerBusiness}
                 iconColor={colors.primary}
-                onPress={() => {}}
+                onPress={() => navigation.navigate('NotificationSettings')}
               />
               <MenuItem
                 icon="apps-outline"

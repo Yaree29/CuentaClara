@@ -43,6 +43,9 @@ class ProductCreateRequest(BaseModel):
     unit: Optional[str] = None
     min_stock: Decimal = Decimal("0")
     purchase_type: Optional[str] = "register_only"
+    # Asistente activo (Modo Asistente) que creó el producto, si aplica.
+    # None = producto creado directamente por el dueño.
+    assistant_id: Optional[int] = None
 
     @field_validator("name")
     @classmethod
@@ -155,6 +158,9 @@ class StockAdjustRequest(BaseModel):
     quantity: Decimal           # positivo = entrada, negativo = salida
     reason: str                 # purchase | waste | manual | return
     notes: Optional[str] = None
+    # Asistente activo (Modo Asistente) que hizo el ajuste, si aplica.
+    # None = ajuste hecho directamente por el dueño.
+    assistant_id: Optional[int] = None
 
     @field_validator("quantity")
     @classmethod

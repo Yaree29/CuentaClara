@@ -10,6 +10,7 @@ import { AuthProvider } from './src/views/providers/AuthProvider';
 import { UserTypeProvider } from './src/views/providers/UserTypeProvider';
 import RootNavigator from './src/views/navigation/RootNavigator';
 import GlobalFAB from './src/components/ui/goblalFAB';
+import NotificationsListener from './src/modules/notifications/components/NotificationsListener';
 
 export const navigationRef = createNavigationContainerRef();
 
@@ -108,6 +109,7 @@ export default function App() {
                     <UserTypeProvider>
                         <RootNavigator />
                         <GlobalFAB />
+                        <NotificationsListener />
                     </UserTypeProvider>
                 </AuthProvider>
             </NavigationContainer>

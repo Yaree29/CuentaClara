@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Linking } from 'react-native';
 import { XMarkIcon, ChatBubbleLeftEllipsisIcon } from 'react-native-heroicons/solid';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styles from '../styles/informalInventory.styles';
 import colors from '../../../theme/colors';
 
 const PromoGeneratorModal = ({ visible, onClose, selectedProducts, onGenerate }) => {
   const [customMessage, setCustomMessage] = useState('');
 
+  // Sin este inset, "Enviar por WhatsApp" queda tapado por la barra de
+  // navegación de Android. Mismo patrón que ProductFormModal.jsx (que ya lo
+  // aplica): requiere navigationBarTranslucent para que el inset no llegue en 0.
+  const insets = useSafeAreaInsets();
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      statusBarTranslucent={true}
+      navigationBarTranslucent={true}
+    >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={styles.modalTitle}>Crear Publicidad</Text>
             <TouchableOpacity onPress={onClose}>

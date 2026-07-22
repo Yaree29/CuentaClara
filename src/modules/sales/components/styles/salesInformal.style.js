@@ -724,6 +724,36 @@ showMoreText: {
     color: '#0F2747',
   },
 
+  // Fila de cierre: el neto real (lo cobrado menos los gastos). Se separa del
+  // resto con una línea para que se lea como el total, no como un dato más.
+  evaluationTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+
+  evaluationTotalLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F2747',
+  },
+
+  evaluationTotalValue: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
+  // Aclaración de que el fiado no entra en el neto (aún no se ha cobrado).
+  evaluationHint: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 6,
+  },
+
 // =========================
 //     History
 // ==========================

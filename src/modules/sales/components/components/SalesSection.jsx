@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Dropdown } from 'react-native-element-dropdown';
 import Toast from 'react-native-toast-message';
 
@@ -40,30 +41,36 @@ const SalesPyme = ({ cashStatus, onGoToCashRegister }) => {
       note: '',
     };
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoadingProducts(true);
-        setProductsLoadError(false);
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoadingProducts(true);
+      setProductsLoadError(false);
 
-        const data = await inventoryService.getProducts();
-        setProducts(data || []);
-      } catch (error) {
-        console.error('Error cargando productos:', error);
-        setProducts([]);
-        setProductsLoadError(true);
-        Toast.show({
-          type: 'error',
-          text1: 'No se pudieron cargar los productos',
-          text2: error?.message || 'Revisa tu conexión e intenta de nuevo.',
-        });
-      } finally {
-        setLoadingProducts(false);
-      }
-    };
-
-    loadProducts();
+      const data = await inventoryService.getProducts();
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      setProducts([]);
+      setProductsLoadError(true);
+      Toast.show({
+        type: 'error',
+        text1: 'No se pudieron cargar los productos',
+        text2: error?.message || 'Revisa tu conexión e intenta de nuevo.',
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
   }, []);
+
+  // En cada foco de la pantalla, no solo al montar: las pestañas quedan
+  // montadas, así que con un useEffect([]) un producto recién creado en
+  // Inventario no aparecía aquí hasta reiniciar la app (mismo bug que tenía
+  // salesInformal.jsx).
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts();
+    }, [loadProducts])
+  );
 
   const dropdownProducts = products.map((product) => ({
     label: `${product.name} - $${product.price}`,
@@ -202,6 +209,10 @@ const SalesPyme = ({ cashStatus, onGoToCashRegister }) => {
     }
 
     setSavingSale(false);
+
+    // La venta descontó inventario en el backend: refrescamos para que el
+    // stock del selector no quede con el valor previo.
+    loadProducts();
 
     const saleData = {
       id: currentSale.id,

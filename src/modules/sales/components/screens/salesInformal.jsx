@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 // 1. Reemplazamos MainLayout por SafeAreaView para igualar la altura del Header
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,20 +60,26 @@ const SalesInformal = () => {
     setDateTo(today.toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setProductsLoading(true);
-      try {
-        const data = await inventoryService.getProducts();
-        setProducts(data || []);
-      } catch (err) {
-        console.error('Error al cargar productos para venta:', err);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProducts();
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true);
+    try {
+      const data = await inventoryService.getProducts();
+      setProducts(data || []);
+    } catch (err) {
+      console.error('Error al cargar productos para venta:', err);
+    } finally {
+      setProductsLoading(false);
+    }
   }, []);
+
+  // Se recarga en CADA foco de la pantalla, no solo al montar: las pestañas del
+  // navegador quedan montadas, así que con un useEffect([]) un producto recién
+  // creado en Inventario no aparecía aquí hasta reiniciar la app por completo.
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts();
+    }, [loadProducts])
+  );
 
   useEffect(() => {
     if (activeTab !== 'history') return;
@@ -155,6 +162,11 @@ const SalesInformal = () => {
       setSelectedProducts([]);
       setSelectedProduct(null);
       setLinkedCustomer(null);
+
+      // La venta descontó inventario en el backend: sin esto, el stock que se
+      // muestra en el selector queda con el valor previo hasta cambiar de
+      // pantalla y volver.
+      loadProducts();
     } catch (err) {
       Alert.alert('Error', error || 'No se pudo registrar la venta');
     }
@@ -748,6 +760,26 @@ const SalesInformal = () => {
                   <Text style={styles.evaluationLabel}>Total Fiado:</Text>
                   <Text style={[styles.evaluationValue, { color: '#EF4444' }]}>${fiadoTotal.toFixed(2)}</Text>
                 </View>
+
+                {/* Neto real = lo COBRADO menos los gastos. El fiado no se suma
+                    a propósito: todavía no es dinero recibido, así que incluirlo
+                    inflaría la ganancia con plata que aún se debe. */}
+                <View style={styles.evaluationTotalRow}>
+                  <Text style={styles.evaluationTotalLabel}>Ganancia neta:</Text>
+                  <Text
+                    style={[
+                      styles.evaluationTotalValue,
+                      { color: salesTotal - totalExpenses < 0 ? '#DC2626' : '#16A34A' },
+                    ]}
+                  >
+                    ${(salesTotal - totalExpenses).toFixed(2)}
+                  </Text>
+                </View>
+                {fiadoTotal > 0 && (
+                  <Text style={styles.evaluationHint}>
+                    No incluye ${fiadoTotal.toFixed(2)} en fiados por cobrar.
+                  </Text>
+                )}
               </View>
 
               <Text style={styles.reportTitle}>

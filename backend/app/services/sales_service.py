@@ -11,11 +11,17 @@ def create_quick_sale(business_id: str, user_id: str, data):
     # venta se registra sin una sesión de caja abierta, y si el negocio tiene
     # horario configurado, tampoco fuera de horario — al llegar la hora de
     # cierre las ventas se bloquean sin excepción, no hay opción de extender.
-    session = cash_service.get_open_session(business_id)
-    if not session:
-        raise ValueError("Debes abrir la caja antes de registrar ventas.")
-    if not cash_service.is_within_operating_hours(business_id):
-        raise ValueError("Fuera de horario de ventas.")
+    #
+    # SOLO aplica a negocios PYME: el usuario informal no tiene el concepto de
+    # caja ni de horario de operación, así que sus ventas se registran siempre
+    # (su factura queda con cash_session_id=NULL).
+    session = None
+    if cash_service.business_uses_cash_sessions(business_id):
+        session = cash_service.get_open_session(business_id)
+        if not session:
+            raise ValueError("Debes abrir la caja antes de registrar ventas.")
+        if not cash_service.is_within_operating_hours(business_id):
+            raise ValueError("Fuera de horario de ventas.")
 
     # Snapshot del nombre del asistente al momento de la venta. Se guarda como
     # texto (invoices.assistant_name), NO se calcula al leer — así el registro
@@ -90,7 +96,7 @@ def create_quick_sale(business_id: str, user_id: str, data):
         # La nota que escribe el usuario al registrar la venta. Antes se
         # recibía en el modelo pero nunca se guardaba: se perdía en silencio.
         "notes": (data.notes or "").strip() or None,
-        "cash_session_id": session["id"],
+        "cash_session_id": session["id"] if session else None,
         "created_at": datetime.utcnow().isoformat()
     }).execute()
 

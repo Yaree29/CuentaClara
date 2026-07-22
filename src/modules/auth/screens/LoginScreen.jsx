@@ -225,7 +225,12 @@ const LoginScreen = ({ navigation }) => {
             onPress={handleLogin}
             disabled={loading || !email || !password}
           >
-            {loading ? (
+            {/* `loading` viene compartido de useAuth y también se activa en
+                loginWithBiometrics, así que sin excluir biometricLoading este
+                botón mostraba el spinner al entrar con huella. Solo estético:
+                el botón sigue deshabilitado durante el login biométrico para
+                no permitir dos intentos de autenticación a la vez. */}
+            {loading && !biometricLoading ? (
               <ActivityIndicator color={colors.textButton} />
             ) : (
               <Text style={styles.buttonText}>Iniciar sesión</Text>

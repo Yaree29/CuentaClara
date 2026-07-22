@@ -42,6 +42,25 @@ def _parse_hhmm(value: str) -> time:
     return time(int(hour), int(minute))
 
 
+def business_uses_cash_sessions(business_id: str) -> bool:
+    """
+    El ciclo de vida de caja (abrir caja antes de vender, horario de ventas)
+    es EXCLUSIVO de negocios PYME (businesses.ui_mode='advanced'). El usuario
+    informal no tiene el concepto de caja abierta ni horario de operación: sus
+    ventas se registran siempre, sin gate. Ver auth_service.get_user_context,
+    donde userType se deriva del mismo ui_mode.
+    """
+    result = supabase_admin.table("businesses") \
+        .select("ui_mode") \
+        .eq("id", business_id) \
+        .limit(1) \
+        .execute()
+
+    if not result.data:
+        return False
+    return result.data[0].get("ui_mode") == "advanced"
+
+
 def get_open_session(business_id: str) -> Optional[dict]:
     result = supabase_admin.table("cash_sessions") \
         .select("*") \

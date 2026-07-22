@@ -5,7 +5,7 @@
 //            (Compras, Personal, Caja, Servicios, Recetas, Comisiones,
 //            Propinas, Ofertas), más Análisis Estratégico e Inventario
 //            Avanzado, que se muestran siempre sin depender de enabled_modules.
-//            Reutiliza el patrón MenuSection/MenuItem de SettingsScreen.jsx.
+//            Reutiliza el patrón MenuSection/MenuItem de ProfileScreen.jsx.
 //
 // La lista de módulos opcionales ya no vive hardcodeada aquí — se deriva de
 // dashboard/engine/moduleConfig.js, que a su vez refleja ALL_VALID_MODULES

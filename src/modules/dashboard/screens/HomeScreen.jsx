@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../../../theme/colors';
 import useAuthStore from '../../../store/useAuthStore';
@@ -15,6 +15,13 @@ const HomeScreen = () => {
   const userType = user?.userType; // 'pyme' | 'informal'
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
 
+  // El saludo (antes DashboardGreeting.jsx, ahora en la fila fija del Header
+  // vía showGreeting) necesita el ingreso del día, pero ese valor se calcula
+  // dentro de cada dashboard (fuentes de datos distintas para PYME/Informal).
+  // Se sube aquí con un callback en vez de recalcularlo, para no duplicar esa
+  // lógica.
+  const [todayIncome, setTodayIncome] = useState(0);
+
   // Este tab ("dashboard") ya no existe en Modo Asistente (ver
   // MainNavigator.jsx/ASSISTANT_TABS) — la rama de abajo queda sin poder
   // alcanzarse en la práctica, pero se deja tal cual (no se borra
@@ -27,15 +34,15 @@ const HomeScreen = () => {
     }
 
     if (userType === 'informal') {
-      return <InformalDashboard />;
+      return <InformalDashboard onTodayIncomeChange={setTodayIncome} />;
     }
 
-    return <PymeDashboard />;
+    return <PymeDashboard onTodayIncomeChange={setTodayIncome} />;
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <DashboardHeader variant="home" />
+      <DashboardHeader title="Inicio" showGreeting todayIncome={todayIncome} />
       {renderDashboard()}
     </SafeAreaView>
   );

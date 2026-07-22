@@ -12,7 +12,7 @@
 //   · Últimas 3 actividades de inventario  — inventoryService.getMovements
 //   · Alerta con productos con stock bajo  — inventoryService.lowStockAlerts
 // =============================================================================
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -21,7 +21,6 @@ import colors from '../../../theme/colors';
 import styles from './styles/InformalDashboard.styles';
 
 import { useInformalDashboard } from '../hooks/useInformalDashboard';
-import DashboardGreeting from './shared/DashboardGreeting';
 
 const REASON_LABEL = {
   sale: 'Venta',
@@ -45,7 +44,7 @@ const formatTimeAgo = (iso) => {
   return `Hace ${days} d`;
 };
 
-const InformalDashboard = () => {
+const InformalDashboard = ({ onTodayIncomeChange } = {}) => {
   const navigation = useNavigation();
 
   const {
@@ -58,6 +57,13 @@ const InformalDashboard = () => {
     recentMovements,
     lowStockProducts,
   } = useInformalDashboard();
+
+  // Reporta el ingreso del día hacia arriba (HomeScreen.jsx) — ahí lo usa el
+  // saludo de DashboardHeader.jsx (showGreeting), que vive fuera de este
+  // ScrollView.
+  useEffect(() => {
+    onTodayIncomeChange?.(todayIncome);
+  }, [todayIncome, onTodayIncomeChange]);
 
   const goToTab = (tabName) => {
     try {
@@ -84,9 +90,6 @@ const InformalDashboard = () => {
         <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.primary]} tintColor={colors.primary} />
       }
     >
-      {/* BIENVENIDA */}
-      <DashboardGreeting todayIncome={todayIncome} />
-
       {/* VENTAS DEL DÍA */}
       <View style={styles.mainCard}>
         <View style={styles.mainCardHeader}>

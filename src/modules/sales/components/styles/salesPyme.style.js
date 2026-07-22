@@ -19,8 +19,24 @@ const shadowStyle = Platform.select({
 });
 
 export default StyleSheet.create({
+  // flex:1 faltaba aquí — sin él, el SafeAreaView no queda acotado a la
+  // altura real de pantalla (ventana - tab bar de 72px en MainNavigator.jsx),
+  // así que el ScrollView de abajo (que tampoco tenía flex:1 en su `style`,
+  // solo contentContainerStyle) terminaba midiéndose por su contenido en vez
+  // de por el viewport. El paddingBottom:120 de `content`/`scrollFlex` ya
+  // estaba bien puesto, pero sin este flex:1 la última fila (el botón
+  // "Guardar Venta"/"Cerrar Caja") podía quedar tapada por el tab bar. Mismo
+  // patrón que InformalDashboard.styles.js (container: flex:1 + ScrollView
+  // con style={styles.container}).
   container: {
+    flex: 1,
     backgroundColor: colors.background,
+  },
+
+  // Aplicar como `style` (no solo `contentContainerStyle`) en el ScrollView
+  // raíz de SalesSection.jsx y RegisterCount.jsx.
+  scrollFlex: {
+    flex: 1,
   },
 
   content: {

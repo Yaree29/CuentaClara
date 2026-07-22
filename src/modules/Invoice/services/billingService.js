@@ -60,6 +60,18 @@ const billingService = {
   getInvoicePdfUrl: async (invoiceId) => {
     return apiRequest(`/invoices/${invoiceId}/pdf`);
   },
+
+  /**
+   * Ganancias y márgenes reales (cruza invoice_items con products.cost_price)
+   * en un rango de fechas: totales, desglose por factura y por producto
+   * vendido. Solo owner/admin (ver require_role en el backend).
+   * @param {string} dateFrom — ISO date
+   * @param {string} dateTo — ISO date
+   */
+  getProfitability: async (dateFrom, dateTo) => {
+    const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+    return apiRequest(`/invoices/reports/profitability?${params.toString()}`);
+  },
 };
 
 export default billingService;

@@ -2,18 +2,15 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../theme/colors';
 
 export default StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   // 120: estándar del proyecto — la lista de órdenes de compra no tenía
   // ningún padding inferior (ScrollView sin contentContainerStyle).
   scrollContent: {
+    paddingTop: 12,
     paddingBottom: 120,
-  },
-  title: {
-    textAlign: 'center',
-    padding: 30,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 10,
   },
   tabsContainer: {
     flexDirection: 'row',

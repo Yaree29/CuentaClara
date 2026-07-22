@@ -24,7 +24,7 @@ Basado en verificación directa del código (`src/modules/`):
 | `billing` | ✅ Implementado | Recibo simple (`SimpleReceiptScreen.jsx` + `receiptService.js`) para Modo Informal — distinto de `Invoice` (ver abajo) |
 | `Invoice` | ✅ Implementado | Facturación formal PYME (`BillingScreen.jsx` + `billingService.js` + `useBilling.js`) — no confundir con `billing`, que es el recibo simple del Modo Informal |
 | `purchases` | ✅ Implementado | Proveedores + órdenes de compra (draft → receive/cancel), con hooks/screens/services en frontend, router y servicio en backend, y `database/schema/05_purchases.sql` |
-| `notifications` | 🟡 Parcial, sin cablear | Servicio, hook, pantalla y listener existen y usan el router real `/notifications`, pero `NotificationsListener` no está montado en `App.js` porque depende de `expo-notifications`/`expo-device`, aún no instalados |
+| `notifications` | ✅ Implementado (sin push real) | Notifica al dueño PYME cuando un asistente registra venta/inventario. `NotificationsListener` montado en `App.js`, alerta vía Realtime de Supabase sobre la tabla `notifications` — funciona con la app abierta o recién en segundo plano. Decisión del proyecto: NO se usa push real (FCM/Firebase), no llega si la app está completamente cerrada |
 | `business_services` | 🔴 Placeholder | `ServicesScreen.jsx` solo muestra "Módulo de Servicios (En construcción)", sin lógica |
 | `recipes` | 🟡 Parcial | Existen `CreateRecipeScreen.jsx`, `recipeService.js` y `useRecipeForm.js` (formulario de creación con su servicio), pero falta la lógica de descuento de insumos vía BOM (JSONB) |
 | `scanner` | 🔴 No iniciado | Sin archivos en el repositorio |

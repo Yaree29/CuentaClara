@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import colors from '../../theme/colors';
 import { View, Text, StyleSheet, Animated, BackHandler } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import useAuthStore from '../../store/useAuthStore';
 import useAssistantModeStore from '../../store/useAssistantModeStore';
@@ -155,6 +156,7 @@ const AnimatedTabBarIcon = ({ focused, children }) => {
 
 const MainNavigator = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const userType = useAuthStore((state) => state.user?.userType);
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
   const exitAssistant = useAssistantModeStore((state) => state.exitAssistant);
@@ -220,9 +222,13 @@ const MainNavigator = () => {
           backgroundColor: colors.tabBackground,
           borderTopWidth: 0,
 
-          height: 72,
+          // Se suma insets.bottom para reservar el espacio de la barra de
+          // navegación del sistema (Android edge-to-edge, app.json tiene
+          // edgeToEdgeEnabled: true) y evitar que los botones
+          // "atrás/inicio/recientes" se superpongan con la tab bar.
+          height: 72 + insets.bottom,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
 
           shadowColor: '#000',
           shadowOffset: {

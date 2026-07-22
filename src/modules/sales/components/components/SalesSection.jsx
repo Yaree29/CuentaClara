@@ -6,12 +6,14 @@ import Toast from 'react-native-toast-message';
 import styles from '../styles/salesPyme.style';
 import useAuthStore from '../../../../store/useAuthStore';
 import useSalesStore from '../../../../store/useSaleStore';
+import useAssistantModeStore from '../../../../store/useAssistantModeStore';
 import inventoryService from '../../../inventory/services/inventoryService';
 import salesService from '../../services/salesService';
 
 const SalesPyme = () => {
   const user = useAuthStore((state) => state.user);
   const businessData = user?.business;
+  const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -182,9 +184,7 @@ const SalesPyme = () => {
     setSavingSale(true);
 
     try {
-      // assistant_id: null hasta que exista el hook de sesión de asistente
-      // (Fase C). Cuando exista, reemplazar por el id del asistente activo.
-      await salesService.createSale(items, 'cash', 1, currentSale.note, false, null);
+      await salesService.createSale(items, 'cash', 1, currentSale.note, false, activeAssistant?.id ?? null);
     } catch (error) {
       setSavingSale(false);
       Toast.show({
@@ -239,7 +239,7 @@ const SalesPyme = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
       <TouchableOpacity style={styles.createButton} onPress={addNewSale}>
         <Text style={styles.saveButtonText}>+ Nueva Venta</Text>
       </TouchableOpacity>

@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // Hook compartido para el sistema de flags de "Configuración de Inventario"
 // (control_peso, caducidad, mermas, recetas, produccion, escaner,
-// stock_predictivo). Lo consumen tanto SettingsScreen.jsx (toggles editables)
+// stock_predictivo). Lo consumen tanto AppSettingsScreen.jsx (toggles editables)
 // como PymeInventory.jsx (mostrar/ocultar secciones), para que ambos lean del
 // mismo estado sin duplicar las llamadas a businessService/inventoryService.
 //
@@ -28,14 +28,29 @@ export const FLAGS_BY_CATEGORY_GROUP = {
   comercio: ['escaner', 'stock_predictivo'],
 };
 
+// Los labels de "caducidad" y "mermas" ya no se usan como
+// ConfigFlagPlaceholder (ver PymeInventory.jsx) — quedan aquí solo por si
+// algún otro punto del código todavía los lee (ej. SettingsScreen.jsx).
 export const FLAG_LABELS = {
-  control_peso: { label: 'Control por peso', description: 'Vender y registrar stock en kg, g o lb.' },
-  caducidad: { label: 'Caducidad', description: 'Seguimiento de fechas de vencimiento por producto o lote.' },
+  control_peso: {
+    label: 'Control por peso',
+    description: 'Función pendiente: todavía no afecta cómo se vende ni se registra stock por peso (kg, g, lb) en Ventas.',
+  },
+  caducidad: { label: 'Caducidad', description: 'Seguimiento de fechas de vencimiento por producto.' },
   mermas: { label: 'Mermas', description: 'Registrar pérdidas y desperdicio de inventario.' },
-  recetas: { label: 'Recetas', description: 'Componer productos a partir de insumos y sus cantidades.' },
-  produccion: { label: 'Producción', description: 'Órdenes de producción y transformación de insumos.' },
-  escaner: { label: 'Escáner', description: 'Lectura de código de barras o SKU para buscar productos.' },
-  stock_predictivo: { label: 'Stock predictivo', description: 'Proyección de quiebres de stock a futuro.' },
+  recetas: {
+    label: 'Recetas',
+    description: 'Función pendiente en esta pantalla — la gestión real de recetas vive en Módulos > Recetas.',
+  },
+  produccion: {
+    label: 'Producción',
+    description: 'Función pendiente en esta pantalla — las órdenes de producción viven en Módulos > Recetas.',
+  },
+  escaner: { label: 'Escáner', description: 'Lectura por SKU para buscar productos (simulación, sin cámara todavía).' },
+  stock_predictivo: {
+    label: 'Stock predictivo',
+    description: 'Función pendiente: todavía no existe ninguna proyección real de quiebres de stock a futuro.',
+  },
 };
 
 const emptyConfig = () =>

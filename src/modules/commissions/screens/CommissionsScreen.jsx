@@ -99,7 +99,7 @@ const CommissionsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Comisiones" variant="default" />
+      <DashboardHeader title="Comisiones" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

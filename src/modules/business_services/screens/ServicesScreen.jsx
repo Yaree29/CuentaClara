@@ -21,7 +21,7 @@ const ServicesScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Servicios Pyme" variant="default" />
+      <DashboardHeader title="Servicios Pyme" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

@@ -12,6 +12,7 @@ dado que la autenticación ya fue validada en el router.
 """
 
 from app.database import supabase_admin
+from app.services import notifications_service
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -82,6 +83,7 @@ def _map_product(inv_row: dict) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv_row.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 
@@ -137,7 +139,7 @@ def list_products(business_id: str) -> list:
     negocio aparezca aunque su fila de inventario embebida venga vacía.
     """
     products_result = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id") \
+        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id, expiration_date") \
         .eq("business_id", business_id) \
         .eq("is_active", True) \
         .execute()
@@ -190,6 +192,7 @@ def list_products(business_id: str) -> list:
                 "cost_price": prod.get("cost_price"),
                 "unit_type": prod.get("unit_type"),
                 "is_active": prod.get("is_active"),
+                "expiration_date": prod.get("expiration_date"),
                 "product_categories": cat,
             },
         }))
@@ -207,6 +210,20 @@ def create_product(business_id: str, user_id: str, data) -> dict:
     """
     category_id = _get_or_create_category(business_id, data.category_name)
 
+    # Snapshot del nombre del asistente al momento de la creación (igual que
+    # sales_service.create_quick_sale con invoices.assistant_name) — sobrevive
+    # aunque el asistente se elimine después (assistant_id queda en NULL por
+    # ON DELETE SET NULL, pero el nombre ya quedó fijado aquí).
+    assistant_name = None
+    if data.assistant_id is not None:
+        assistant = supabase_admin.table("business_assistants")\
+            .select("name")\
+            .eq("id", data.assistant_id)\
+            .eq("business_id", business_id)\
+            .execute()
+        if assistant.data:
+            assistant_name = assistant.data[0]["name"]
+
     # 1. Insertar en products
     product_payload = {
         "business_id": business_id,
@@ -217,6 +234,9 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "cost_price": float(data.cost_price) if data.cost_price is not None else 0,
         "unit_type": data.unit_type or None,
         "is_active": True,
+        "expiration_date": data.expiration_date.isoformat() if data.expiration_date else None,
+        "assistant_id": data.assistant_id,
+        "assistant_name": assistant_name,
     }
     product_result = supabase_admin.table("products") \
         .insert(product_payload) \
@@ -280,6 +300,14 @@ def create_product(business_id: str, user_id: str, data) -> dict:
     min_stock = Decimal(str(inv.get("min_stock") or 0))
     is_low = (stock is not None) and (Decimal(str(stock)) <= min_stock) and (min_stock > 0)
 
+    # Notificar al dueño si el producto lo creó un asistente (Modo Asistente).
+    if data.assistant_id is not None:
+        notifications_service.notify_owner_of_assistant_action(
+            business_id,
+            "inventory",
+            f'{assistant_name or "Un asistente"} agregó el producto "{data.name}".'
+        )
+
     return {
         "id": product_id,
         "name": product["name"],
@@ -294,6 +322,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 
@@ -316,6 +345,8 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         product_payload["sku"] = data.sku
     if data.unit_type is not None:
         product_payload["unit_type"] = data.unit_type
+    if data.expiration_date is not None:
+        product_payload["expiration_date"] = data.expiration_date.isoformat()
 
     if product_payload:
         prod_result = supabase_admin.table("products") \
@@ -360,7 +391,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
 
     # Re-fetch producto para devolver datos actualizados
     prod = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type") \
+        .select("id, name, sku, price, cost_price, unit_type, expiration_date") \
         .eq("id", product_id) \
         .execute()
     product = prod.data[0] if prod.data else {}
@@ -377,6 +408,7 @@ def update_product(business_id: str, product_id: int, data) -> dict:
         "min_stock": float(min_stock),
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
+        "expiration_date": product.get("expiration_date"),
     }
 
 
@@ -420,6 +452,19 @@ def adjust_stock(business_id: str, user_id: str, data) -> dict:
 
     quantity = Decimal(str(data.quantity))
     mov_type = REASON_TO_TYPE[data.reason]
+
+    # Nombre del asistente solo para el mensaje de notificación — no se
+    # persiste en inventory_movements (esa tabla no tiene assistant_id; sin
+    # llamadores desde el frontend hoy, se deja fuera de la migración).
+    assistant_name = None
+    if data.assistant_id is not None:
+        assistant = supabase_admin.table("business_assistants")\
+            .select("name")\
+            .eq("id", data.assistant_id)\
+            .eq("business_id", business_id)\
+            .execute()
+        if assistant.data:
+            assistant_name = assistant.data[0]["name"]
 
     # Fetch fila de inventario actual
     inv_result = supabase_admin.table("inventory") \
@@ -476,6 +521,15 @@ def adjust_stock(business_id: str, user_id: str, data) -> dict:
     movement_id = mov_result.data[0]["id"] if mov_result.data else -1
 
     is_low = (new_qty is not None) and (new_qty <= min_stock) and (min_stock > 0)
+
+    # Notificar al dueño si el ajuste lo hizo un asistente (Modo Asistente).
+    if data.assistant_id is not None:
+        verb = {"in": "agregó", "out": "descontó", "adjust": "ajustó"}[mov_type]
+        notifications_service.notify_owner_of_assistant_action(
+            business_id,
+            "inventory",
+            f"{assistant_name or 'Un asistente'} {verb} stock del producto {data.product_id} ({data.reason})."
+        )
 
     return {
         "product_id": data.product_id,

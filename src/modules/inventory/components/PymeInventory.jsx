@@ -17,7 +17,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Modal, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { PlusIcon, PencilIcon } from 'react-native-heroicons/solid';
+import { PlusIcon, PencilIcon, MagnifyingGlassIcon } from 'react-native-heroicons/solid';
 import colors from '../../../theme/colors';
 import InventoryAlertWidget from './InventoryAlertWidget';
 import ProductScannerWidget from './ProductScannerWidget';
@@ -31,7 +31,13 @@ import profileStyles from '../../profile/styles/profile.styles';
 // todavía en esta pantalla. "caducidad" y "mermas" salieron de esta lista:
 // ya tienen acceso funcional real (ver ExpiringProductsCard/WasteModal).
 // "escaner" tampoco está acá porque ya tiene un widget real: ProductScannerWidget.
-const PLACEHOLDER_FLAGS = ['control_peso', 'recetas', 'produccion', 'stock_predictivo'];
+// "stock_predictivo" tampoco: ya tiene tarjeta real (ver PredictiveStockCard /
+// GET /inventory/stock/predictive). "control_peso" tampoco: ya controla un
+// campo real del formulario (selector de unidad kg/libra/unidad en
+// ProductFormModal, ver showWeightControl más abajo).
+const PLACEHOLDER_FLAGS = ['recetas', 'produccion'];
+
+const PREDICTIVE_THRESHOLD_DAYS = 7;
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 
@@ -179,7 +185,7 @@ const WasteModal = ({ visible, onClose, products, onRegistered }) => {
 
 const PymeInventory = () => {
   const navigation = useNavigation();
-  const { config, loading: loadingConfig } = useInventoryConfig();
+  const { categoryGroup, config, loading: loadingConfig } = useInventoryConfig();
   const activePlaceholderFlags = PLACEHOLDER_FLAGS.filter((flag) => config[flag]);
 
   const [alerts, setAlerts] = useState([]);
@@ -188,9 +194,25 @@ const PymeInventory = () => {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
+  const [predictiveStock, setPredictiveStock] = useState([]);
+  const [loadingPredictive, setLoadingPredictive] = useState(true);
+
   const [formModalVisible, setFormModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [wasteModalVisible, setWasteModalVisible] = useState(false);
+  // Código leído por el escáner cuando el producto no existía — se pasa a
+  // ProductFormModal para prellenar el campo Código de barras al crearlo.
+  const [prefillBarcode, setPrefillBarcode] = useState(null);
+
+  // Buscador (mismo patrón que useInformalInventory: filtra por nombre/SKU).
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Modal "Agregar categoría" (reutiliza inventoryService.createCategory, el
+  // mismo servicio que usa useInformalInventory.addCategory).
+  const [addCategoryVisible, setAddCategoryVisible] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryError, setCategoryError] = useState(null);
+  const [savingCategory, setSavingCategory] = useState(false);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -215,6 +237,18 @@ const PymeInventory = () => {
     }
   }, []);
 
+  const fetchPredictiveStock = useCallback(async () => {
+    setLoadingPredictive(true);
+    try {
+      const data = await inventoryService.getPredictiveStock(PREDICTIVE_THRESHOLD_DAYS);
+      setPredictiveStock(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setPredictiveStock([]);
+    } finally {
+      setLoadingPredictive(false);
+    }
+  }, []);
+
   // Categorías reales (mismo servicio que useInformalInventory.js) — no se
   // derivan de `products` porque una categoría recién creada sin productos
   // todavía no aparecería en esa lista.
@@ -233,16 +267,79 @@ const PymeInventory = () => {
       fetchAlerts();
       fetchProducts();
       fetchCategories();
-    }, [fetchAlerts, fetchProducts, fetchCategories])
+      fetchPredictiveStock();
+    }, [fetchAlerts, fetchProducts, fetchCategories, fetchPredictiveStock])
   );
 
   const totalAlerts = alerts.length;
   // Déficit crítico: sin stock disponible (current_stock === 0).
   const itemsAtRisk = alerts.filter((alert) => alert.current_stock === 0).length;
 
+  // Filtro por nombre o SKU (mismo criterio que useInformalInventory, más SKU
+  // porque en PYME el código de barras es un dato de búsqueda relevante).
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q)
+    );
+  }, [products, searchQuery]);
+
   const openAddProduct = () => {
     setEditingProduct(null);
+    setPrefillBarcode(null);
     setFormModalVisible(true);
+  };
+
+  // Escaneo sin coincidencia -> abrir el formulario en modo creación con el
+  // código ya prellenado (flujo "buscar → si no existe, crear").
+  const handleScanCreateNew = (code) => {
+    setEditingProduct(null);
+    setPrefillBarcode(code);
+    setFormModalVisible(true);
+  };
+
+  const CATEGORY_VALID = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
+
+  const handleCategoryNameChange = (val) => {
+    setNewCategoryName(val);
+    if (val.trim() === '') {
+      setCategoryError(null);
+    } else if (!CATEGORY_VALID.test(val)) {
+      setCategoryError('Solo letras y espacios. Sin números ni símbolos.');
+    } else if (val.trim().length < 2) {
+      setCategoryError('El nombre debe tener al menos 2 letras.');
+    } else {
+      setCategoryError(null);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed || categoryError) return;
+    setSavingCategory(true);
+    try {
+      const response = await inventoryService.createCategory(null, trimmed);
+      if (response.alreadyExists) {
+        Alert.alert('Aviso', `La categoría "${response.category.name}" ya existe.`);
+      } else {
+        // Actualización optimista — mismo patrón que
+        // useInformalInventory.addCategory: se agrega la categoría nueva
+        // directamente al estado local (en vez de esperar un refetch
+        // completo a GET /inventory/categories) para que la lista se
+        // refresque de inmediato sin depender de un segundo round-trip.
+        setCategories((prev) => [...prev, response.category.name].sort((a, b) => a.localeCompare(b)));
+      }
+      setNewCategoryName('');
+      setCategoryError(null);
+      setAddCategoryVisible(false);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'No se pudo crear la categoría.');
+    } finally {
+      setSavingCategory(false);
+    }
   };
 
   const openEditProduct = (product) => {
@@ -263,7 +360,7 @@ const PymeInventory = () => {
         await inventoryService.createProduct(null, data);
       }
       closeProductForm();
-      await Promise.all([fetchProducts(), fetchAlerts()]);
+      await Promise.all([fetchProducts(), fetchAlerts(), fetchPredictiveStock()]);
     } catch (error) {
       Alert.alert('Error', error.message || 'No se pudo guardar el producto.');
     }
@@ -281,7 +378,7 @@ const PymeInventory = () => {
 
   const handleWasteRegistered = async () => {
     setWasteModalVisible(false);
-    await Promise.all([fetchProducts(), fetchAlerts()]);
+    await Promise.all([fetchProducts(), fetchAlerts(), fetchPredictiveStock()]);
   };
 
   // "Productos por vencer": expiration_date real (products.expiration_date)
@@ -339,20 +436,48 @@ const PymeInventory = () => {
             <Text style={styles.sectionTitle}>Tus productos ({products.length})</Text>
           </View>
 
+          {/* Buscador por nombre o SKU (mismo patrón que InformalInventory). */}
+          <View style={styles.searchContainer}>
+            <MagnifyingGlassIcon size={18} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre o código..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {/* "Agregar categoría" debajo del buscador. */}
+          <TouchableOpacity
+            style={styles.addCategoryPill}
+            onPress={() => {
+              setNewCategoryName('');
+              setCategoryError(null);
+              setAddCategoryVisible(true);
+            }}
+          >
+            <PlusIcon size={13} color={colors.primary} />
+            <Text style={styles.addCategoryPillText}>Agregar categoría</Text>
+          </TouchableOpacity>
+
           {loadingProducts ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : products.length === 0 ? (
             <Text style={styles.emptyText}>Aún no tienes productos. Usa el botón "+" para agregar el primero.</Text>
+          ) : filteredProducts.length === 0 ? (
+            <Text style={styles.emptyText}>Ningún producto coincide con "{searchQuery}".</Text>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
               <View key={product.id} style={styles.productListCard}>
                 <View style={styles.productListInfo}>
                   <Text style={styles.productListName}>{product.name}</Text>
                   <Text style={styles.productListMeta}>
                     {money(product.price)}
                     {product.stock !== null ? ` · Stock ${product.stock} ${product.unit || ''}` : ' · Servicio'}
+                    {product.sku ? ` · ${product.sku}` : ''}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.editIconBtn} onPress={() => openEditProduct(product)}>
@@ -422,7 +547,48 @@ const PymeInventory = () => {
               </View>
             )}
 
-            {config.escaner && <ProductScannerWidget />}
+            {/* ── Stock predictivo: días estimados hasta quiebre (reemplaza el placeholder) ── */}
+            {config.stock_predictivo && (
+              <View style={styles.sectionBlock}>
+                <View style={styles.sectionRow}>
+                  <Text style={styles.sectionTitle}>Stock predictivo</Text>
+                </View>
+                {loadingPredictive ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : (
+                  <View style={styles.expiringCard}>
+                    {predictiveStock.length === 0 ? (
+                      <Text style={styles.emptyText}>
+                        Ningún producto se quedará sin stock en los próximos {PREDICTIVE_THRESHOLD_DAYS} días.
+                      </Text>
+                    ) : (
+                      predictiveStock.map((item, index) => (
+                        <View
+                          key={item.product_id}
+                          style={[styles.expiringRow, index === predictiveStock.length - 1 && styles.expiringRowLast]}
+                        >
+                          <Text style={styles.expiringName}>{item.product_name}</Text>
+                          <Text
+                            style={[
+                              styles.expiringDate,
+                              item.estimated_days <= 2 ? styles.expiringDateDanger : styles.expiringDateWarning,
+                            ]}
+                          >
+                            {item.estimated_days === 0
+                              ? 'Se agota hoy'
+                              : `~${item.estimated_days} d restantes`}
+                          </Text>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {config.escaner && <ProductScannerWidget onCreateNew={handleScanCreateNew} />}
 
             {activePlaceholderFlags.length > 0 && (
               <View style={styles.flagsSection}>
@@ -448,6 +614,9 @@ const PymeInventory = () => {
         initialData={editingProduct}
         categories={categories}
         showExpiration={!!config.caducidad}
+        showCostPrice={categoryGroup === 'comida_preparada'}
+        prefillBarcode={prefillBarcode}
+        showWeightControl={!!config.control_peso}
         onSave={handleSaveProduct}
         onDelete={handleDeleteProduct}
       />
@@ -458,6 +627,54 @@ const PymeInventory = () => {
         products={products}
         onRegistered={handleWasteRegistered}
       />
+
+      {/* Modal "Agregar categoría" — mismo patrón visual que InformalInventory. */}
+      <Modal
+        visible={addCategoryVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAddCategoryVisible(false)}
+      >
+        <View style={styles.addCatOverlay}>
+          <View style={styles.addCatCard}>
+            <Text style={styles.addCatTitle}>Nueva Categoría</Text>
+            <TextInput
+              style={[styles.formInput, categoryError && styles.inputError]}
+              placeholder="Ej. Frutas, Tecnología, Ropa..."
+              placeholderTextColor={colors.placeholder}
+              value={newCategoryName}
+              onChangeText={handleCategoryNameChange}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleAddCategory}
+            />
+            {categoryError ? <Text style={styles.errorText}>{categoryError}</Text> : null}
+
+            <View style={styles.addCatActions}>
+              <TouchableOpacity
+                style={styles.addCatCancelBtn}
+                onPress={() => {
+                  setAddCategoryVisible(false);
+                  setCategoryError(null);
+                }}
+              >
+                <Text style={styles.addCatCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.addCatConfirmBtn, (!newCategoryName.trim() || savingCategory || !!categoryError) && styles.saveBtnDisabled]}
+                onPress={handleAddCategory}
+                disabled={!newCategoryName.trim() || savingCategory || !!categoryError}
+              >
+                {savingCategory ? (
+                  <ActivityIndicator size="small" color={colors.textButton} />
+                ) : (
+                  <Text style={styles.addCatConfirmText}>Guardar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

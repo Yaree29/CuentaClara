@@ -32,7 +32,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CuentaClara usa la cámara para escanear el código de barras de tus productos en Inventario."
+        }
+      ]
     ]
   }
 }

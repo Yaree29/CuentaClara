@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,6 +38,25 @@ const resolveCategoryId = (categoryGroup, categories) => {
   return match ? match.id : null;
 };
 
+// El usuario ya no elige entre las 11 plantillas de industria una por una
+// (Carnicería, Barbería, etc.) — elige una de estas 5 categorías genéricas.
+// Internamente se sigue guardando un industry_template_id real (el de la
+// primera plantilla de ese category_group, ver firstTemplateIdByGroup más
+// abajo): el backend (auth_service.py) sigue derivando category_group,
+// flags de inventario y módulos a partir de esa columna, sin cambios ahí.
+// 'general' es la excepción: no existe ninguna plantilla con
+// category_group='general' en las 11 existentes (ver
+// 15_category_group_and_inventory_config.sql), así que se guarda
+// industryTemplateId=null — auth_service.py ya trata null como "sin
+// plantilla" y cae en su rama por defecto (category_group=None).
+const CATEGORY_OPTIONS = [
+  { key: 'general', label: 'General', icon: '🏢' },
+  { key: 'alimentos', label: 'Alimentos', icon: '🥕' },
+  { key: 'comida_preparada', label: 'Comida Preparada', icon: '🍽️' },
+  { key: 'comercio', label: 'Comercio', icon: '🏪' },
+  { key: 'servicios', label: 'Servicios', icon: '💼' },
+];
+
 const RegisterScreen = ({ navigation }) => {
   const setLogin = useAuthStore((state) => state.setLogin);
   const { linkBiometricSession, isBiometricAvailable } = useAuth();
@@ -53,7 +72,8 @@ const RegisterScreen = ({ navigation }) => {
     phone: '',
     businessName: '',
     profileType: '',
-    industryTemplateId: null, // Sincronizado con IDs reales (1-5)
+    categoryGroup: null, // 'general'|'alimentos'|'comida_preparada'|'comercio'|'servicios'
+    industryTemplateId: null, // id real interno (representante del category_group elegido)
     categoryId: null,
     nit: '',
     address: '',
@@ -86,6 +106,20 @@ const RegisterScreen = ({ navigation }) => {
   const [templates, setTemplates] = useState([]);
   const [categories, setCategories] = useState([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+
+  // Primera plantilla (menor id) de cada category_group, entre las 11 reales
+  // — es el representante interno que se guarda como industryTemplateId
+  // cuando el usuario elige una de las 5 categorías genéricas. No se toca ni
+  // se borra ninguna plantilla: solo se usa su id como valor interno.
+  const firstTemplateIdByGroup = useMemo(() => {
+    const map = {};
+    templates.forEach((t) => {
+      if (t.category_group && !(t.category_group in map)) {
+        map[t.category_group] = t.id;
+      }
+    });
+    return map;
+  }, [templates]);
   const [logoUri, setLogoUri] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
@@ -230,7 +264,7 @@ const RegisterScreen = ({ navigation }) => {
             setLoading(false);
             return;
           }
-          if (!formData.industryTemplateId) {
+          if (!formData.categoryGroup) {
             Alert.alert('Datos inválidos', 'Debes seleccionar la Categoría de tu Negocio.');
             setLoading(false);
             return;
@@ -514,16 +548,17 @@ const RegisterScreen = ({ navigation }) => {
 
               <Text style={styles.sectionTitle}>Categoría de Negocio</Text>
 
-              {/* Combobox de plantillas */}
+              {/* Combobox de las 5 categorías genéricas — no de las 11
+                  plantillas reales (ver CATEGORY_OPTIONS más arriba). */}
               <TouchableOpacity
                 style={[styles.input, { justifyContent: 'center' }]}
                 onPress={() => setTemplatePickerOpen(!templatePickerOpen)}
               >
                 <Text style={{ color: colors.textPrimary }}>
-                  {formData.industryTemplateId
+                  {formData.categoryGroup
                     ? (() => {
-                        const t = templates.find((t) => t.id === formData.industryTemplateId);
-                        return t ? `${t.icon}  ${t.name}` : 'Selecciona la categoría';
+                        const opt = CATEGORY_OPTIONS.find((o) => o.key === formData.categoryGroup);
+                        return opt ? `${opt.icon}  ${opt.label}` : 'Selecciona la categoría';
                       })()
                     : 'Selecciona la categoría del negocio ▾'}
                 </Text>
@@ -534,38 +569,52 @@ const RegisterScreen = ({ navigation }) => {
                   {templates.length === 0 ? (
                     <ActivityIndicator style={{ padding: 16 }} color={colors.primary} />
                   ) : (
-                    templates.map((t) => (
+                    CATEGORY_OPTIONS.map((opt) => (
                       <TouchableOpacity
-                        key={t.id}
+                        key={opt.key}
                         onPress={() => {
-                          updateField('industryTemplateId', t.id);
-                          updateField('categoryId', resolveCategoryId(t.category_group, categories));
+                          // 'general' no tiene plantilla representante (ninguna
+                          // de las 11 tiene category_group='general') — se
+                          // guarda industryTemplateId=null, que auth_service.py
+                          // ya trata como "sin plantilla elegida".
+                          const templateId = opt.key === 'general' ? null : (firstTemplateIdByGroup[opt.key] ?? null);
+                          updateField('categoryGroup', opt.key);
+                          updateField('industryTemplateId', templateId);
+                          updateField('categoryId', resolveCategoryId(opt.key, categories));
                           setTemplatePickerOpen(false);
                         }}
                         style={styles.dropdownItem}
                       >
-                        <Text>{t.icon}  {t.name}</Text>
+                        <Text>{opt.icon}  {opt.label}</Text>
                       </TouchableOpacity>
                     ))
                   )}
                 </View>
               )}
 
-              {/* Configuración Operativa — solo Servicios (ID 2) y Restaurante/
-                  Alimentos Preparados (ID 4) tienen toggles que de verdad
-                  afectan algo (activan módulos en register_business o
-                  cambian subtítulos reales del Dashboard PYME). Alimentos
-                  (ID 1) y Comercio (ID 3) se quitaron: sus toggles
-                  (unidad de medida, merma, balanza, códigos de barras) se
-                  guardaban en business_configs.settings pero ningún lugar
-                  del sistema los leía de vuelta. */}
-              {(formData.industryTemplateId === 2 || formData.industryTemplateId === 4) && (
+              {/* Configuración Operativa — solo Servicios y Comida Preparada
+                  tienen toggles que de verdad afectan algo (activan módulos
+                  en register_business o cambian subtítulos reales del
+                  Dashboard PYME). Alimentos y Comercio se quitaron: sus
+                  toggles (unidad de medida, merma, balanza, códigos de
+                  barras) se guardaban en business_configs.settings pero
+                  ningún lugar del sistema los leía de vuelta. Antes esto se
+                  gateaba por industryTemplateId===2/4 (IDs mágicos de la
+                  plantilla representante); ahora que el usuario elige
+                  categoryGroup directamente, se gatea por eso — más robusto
+                  y no depende de qué plantilla haya quedado como
+                  representante interno de cada grupo. */}
+              {(formData.categoryGroup === 'servicios' || formData.categoryGroup === 'comida_preparada') && (
                 <>
                   <Text style={styles.sectionTitle}>Configuración Operativa</Text>
                   <View style={styles.sectionCard}>
-                    {/* ID 2: Servicios (Estilista, Barbería, Técnicos, etc.) */}
-                    {formData.industryTemplateId === 2 && (
+                    {formData.categoryGroup === 'servicios' && (
                       <>
+                        {/* "Cobra por comisión" ya activa el módulo Comisiones
+                            en register_business (ver auth_service.py) además
+                            de su uso previo en el subtítulo del Dashboard
+                            PYME (dashboardEngine.js/summaryRules.js) — mismo
+                            campo, ambos efectos, sin duplicar la pregunta. */}
                         <View style={styles.rowContainer}>
                           <Text style={styles.rowLabel}>Cobra por comisión</Text>
                           <View style={styles.inputRow}>
@@ -602,8 +651,7 @@ const RegisterScreen = ({ navigation }) => {
                       </>
                     )}
 
-                    {/* ID 4: Restaurante / Alimentos Preparados (Panadería, Cafeterías, etc.) */}
-                    {formData.industryTemplateId === 4 && (
+                    {formData.categoryGroup === 'comida_preparada' && (
                       <>
                         <View style={styles.rowContainer}>
                           <Text style={styles.rowLabel}>Transforma materia prima</Text>
@@ -644,7 +692,7 @@ const RegisterScreen = ({ navigation }) => {
                 </>
               )}
 
-              {formData.industryTemplateId && (
+              {formData.categoryGroup && (
                 <>
                   <Text style={styles.sectionTitle}>Configuración General</Text>
                   <View style={styles.sectionCard}>
@@ -664,9 +712,9 @@ const RegisterScreen = ({ navigation }) => {
               )}
 
               <TouchableOpacity
-                style={[styles.button, !formData.industryTemplateId && { opacity: 0.5 }]}
+                style={[styles.button, !formData.categoryGroup && { opacity: 0.5 }]}
                 onPress={handleRegister}
-                disabled={loading || !formData.industryTemplateId}
+                disabled={loading || !formData.categoryGroup}
               >
                 <Text style={styles.buttonText}>{loading ? 'Registrando...' : 'Finalizar'}</Text>
               </TouchableOpacity>

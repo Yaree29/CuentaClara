@@ -13,7 +13,7 @@ dado que la autenticación ya fue validada en el router.
 
 from app.database import supabase_admin
 from app.services import notifications_service
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -576,6 +576,94 @@ def list_movements(business_id: str, limit: int = 50) -> list:
         }
         for r in rows
     ]
+
+
+def get_predictive_stock(business_id: str, threshold_days: int = 7) -> list:
+    """
+    Heurística simple de quiebre de stock: para cada producto con stock
+    controlado (quantity != NULL), suma las salidas por venta
+    (inventory_movements.reason='sale') de los últimos 30 días, calcula el
+    consumo promedio diario (total / 30) y estima en cuántos días se agotará
+    el stock actual (current_stock / consumo_promedio_diario).
+
+    Si no hubo ventas en los últimos 30 días (consumo = 0), no se puede
+    dividir por cero y no hay urgencia real que estimar — esos productos se
+    excluyen del resultado en vez de forzar una división.
+
+    Devuelve solo los productos con estimated_days <= threshold_days,
+    ordenados de menor a mayor urgencia (menos días primero).
+    """
+    products_result = supabase_admin.table("products") \
+        .select("id, name") \
+        .eq("business_id", business_id) \
+        .eq("is_active", True) \
+        .execute()
+    products_rows = products_result.data or []
+    if not products_rows:
+        return []
+
+    product_ids = [p["id"] for p in products_rows]
+    product_name_by_id = {p["id"]: p["name"] for p in products_rows}
+
+    inv_result = supabase_admin.table("inventory") \
+        .select("product_id, quantity, unit") \
+        .eq("business_id", business_id) \
+        .in_("product_id", product_ids) \
+        .execute()
+    # Un producto puede tener varias filas de inventario histórico; nos
+    # quedamos con la última leída (mismo criterio que list_products).
+    stock_by_pid = {}
+    unit_by_pid = {}
+    for row in (inv_result.data or []):
+        pid = row.get("product_id")
+        if pid is not None and pid not in stock_by_pid:
+            stock_by_pid[pid] = row.get("quantity")
+            unit_by_pid[pid] = row.get("unit")
+
+    since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    movements_result = supabase_admin.table("inventory_movements") \
+        .select("product_id, quantity") \
+        .eq("business_id", business_id) \
+        .eq("reason", "sale") \
+        .in_("product_id", product_ids) \
+        .gte("created_at", since) \
+        .execute()
+
+    sold_qty_by_pid = {}
+    for mov in (movements_result.data or []):
+        pid = mov.get("product_id")
+        if pid is None:
+            continue
+        sold_qty_by_pid[pid] = sold_qty_by_pid.get(pid, Decimal("0")) + Decimal(str(mov.get("quantity") or 0))
+
+    predictions = []
+    for pid in product_ids:
+        current_stock = stock_by_pid.get(pid)
+        if current_stock is None:
+            # Servicio / stock ilimitado — no aplica proyección.
+            continue
+        current_stock = Decimal(str(current_stock))
+
+        total_sold = sold_qty_by_pid.get(pid, Decimal("0"))
+        avg_daily_consumption = total_sold / Decimal("30")
+
+        if avg_daily_consumption <= 0:
+            # Sin ventas registradas en 30 días: no hay consumo con qué
+            # proyectar un quiebre, se excluye en vez de forzar una división.
+            continue
+
+        estimated_days = float(current_stock / avg_daily_consumption)
+        if estimated_days <= threshold_days:
+            predictions.append({
+                "product_id": pid,
+                "product_name": product_name_by_id.get(pid, ""),
+                "current_stock": float(current_stock),
+                "unit": unit_by_pid.get(pid),
+                "avg_daily_consumption": float(avg_daily_consumption),
+                "estimated_days": round(estimated_days, 1),
+            })
+
+    return sorted(predictions, key=lambda x: x["estimated_days"])
 
 
 def list_low_stock(business_id: str) -> list:

@@ -4,8 +4,6 @@ import {BanknotesIcon,CubeIcon,
   ChartBarIcon,
   GiftIcon,
   CurrencyDollarIcon,
-  UserGroupIcon,
-  CalculatorIcon,
   ShoppingCartIcon,
   BuildingStorefrontIcon,
 } from 'react-native-heroicons/outline';
@@ -172,37 +170,15 @@ const moduleConfig = {
     ],
   },
 
-  staff: {
-    id: 'staff',
-    name: 'Personal',
-    icon: UserGroupIcon,
-    enabled: true,
-    optional: true,
-    route: 'staff',
-    subLabel: 'Empleados y roles',
-
-    dashboard: {
-      summary: false,
-      alerts: false,
-      quickActions: false,
-    },
-  },
-
-  cash: {
-    id: 'cash',
-    name: 'Caja',
-    icon: CalculatorIcon,
-    enabled: true,
-    optional: true,
-    route: 'cash',
-    subLabel: 'Flujo de caja y arqueos',
-
-    dashboard: {
-      summary: false,
-      alerts: false,
-      quickActions: false,
-    },
-  },
+  // "staff" y "cash" (Personal/Caja) se removieron de aquí: apuntaban a
+  // rutas ('staff'/'cash') que nunca se registraron en
+  // MainStackNavigator.jsx — no existía pantalla real detrás de esas
+  // tarjetas. Sus necesidades ya están cubiertas por funcionalidad real:
+  // Cierre de Caja vive en Ventas (cashRegister.style.js/useCashSession.js,
+  // ver salesPyme.jsx) y la gestión de personal vive en Asistentes con rol
+  // (TeamScreen.jsx). Los módulos backend `staff`/`cash` de
+  // ALL_VALID_MODULES (auth_service.py) siguen existiendo — no se tocan —
+  // solo se quitó la tarjeta de navegación rota del frontend.
 
   // Pendiente de auditoría propia (ver punto 6): no está en ALL_VALID_MODULES
   // del backend — se deja fuera de `optional` a propósito para que no

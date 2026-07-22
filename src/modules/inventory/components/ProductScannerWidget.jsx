@@ -1,20 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { MagnifyingGlassIcon } from 'react-native-heroicons/solid';
+import { CameraIcon, MagnifyingGlassIcon } from 'react-native-heroicons/solid';
 import colors from '../../../theme/colors';
 import inventoryService from '../services/inventoryService';
+import BarcodeScannerModal from './BarcodeScannerModal';
 import styles from '../styles/productScannerWidget.styles';
 
-// Lookup real: busca por SKU sobre el catálogo real (GET /inventory/products
-// vía inventoryService.getProducts()). No hay endpoint de búsqueda dedicado
-// ni lectura de cámara — "escaneo" sigue siendo la simulación de teclear un
-// código, pero ya no compara contra un catálogo mock.
-const ProductScannerWidget = ({ onScan }) => {
+// Busca un producto por código (SKU/código de barras) sobre el catálogo real
+// (GET /inventory/products). La cámara NO se enciende sola: se abre bajo
+// demanda con el botón "Escanear producto" (BarcodeScannerModal). El input
+// manual queda como respaldo (producto sin código legible o sin cámara).
+//
+// Al leer/buscar un código:
+//   - Si existe el producto, se muestra su información (nombre, stock, etc.).
+//   - Si NO existe y el padre pasó onCreateNew, se invoca con el código para
+//     que abra el formulario de creación con ese código ya prellenado.
+const ProductScannerWidget = ({ onScan, onCreateNew }) => {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [manualCode, setManualCode] = useState('');
   const [scanResult, setScanResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -33,20 +40,9 @@ const ProductScannerWidget = ({ onScan }) => {
     };
   }, []);
 
-  const helperText = useMemo(() => {
-    if (loadingProducts) {
-      return 'Cargando catálogo de productos...';
-    }
-    if (!scanResult) {
-      return notFound
-        ? 'No se encontró ningún producto con ese SKU.'
-        : 'Escribe el SKU de un producto y ejecuta una simulación para ver el resultado del escaneo.';
-    }
-    return `Escaneo simulado listo para ${scanResult.name}.`;
-  }, [scanResult, notFound, loadingProducts]);
-
-  const handleSimulatedScan = () => {
-    const normalizedCode = manualCode.trim().toUpperCase();
+  const lookupByCode = (rawCode, { allowCreate = false } = {}) => {
+    const normalizedCode = rawCode.trim().toUpperCase();
+    if (!normalizedCode) return;
     const match = products.find((item) => (item.sku || '').toUpperCase() === normalizedCode) || null;
 
     setScanResult(match);
@@ -55,9 +51,31 @@ const ProductScannerWidget = ({ onScan }) => {
     if (typeof onScan === 'function') {
       onScan(match, normalizedCode);
     }
+
+    // No encontrado tras un escaneo real -> ofrecer crear el producto con el
+    // código ya prellenado (el flujo lo decide el padre, PymeInventory).
+    if (!match && allowCreate && typeof onCreateNew === 'function') {
+      onCreateNew(normalizedCode);
+    }
   };
 
-  const canScan = !loadingProducts && manualCode.trim().length > 0;
+  const handleScanned = (code) => {
+    setScannerVisible(false);
+    lookupByCode(code, { allowCreate: true });
+  };
+
+  const handleManualSearch = () => {
+    lookupByCode(manualCode);
+  };
+
+  const helperText = useMemo(() => {
+    if (loadingProducts) return 'Cargando catálogo de productos...';
+    if (scanResult) return `Producto encontrado: ${scanResult.name}.`;
+    if (notFound) return 'No se encontró ningún producto con ese código.';
+    return 'Escanea el código de barras del producto o búscalo por su SKU.';
+  }, [scanResult, notFound, loadingProducts]);
+
+  const canSearchManual = !loadingProducts && manualCode.trim().length > 0;
 
   return (
     <View style={styles.widget}>
@@ -65,46 +83,46 @@ const ProductScannerWidget = ({ onScan }) => {
         <View>
           <Text style={styles.kicker}>ESCÁNER</Text>
           <Text style={styles.title}>Escaneo de productos</Text>
-          <Text style={styles.subtitle}>Búsqueda por SKU sobre tu catálogo real, preparada para una futura integración con cámara.</Text>
-        </View>
-        <View style={styles.livePill}>
-          <Text style={styles.livePillText}>Live</Text>
+          <Text style={styles.subtitle}>{helperText}</Text>
         </View>
       </View>
-
-      <View style={styles.scannerFrame}>
-        <View style={styles.cornerLine} />
-        <View style={styles.cornerLineRight} />
-        <View style={styles.previewCircle}>
-          <MagnifyingGlassIcon size={28} color={colors.primary} />
-        </View>
-        <Text style={styles.previewTitle}>Área de lectura simulada</Text>
-        <Text style={styles.previewText}>{helperText}</Text>
-      </View>
-
-      <Text style={styles.inputLabel}>Código manual (SKU)</Text>
-      <TextInput
-        style={styles.input}
-        value={manualCode}
-        onChangeText={setManualCode}
-        placeholder="Ej. CAR-001"
-        placeholderTextColor={colors.placeholder}
-        autoCapitalize="characters"
-        editable={!loadingProducts}
-      />
 
       <TouchableOpacity
-        style={[styles.button, !canScan && styles.buttonDisabled]}
-        onPress={handleSimulatedScan}
-        activeOpacity={0.8}
-        disabled={!canScan}
+        style={[styles.button, styles.scanButton, loadingProducts && styles.buttonDisabled]}
+        onPress={() => setScannerVisible(true)}
+        activeOpacity={0.85}
+        disabled={loadingProducts}
       >
-        {loadingProducts ? (
-          <ActivityIndicator size="small" color={colors.textWhite} />
-        ) : (
-          <Text style={styles.buttonText}>Simular escaneo</Text>
-        )}
+        <CameraIcon size={18} color={colors.textWhite} />
+        <Text style={styles.buttonText}>Escanear producto</Text>
       </TouchableOpacity>
+
+      <Text style={styles.inputLabel}>O busca por código (SKU)</Text>
+      <View style={styles.manualRow}>
+        <TextInput
+          style={[styles.input, styles.manualInput]}
+          value={manualCode}
+          onChangeText={setManualCode}
+          placeholder="Ej. CAR-001"
+          placeholderTextColor={colors.placeholder}
+          autoCapitalize="characters"
+          editable={!loadingProducts}
+          onSubmitEditing={handleManualSearch}
+          returnKeyType="search"
+        />
+        <TouchableOpacity
+          style={[styles.searchIconButton, !canSearchManual && styles.buttonDisabled]}
+          onPress={handleManualSearch}
+          activeOpacity={0.85}
+          disabled={!canSearchManual}
+        >
+          {loadingProducts ? (
+            <ActivityIndicator size="small" color={colors.textWhite} />
+          ) : (
+            <MagnifyingGlassIcon size={18} color={colors.textWhite} />
+          )}
+        </TouchableOpacity>
+      </View>
 
       {scanResult ? (
         <View style={styles.resultCard}>
@@ -118,6 +136,12 @@ const ProductScannerWidget = ({ onScan }) => {
           </Text>
         </View>
       ) : null}
+
+      <BarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onScanned={handleScanned}
+      />
     </View>
   );
 };

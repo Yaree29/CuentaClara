@@ -14,12 +14,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../theme/colors';
 import recipeService from '../services/recipeService';
 import useRecipes from '../hooks/useRecipes';
 import useRecipeForm from '../hooks/useRecipeForm';
 import styles from '../styles/recipesScreen.styles';
+import profileStyles from '../../profile/styles/profile.styles';
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const NO_DISPONIBLE = 'No disponible';
@@ -475,6 +477,7 @@ const RecipeDetailModal = ({ visible, recipe, onClose, onChanged, onEdit, onDele
 // ─── Pantalla principal ──────────────────────────────────────────────────────
 
 const RecipesScreen = () => {
+  const navigation = useNavigation();
   const { recipes, products, loading, refetch } = useRecipes();
 
   const [formModal, setFormModal] = useState({ visible: false, recipe: null });
@@ -499,7 +502,17 @@ const RecipesScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <DashboardHeader title="Recetas" />
+      {/* Header con botón "atrás" — mismo patrón que PymeInventory.jsx/
+          StrategicAnalysisScreen.jsx (profileStyles.topBar/backButton), no
+          DashboardHeader: Recetas se navega desde ModulesScreen, no es un tab
+          raíz, así que necesita una forma real de volver atrás. */}
+      <View style={profileStyles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={profileStyles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={profileStyles.headerTitle}>Recetas</Text>
+        <View style={profileStyles.headerPlaceholder} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>

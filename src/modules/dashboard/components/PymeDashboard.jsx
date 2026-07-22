@@ -1,8 +1,8 @@
 // Pyme Dashboard
 import React, {useState,useCallback,useMemo,useEffect,} from "react";
-import {View,Text,ScrollView,RefreshControl,TouchableOpacity,Modal,TextInput,Alert,ActivityIndicator,} from "react-native";
+import {View,Text,ScrollView,RefreshControl,TouchableOpacity,} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import {ExclamationTriangleIcon,TrophyIcon,ArrowTrendingDownIcon,} from "react-native-heroicons/outline";
+import {ExclamationTriangleIcon,ArrowTrendingDownIcon,} from "react-native-heroicons/outline";
 import styles from "./styles/PymeDashboards.styles";
 import colors from "../../../theme/colors";
 import useAuthStore from "../../../store/useAuthStore";
@@ -10,10 +10,8 @@ import useBlueprintStore from "../../../store/useBlueprintStore";
 import useSalesStore from "../../../store/useSaleStore";
 import useDashboardData from "../hooks/useDashboardData";
 import salesService from "../../sales/services/salesService";
-import businessService from "../../../services/businessService";
 import SummaryCard from "./shared/SummaryCard";
 import AlertCard from "./shared/AlertCard";
-import GoalProgressCard from "./shared/GoalProgressCard";
 import QuickActions from "./shared/QuickActions";
 import { buildDashboard } from "../engine/dashboardEngine";
 import { formatMoney } from "../helpers/currency";
@@ -63,15 +61,12 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
   }, [setDailyTotals]);
 
   // ── Meta mensual ───────────────────────────────────────────────────────────
-  // Estas declaraciones van ANTES de los callbacks que las usan: al estar
-  // debajo, `goalDraft` y `fetchMonthIncome` quedaban en zona muerta temporal
-  // al evaluarse los arrays de dependencias durante el render, y handleSaveGoal
-  // acababa leyendo un valor indefinido (el modal avisaba "monto mayor a 0"
-  // aunque hubieras escrito 6000).
+  // Solo lectura: la meta se configura en Perfil > Ajustes de Negocio > Meta
+  // Mensual. Aquí únicamente se mide el avance para el banner de "Ventas del
+  // Día". Se declara ANTES de los callbacks que lo usan (fetchMonthIncome,
+  // onRefresh): declararlo después dejaba la referencia en zona muerta temporal
+  // al evaluarse los arrays de dependencias durante el render.
   const [monthIncome, setMonthIncome] = useState(0);
-  const [goalModalVisible, setGoalModalVisible] = useState(false);
-  const [goalDraft, setGoalDraft] = useState('');
-  const [savingGoal, setSavingGoal] = useState(false);
 
   // Acumulado del MES (1 del mes → hoy), para medir la meta mensual. Es una
   // consulta aparte de la del día: /sales/profits acepta rango.
@@ -102,32 +97,6 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
     }
   }, [reload, fetchDailyTotals, fetchMonthIncome]);
 
-  // Guarda la meta dentro de business_configs.settings. El backend REEMPLAZA
-  // `settings` entero (ver business_service.update_business_config), así que se
-  // envía fusionado con lo que ya había para no borrar el resto de ajustes.
-  const handleSaveGoal = useCallback(async () => {
-    // goalDraft ya viene solo con dígitos (ver el TextInput): antes se hacía
-    // replace(',', '.') sobre el texto crudo, así que un separador de MILES se
-    // convertía en decimal y "6,000" (o "6.000") se guardaba como 6 — de ahí
-    // que las metas altas parecieran no aceptarse.
-    const value = Number(goalDraft);
-    if (!Number.isFinite(value) || value <= 0) {
-      Alert.alert('Meta inválida', 'Escribe un monto mayor a 0.');
-      return;
-    }
-    setSavingGoal(true);
-    try {
-      await businessService.updateBusinessConfig({
-        settings: { ...(config?.settings || {}), monthlyGoal: value },
-      });
-      setGoalModalVisible(false);
-      await reload();
-    } catch (e) {
-      Alert.alert('No se pudo guardar', e?.message || 'Intenta de nuevo.');
-    } finally {
-      setSavingGoal(false);
-    }
-  }, [goalDraft, config, reload]);
 
   const [todayIncome, setTodayIncome] = useState(0);
 
@@ -193,8 +162,9 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
   // buildGoal() comparaba las ventas de HOY contra un objetivo MENSUAL, y usaba
   // un tope inventado de 10.000 cuando no había meta configurada (además nunca
   // llegaba a leerla: `settings` no se pasaba dentro de businessData). Aquí se
-  // calcula con lo acumulado del mes y con la meta que el dueño eligió; si no
-  // hay meta, no se finge ninguna: se ofrece configurarla.
+  // calcula con lo acumulado del mes y con la meta que el dueño eligió en
+  // Perfil > Ajustes de Negocio > Meta Mensual. Si no hay meta, no se finge
+  // ninguna: el banner simplemente no muestra barra de progreso.
   const monthlyGoal = Number(config?.settings?.monthlyGoal) || 0;
   const hasGoal = monthlyGoal > 0;
 
@@ -332,60 +302,10 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
 
       {/*separacion*/}
 
-      {/* 5. Meta Mensual — motivacional, no urgente ni accionable a diario.
-          Referencia el mismo % que la tarjeta "Rendimiento" del Resumen,
-          aquí con la barra de progreso completa (actual/meta). */}
-      <View style={styles.goalContainer}>
-        <View style={styles.sectionTitleContainer}>
-          <TrophyIcon
-            size={20}
-            color={colors.warning}
-          />
-
-          <Text style={styles.sectionTitle}>
-            Meta Mensual
-          </Text>
-        </View>
-
-        {hasGoal ? (
-          <>
-            <GoalProgressCard
-              current={monthIncome}
-              target={monthlyGoal}
-              percentage={goalPercentage}
-            />
-            <TouchableOpacity
-              style={styles.goalEditButton}
-              onPress={() => {
-                // Se redondea por si quedó guardada una meta decimal por el
-                // bug anterior de separadores (p.ej. 6 en vez de 6000).
-                setGoalDraft(String(Math.round(monthlyGoal)));
-                setGoalModalVisible(true);
-              }}
-            >
-              <Text style={styles.goalEditText}>Cambiar meta</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          // Sin meta configurada no se inventa un objetivo: se invita a elegirlo.
-          <TouchableOpacity
-            style={styles.goalEmptyCard}
-            onPress={() => {
-              setGoalDraft('');
-              setGoalModalVisible(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.goalEmptyTitle}>Selecciona una meta para este mes</Text>
-            <Text style={styles.goalEmptySubtitle}>
-              Define cuánto quieres vender y sigue tu avance aquí.
-            </Text>
-            <Text style={styles.goalEmptyCta}>Elegir meta →</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/*separacion*/}
+      {/* La "Meta Mensual" ya no se configura ni se grafica aquí: se movió a
+          Perfil > Ajustes de Negocio > Meta Mensual (MonthlyGoalScreen). En el
+          dashboard queda solo su REPRESENTACIÓN, dentro del banner de "Ventas
+          del Día" de arriba. */}
 
       {/* 6. Actividad del Día */}
       <Text style={styles.sectionTitle}>
@@ -427,59 +347,6 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
         )}
       </View>
 
-      {/* Selector de meta mensual */}
-      <Modal
-        visible={goalModalVisible}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={() => setGoalModalVisible(false)}
-      >
-        <View style={styles.goalModalOverlay}>
-          <View style={styles.goalModalCard}>
-            <Text style={styles.goalModalTitle}>Meta de ventas del mes</Text>
-            <Text style={styles.goalModalSubtitle}>
-              ¿Cuánto quieres vender este mes? Verás tu avance en el inicio.
-            </Text>
-
-            {/* Solo dígitos (number-pad, sin "." ni ","): una meta mensual se
-                expresa en unidades enteras y admitir separadores volvía
-                ambiguo si "6.000" son seis mil o seis. Al filtrarlos aquí,
-                escribir "6,000" queda como 6000 en vez de convertirse en 6. */}
-            <TextInput
-              style={styles.goalModalInput}
-              placeholder="Ej: 6000"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              value={goalDraft}
-              onChangeText={(val) => setGoalDraft(val.replace(/[^0-9]/g, ''))}
-            />
-
-            <View style={styles.goalModalActions}>
-              <TouchableOpacity
-                style={styles.goalModalCancel}
-                onPress={() => setGoalModalVisible(false)}
-                disabled={savingGoal}
-              >
-                <Text style={styles.goalModalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.goalModalSave, savingGoal && styles.goalModalSaveDisabled]}
-                onPress={handleSaveGoal}
-                disabled={savingGoal}
-              >
-                {savingGoal ? (
-                  <ActivityIndicator color={colors.textWhite} size="small" />
-                ) : (
-                  <Text style={styles.goalModalSaveText}>Guardar meta</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
     </ScrollView>
   );

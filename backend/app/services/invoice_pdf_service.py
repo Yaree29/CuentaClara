@@ -16,6 +16,26 @@ from fpdf import FPDF
 SIGNED_URL_EXPIRES_IN = 3600  # 1 hora
 
 
+def _pdf_safe(value) -> str:
+    """
+    Deja el texto en el rango que admiten las fuentes base de fpdf2.
+
+    fpdf2 con Helvetica (fuente core, sin TTF embebida) solo soporta latin-1:
+    un emoji en el nombre del negocio —p.ej. "Fonda Marta 🐮"— hacía que
+    pdf.cell() lanzara FPDFUnicodeEncodingException y el endpoint respondiera
+    500, así que compartir el PDF fallaba por completo.
+
+    Se descartan únicamente los caracteres fuera de latin-1. Las tildes, la ñ y
+    los signos de apertura (¿ ¡) SÍ están en latin-1, así que el texto en
+    español se conserva intacto; lo que se pierde son emojis y símbolos
+    exóticos, que no aportan nada a un comprobante impreso.
+    """
+    text = "" if value is None else str(value)
+    cleaned = text.encode("latin-1", errors="ignore").decode("latin-1")
+    # Al quitar un emoji suele quedar un espacio doble o colgando al final.
+    return " ".join(cleaned.split())
+
+
 def _invoice_label(invoice: dict) -> str:
     # Las ventas de la pestaña "Ventas" (POST /sales/quick) no reciben
     # numeración fiscal (invoice_number queda NULL) — se rotulan por su id
@@ -28,22 +48,27 @@ def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
     pdf = FPDF()
     pdf.add_page()
 
+    # Todo texto de origen externo (nombre del negocio, dirección, cliente,
+    # productos) pasa por _pdf_safe: puede traer emojis y romper el render.
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, business.get("name") or "Negocio", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 10, _pdf_safe(business.get("name")) or "Negocio", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 10)
-    if business.get("address"):
-        pdf.cell(0, 6, business["address"], new_x="LMARGIN", new_y="NEXT")
-    if business.get("phone"):
-        pdf.cell(0, 6, f"Tel: {business['phone']}", new_x="LMARGIN", new_y="NEXT")
+    address = _pdf_safe(business.get("address"))
+    if address:
+        pdf.cell(0, 6, address, new_x="LMARGIN", new_y="NEXT")
+    phone = _pdf_safe(business.get("phone"))
+    if phone:
+        pdf.cell(0, 6, f"Tel: {phone}", new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, _invoice_label(invoice), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, _pdf_safe(_invoice_label(invoice)), new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Fecha: {invoice['created_at'][:10]}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"Cliente: {invoice.get('customer_name') or 'Consumidor final'}", new_x="LMARGIN", new_y="NEXT")
+    customer = _pdf_safe(invoice.get("customer_name")) or "Consumidor final"
+    pdf.cell(0, 6, f"Cliente: {customer}", new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 10)
@@ -54,7 +79,7 @@ def _build_pdf_bytes(invoice: dict, business: dict) -> bytes:
 
     pdf.set_font("Helvetica", "", 10)
     for item in invoice["items"]:
-        name = item.get("product_name") or f"Producto #{item['product_id']}"
+        name = _pdf_safe(item.get("product_name")) or f"Producto #{item['product_id']}"
         pdf.cell(85, 8, name[:45], border=1)
         pdf.cell(25, 8, f"{float(item['quantity']):.2f}", border=1, align="R")
         pdf.cell(35, 8, f"${float(item['unit_price']):.2f}", border=1, align="R")
@@ -121,8 +146,10 @@ def _build_invoice_pdf_bytes(business_id: str, invoice_id: int) -> tuple[bytes, 
 
     pdf_bytes = _build_pdf_bytes(invoice, business)
     # Nombre "seguro" para archivo/entrada de zip: "FAC-0001.pdf" o "Venta 12.pdf".
-    label = _invoice_label(invoice).replace("#", "").replace("/", "-").strip()
-    file_name = f"{label}.pdf"
+    # _pdf_safe también aquí: el nombre acaba como entrada del .zip, y un emoji
+    # en el rótulo daría un nombre de archivo problemático al descomprimir.
+    label = _pdf_safe(_invoice_label(invoice)).replace("#", "").replace("/", "-").strip()
+    file_name = f"{label or 'Factura'}.pdf"
     return pdf_bytes, file_name
 
 

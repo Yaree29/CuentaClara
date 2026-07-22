@@ -244,6 +244,16 @@ const ProfileScreen = () => {
                     onPress={() => navigation.navigate('SalesSchedule')}
                   />
                 )}
+                {profile?.role === 'owner' && (
+                  <MenuItem
+                    icon="trophy-outline"
+                    label="Meta Mensual"
+                    subLabel="Objetivo de ventas del mes"
+                    iconBgStyle={styles.iconContainerBusiness}
+                    iconColor={colors.primary}
+                    onPress={() => navigation.navigate('MonthlyGoal')}
+                  />
+                )}
                 <MenuItem
                   icon="people-circle-outline"
                   label="Entrar a Modo Asistente"

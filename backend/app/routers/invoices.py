@@ -27,6 +27,7 @@ def list_invoices(
     status: str = None,
     date_from: str = None,
     date_to: str = None,
+    cash_session_id: int = None,
     limit: int = 20,
     current_user: dict = Depends(require_role("owner", "admin"))
 ):
@@ -42,6 +43,11 @@ def list_invoices(
         query = query.gte("created_at", date_from)
     if date_to:
         query = query.lte("created_at", date_to)
+    # "Registro de Ventas" (Ventas PYME) filtra por la sesión de caja vigente
+    # en vez de un rango de fecha calendario — ver cash_session_id en invoices
+    # (20_sales_schedule_and_cash_lifecycle.sql).
+    if cash_session_id:
+        query = query.eq("cash_session_id", cash_session_id)
 
     result = query.execute()
     return result.data

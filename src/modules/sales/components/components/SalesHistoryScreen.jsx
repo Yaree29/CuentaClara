@@ -1,49 +1,85 @@
-import React, { useCallback, useMemo, useState } from 'react';
+// =============================================================================
+// SalesHistoryScreen.jsx (antes AccountingScreen.jsx — nombre corregido: este
+// archivo siempre fue el historial/"Registro de Ventas", no una pantalla de
+// contabilidad; RegisterCount.jsx era en realidad el cierre de caja, ver
+// CashRegisterScreen.jsx)
+// -----------------------------------------------------------------------------
+// Ledger real: facturas de la sesión de caja vigente vía GET /invoices/. Antes
+// filtraba por rango de fecha calendario (todayRange); ahora filtra por
+// cash_session_id (la sesión abierta actual, o la última cerrada si todavía
+// no se ha abierto caja hoy) — así la lista se vacía naturalmente al abrir
+// una sesión nueva, en vez de depender de la medianoche.
+//
+// Sigue accesible con normalidad fuera de horario de ventas (a diferencia de
+// SalesSection.jsx, aquí no aplica ningún bloqueo — decisión explícita del
+// usuario).
+// =============================================================================
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import styles from './styles/accounting.style';
+import styles from './styles/salesHistory.style';
 import useAuthStore from '../../../../store/useAuthStore';
 import billingService from '../../../Invoice/services/billingService';
+import cashService from '../../services/cashService';
 import colors from '../../../../theme/colors';
 import { ArchiveBoxIcon } from 'react-native-heroicons/outline';
 
-const todayRange = () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  return { dateFrom: start.toISOString(), dateTo: end.toISOString() };
-};
-
-const AccountingScreen = () => {
+const SalesHistoryScreen = ({ cashStatus }) => {
   // Usuario autenticado (dueño por ahora)
   const user = useAuthStore((state) => state.user);
 
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [sessionLabel, setSessionLabel] = useState(null);
 
-  // Ledger real: facturas de HOY vía GET /invoices/ (antes leía solo
-  // useSaleStore.dailySales, que se vacía al reabrir la app aunque existan
-  // ventas reales guardadas en el backend).
-  const fetchTodayInvoices = useCallback(async () => {
+  const openSessionId = cashStatus?.session?.id ?? null;
+
+  const fetchSessionInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const { dateFrom, dateTo } = todayRange();
-      const data = await billingService.getInvoices(null, { dateFrom, dateTo, limit: 200 });
+      let sessionId = openSessionId;
+      let label = null;
+
+      if (sessionId) {
+        label = 'Ventas de la caja abierta ahora mismo.';
+      } else {
+        const lastSessions = await cashService.getSessions(1).catch(() => []);
+        if (Array.isArray(lastSessions) && lastSessions[0]) {
+          sessionId = lastSessions[0].id;
+          label = 'Última caja cerrada. Se vaciará al abrir una nueva.';
+        }
+      }
+
+      if (!sessionId) {
+        setInvoices([]);
+        setSessionLabel(null);
+        return;
+      }
+
+      const data = await billingService.getInvoices(null, { cashSessionId: sessionId, limit: 200 });
       setInvoices(Array.isArray(data) ? data : []);
+      setSessionLabel(label);
     } catch (error) {
-      console.error('Error cargando ventas del día:', error);
+      console.error('Error cargando ventas de la sesión:', error);
       setInvoices([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [openSessionId]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchTodayInvoices();
-    }, [fetchTodayInvoices])
+      fetchSessionInvoices();
+    }, [fetchSessionInvoices])
   );
+
+  // Refresca también cuando cambia el estado de caja (ej. se acaba de abrir
+  // una sesión nueva) sin esperar a un nuevo foco de pantalla.
+  useEffect(() => {
+    fetchSessionInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSessionId]);
 
   // Por ahora solo existe el dueño del negocio.
   // Cuando existan asistentes, este arreglo vendrá de la API.
@@ -86,25 +122,36 @@ const AccountingScreen = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Registro de ventas</Text>
 
+        {!loading && sessionLabel && (
+          <View style={styles.sessionBanner}>
+            <ArchiveBoxIcon size={18} color={colors.primary} />
+            <Text style={styles.sessionBannerText}>{sessionLabel}</Text>
+          </View>
+        )}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
+        ) : !openSessionId && !sessionLabel ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aún no hay ninguna caja abierta ni cerrada para mostrar.</Text>
+          </View>
         ) : (
-          userSales.map((user) => (
+          userSales.map((u) => (
             <TouchableOpacity
-              key={user.id}
+              key={u.id}
               style={styles.userCard}
-              onPress={() => setSelectedUser(user)}
+              onPress={() => setSelectedUser(u)}
             >
               <View style={styles.userHeader}>
                 <View>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userRole}>{user.role}</Text>
+                  <Text style={styles.userName}>{u.name}</Text>
+                  <Text style={styles.userRole}>{u.role}</Text>
                 </View>
 
                 <Text style={styles.userMoney}>
-                  ${user.totalMoney.toFixed(2)}
+                  ${u.totalMoney.toFixed(2)}
                 </Text>
               </View>
 
@@ -112,8 +159,8 @@ const AccountingScreen = () => {
                 <ArchiveBoxIcon size={20} color="#000000" />
 
                 <Text style={styles.userInfoText}>
-                  {user.totalProducts}{' '}
-                  {user.totalProducts === 1 ? 'producto' : 'productos'}
+                  {u.totalProducts}{' '}
+                  {u.totalProducts === 1 ? 'producto' : 'productos'}
                 </Text>
 
                 <Text style={styles.viewMoreText}>
@@ -144,7 +191,7 @@ const AccountingScreen = () => {
               {selectedUser?.sales?.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>
-                    No existen ventas registradas hoy.
+                    No existen ventas registradas en esta caja.
                   </Text>
                 </View>
               ) : (
@@ -193,4 +240,4 @@ const AccountingScreen = () => {
   );
 };
 
-export default AccountingScreen;
+export default SalesHistoryScreen;

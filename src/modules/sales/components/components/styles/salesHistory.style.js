@@ -1,4 +1,3 @@
-// Archivo: accounting.styles.js
 import { StyleSheet, Platform } from 'react-native';
 import colors from '../../../../../theme/colors';
 
@@ -27,6 +26,24 @@ export default StyleSheet.create({
     marginBottom: 16,
     marginTop: 10,
     letterSpacing: -0.3,
+  },
+
+  // Banner de contexto: a qué sesión de caja pertenece lo que se muestra
+  // (la abierta ahora, o la última cerrada si todavía no se ha abierto hoy).
+  sessionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary + '12',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  sessionBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
 
   /* =====================

@@ -44,5 +44,6 @@ StrEnum==0.4.15
 supabase==1.2.0
 supafunc==0.2.3
 typing_extensions==4.15.0
+tzdata==2025.2
 uvicorn==0.24.0
-websockets==12.0pillow==12.2.0
+websockets==12.0

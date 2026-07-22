@@ -13,6 +13,8 @@
 #   DELETE /businesses/me/data         — reiniciar historial y transacciones (solo owner)
 #   GET    /businesses/me/config       — configuración del negocio
 #   PUT    /businesses/me/config       — actualizar configuración del negocio
+#   GET    /businesses/me/sales-schedule — horario de ventas configurado
+#   PUT    /businesses/me/sales-schedule — configurar horario de ventas (solo owner)
 #   PUT    /businesses/me/modules      — activar/desactivar un módulo opcional
 #
 # Nota: Usa /me en lugar de /{business_id} para que el business_id se extraiga
@@ -26,6 +28,7 @@ from app.models.business import (
     BusinessUpdate,
     BusinessConfigUpdate,
     ModuleToggleRequest,
+    SalesScheduleUpdate,
 )
 
 router = APIRouter()
@@ -90,6 +93,41 @@ def update_business_config(
     """
     try:
         return business_service.update_business_config(
+            business_id=current_user["business_id"],
+            data=data,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/me/sales-schedule", summary="Obtener el horario de ventas configurado")
+def get_sales_schedule(current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve {opening_time, closing_time} (formato "HH:MM") o null si el
+    negocio no tiene horario configurado (sin restricción horaria — la caja
+    diaria sigue siendo obligatoria para vender de todos modos).
+    """
+    try:
+        return business_service.get_sales_schedule(
+            business_id=current_user["business_id"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/me/sales-schedule", summary="Configurar el horario de ventas")
+def update_sales_schedule(
+    data: SalesScheduleUpdate,
+    current_user: dict = Depends(require_role("owner")),
+):
+    """
+    Configura el horario fijo diario de ventas. Enviar ambos campos en null
+    desactiva la restricción horaria. Solo el dueño puede modificarlo.
+    """
+    try:
+        return business_service.update_sales_schedule(
             business_id=current_user["business_id"],
             data=data,
         )

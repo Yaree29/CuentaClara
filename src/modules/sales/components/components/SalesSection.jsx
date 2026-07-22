@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import Toast from 'react-native-toast-message';
 
 import styles from '../styles/salesPyme.style';
+import colors from '../../../../theme/colors';
 import useAuthStore from '../../../../store/useAuthStore';
 import useSalesStore from '../../../../store/useSaleStore';
 import useAssistantModeStore from '../../../../store/useAssistantModeStore';
 import inventoryService from '../../../inventory/services/inventoryService';
 import salesService from '../../services/salesService';
 
-const SalesPyme = () => {
+// Ciclo de vida de caja (ver plan "horario de operación + caja"): esta es la
+// ÚNICA de las 3 pestañas de Ventas PYME que se bloquea fuera de horario o
+// sin caja abierta — "Registro de Ventas" y "Cierre Diario" siguen viéndose
+// con normalidad (decisión explícita del usuario). cashStatus/onGoToCashRegister
+// vienen del shell (salesPyme.jsx), que monta useCashSession() una sola vez.
+const SalesPyme = ({ cashStatus, onGoToCashRegister }) => {
   const user = useAuthStore((state) => state.user);
   const businessData = user?.business;
   const activeAssistant = useAssistantModeStore((state) => state.activeAssistant);
@@ -237,6 +243,49 @@ const SalesPyme = () => {
       text2: `Venta #${selectedSale}`,
     });
   };
+
+  if (!cashStatus) {
+    return (
+      <View style={[styles.content, { flex: 1, justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!cashStatus.is_open) {
+    return (
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
+        <View style={styles.emptyStateCard}>
+          <Text style={styles.emptyStateTitle}>Debes abrir la caja antes de vender</Text>
+          <Text style={styles.emptyStateText}>
+            Registra el monto inicial en "Cierre Diario" para empezar a registrar ventas de hoy.
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.saveButton} onPress={onGoToCashRegister}>
+          <Text style={styles.saveButtonText}>Ir a Cierre Diario</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
+
+  if (!cashStatus.can_sell) {
+    const schedule = cashStatus.schedule;
+    return (
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>
+        <View style={styles.emptyStateCard}>
+          <Text style={styles.emptyStateTitle}>Fuera de horario de ventas</Text>
+          <Text style={styles.emptyStateText}>
+            {schedule
+              ? `Abrimos de ${schedule.opening_time} a ${schedule.closing_time}. La caja ya no acepta ventas — ve a "Cierre Diario" para cerrarla.`
+              : 'En este momento no se pueden registrar ventas.'}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.saveButton} onPress={onGoToCashRegister}>
+          <Text style={styles.saveButtonText}>Ir a Cierre Diario</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.content}>

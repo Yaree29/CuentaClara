@@ -145,6 +145,7 @@ def _map_product(inv_row: dict) -> dict:
         "is_low_stock": is_low,
         "updated_at": inv_row.get("updated_at"),
         "expiration_date": product.get("expiration_date"),
+        "is_ingredient_only": bool(product.get("is_ingredient_only")),
     }
 
 
@@ -200,7 +201,7 @@ def list_products(business_id: str) -> list:
     negocio aparezca aunque su fila de inventario embebida venga vacía.
     """
     products_result = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id, expiration_date") \
+        .select("id, name, sku, price, cost_price, unit_type, is_active, category_id, expiration_date, is_ingredient_only") \
         .eq("business_id", business_id) \
         .eq("is_active", True) \
         .execute()
@@ -254,6 +255,7 @@ def list_products(business_id: str) -> list:
                 "unit_type": prod.get("unit_type"),
                 "is_active": prod.get("is_active"),
                 "expiration_date": prod.get("expiration_date"),
+                "is_ingredient_only": prod.get("is_ingredient_only"),
                 "product_categories": cat,
             },
         }))
@@ -298,6 +300,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "expiration_date": data.expiration_date.isoformat() if data.expiration_date else None,
         "assistant_id": data.assistant_id,
         "assistant_name": assistant_name,
+        "is_ingredient_only": bool(getattr(data, "is_ingredient_only", False)),
     }
     product_result = supabase_admin.table("products") \
         .insert(product_payload) \
@@ -384,6 +387,7 @@ def create_product(business_id: str, user_id: str, data) -> dict:
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
         "expiration_date": product.get("expiration_date"),
+        "is_ingredient_only": bool(product.get("is_ingredient_only")),
     }
 
 
@@ -424,6 +428,8 @@ def update_product(business_id: str, product_id: int, data, user_id: str = None)
         product_payload["unit_type"] = data.unit_type
     if data.expiration_date is not None:
         product_payload["expiration_date"] = data.expiration_date.isoformat()
+    if data.is_ingredient_only is not None:
+        product_payload["is_ingredient_only"] = data.is_ingredient_only
 
     if product_payload:
         prod_result = supabase_admin.table("products") \
@@ -510,7 +516,7 @@ def update_product(business_id: str, product_id: int, data, user_id: str = None)
 
     # Re-fetch producto para devolver datos actualizados
     prod = supabase_admin.table("products") \
-        .select("id, name, sku, price, cost_price, unit_type, expiration_date") \
+        .select("id, name, sku, price, cost_price, unit_type, expiration_date, is_ingredient_only") \
         .eq("id", product_id) \
         .execute()
     product = prod.data[0] if prod.data else {}
@@ -528,6 +534,7 @@ def update_product(business_id: str, product_id: int, data, user_id: str = None)
         "is_low_stock": is_low,
         "updated_at": inv.get("updated_at"),
         "expiration_date": product.get("expiration_date"),
+        "is_ingredient_only": bool(product.get("is_ingredient_only")),
     }
 
 
@@ -560,6 +567,12 @@ def adjust_stock(business_id: str, user_id: str, data) -> dict:
 
     Actualiza la columna quantity en inventory.
     Valida que el stock resultante no sea negativo.
+
+    Si reason='purchase' y viene unit_cost (StockAdjustRequest.unit_cost),
+    también actualiza products.cost_price con ese valor — es el costo más
+    reciente conocido del producto. Misma columna que ya leen
+    recipes_service.py (costo de insumos) e invoice_service.get_profitability
+    (margen real por venta); no se duplica el dato en otro campo.
     """
     REASON_TO_TYPE = {
         "purchase":   "in",
@@ -638,6 +651,18 @@ def adjust_stock(business_id: str, user_id: str, data) -> dict:
     }).execute()
 
     movement_id = mov_result.data[0]["id"] if mov_result.data else -1
+
+    # Compra con costo real -> actualiza products.cost_price (el más reciente
+    # conocido, reemplaza el anterior). Sin esto, un producto podía comprarse
+    # una y otra vez con costo real conocido y products.cost_price se quedaba
+    # en 0/desactualizado para siempre — recetas y márgenes reales dependen
+    # de esta misma columna.
+    if data.reason == "purchase" and getattr(data, "unit_cost", None) is not None:
+        supabase_admin.table("products") \
+            .update({"cost_price": float(data.unit_cost)}) \
+            .eq("id", data.product_id) \
+            .eq("business_id", business_id) \
+            .execute()
 
     is_low = (new_qty is not None) and (new_qty <= min_stock) and (min_stock > 0)
 

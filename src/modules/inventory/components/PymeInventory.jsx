@@ -188,7 +188,7 @@ const WasteModal = ({ visible, onClose, products, onRegistered }) => {
 const PymeInventory = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const { categoryGroup, config, loading: loadingConfig } = useInventoryConfig();
+    const { config, loading: loadingConfig } = useInventoryConfig();
 
     const [alerts, setAlerts] = useState([]);
     const [loadingAlerts, setLoadingAlerts] = useState(true);
@@ -652,9 +652,9 @@ const PymeInventory = () => {
                     initialData={editingProduct}
                     categories={categories}
                     showExpiration={!!config.caducidad}
-                    showCostPrice={categoryGroup === 'comida_preparada'}
                     prefillBarcode={prefillBarcode}
                     showWeightControl={!!config.control_peso}
+                    showIngredientOnlyToggle={!!(config.recetas || config.produccion)}
                     onSave={handleSaveProduct}
                     onDelete={handleDeleteProduct}
                 />

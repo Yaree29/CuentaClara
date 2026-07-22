@@ -72,11 +72,18 @@ const SalesPyme = ({ cashStatus, onGoToCashRegister }) => {
     }, [loadProducts])
   );
 
-  const dropdownProducts = products.map((product) => ({
-    label: `${product.name} - $${product.price}`,
-    value: product.id,
-    product,
-  }));
+  // Insumos marcados "solo para recetas" (products.is_ingredient_only) no se
+  // ofrecen como opción de venta directa — se filtran aquí, al consumir la
+  // lista compartida de inventoryService.getProducts(), sin tocar el
+  // servicio/backend: Inventario y el selector de insumos de Recetas siguen
+  // viendo todos los productos con la misma llamada.
+  const dropdownProducts = products
+    .filter((product) => !product.isIngredientOnly)
+    .map((product) => ({
+      label: `${product.name} - $${product.price}`,
+      value: product.id,
+      product,
+    }));
 
   const calculateTotal = () =>
     currentSale.products.reduce(

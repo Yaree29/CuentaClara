@@ -34,6 +34,10 @@ const mapProduct = (row) => ({
   isLowStock: !!row.is_low_stock,
   updatedAt: row.updated_at,
   expirationDate: row.expiration_date || null,
+  // Solo insumo de recetas, no se vende directamente — SalesSection.jsx lo
+  // filtra al consumir esta misma lista; Inventario y Recetas lo muestran
+  // normal (no se filtra aquí, en el servicio compartido).
+  isIngredientOnly: !!row.is_ingredient_only,
 });
 
 const inventoryService = {
@@ -88,6 +92,7 @@ const inventoryService = {
       min_stock: Number(productData.minStock || 0),
       purchase_type: productData.purchaseType || 'register_only',
       expiration_date: productData.expirationDate || null,
+      is_ingredient_only: !!productData.isIngredientOnly,
     };
 
     const data = await apiRequest('/inventory/products', {
@@ -117,6 +122,7 @@ const inventoryService = {
       // Solo lo usa el backend cuando el stock sube: decide si además del
       // movimiento de entrada se registra el gasto en caja.
       ...(productData.purchaseType !== undefined ? { purchase_type: productData.purchaseType } : {}),
+      ...(productData.isIngredientOnly !== undefined ? { is_ingredient_only: !!productData.isIngredientOnly } : {}),
     };
 
     const data = await apiRequest(`/inventory/products/${productId}`, {
@@ -135,7 +141,9 @@ const inventoryService = {
   },
 
   // ── Movimientos de stock ──────────────────────────────────────────────────
-  adjustStock: async ({ productId, quantity, reason, notes }) => {
+  // unitCost: obligatorio en el backend cuando reason='purchase' (actualiza
+  // products.cost_price con el valor más reciente conocido).
+  adjustStock: async ({ productId, quantity, reason, notes, unitCost }) => {
     return apiRequest('/inventory/stock/adjust', {
       method: 'POST',
       body: JSON.stringify({
@@ -143,6 +151,7 @@ const inventoryService = {
         quantity: Number(quantity),
         reason,
         notes: notes || null,
+        ...(unitCost !== undefined && unitCost !== null ? { unit_cost: Number(unitCost) } : {}),
       }),
     });
   },

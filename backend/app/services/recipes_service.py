@@ -307,8 +307,10 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
     # total_cost aquí es la suma parcial (insumos sin cost_price aportan 0) —
     # production_records.total_cost es NOT NULL, así que no puede quedar en
     # None como en el detalle de receta; sigue siendo el costo real de los
-    # insumos que sí tienen cost_price configurado.
-    total_cost, _, _ = _recipe_cost(scaled_ingredients, products_by_id)
+    # insumos que sí tienen cost_price configurado. has_missing_cost se
+    # devuelve aparte para que el frontend avise en vez de mostrar "$0.00"
+    # como si fuera el costo real completo.
+    total_cost, _, has_missing_cost = _recipe_cost(scaled_ingredients, products_by_id)
 
     record_payload = {
         "business_id": business_id,
@@ -348,6 +350,7 @@ def produce(business_id: str, user_id: str, recipe_id: int, portions_to_produce:
         "recipe_id": recipe_id,
         "portions_produced": float(portions_to_produce),
         "total_cost": float(total_cost),
+        "has_missing_cost": has_missing_cost,
         # Se expone como "created_at" en la respuesta (el frontend ya lo lee
         # así) aunque la columna real en production_records sea produced_at.
         "created_at": production_record.get("produced_at"),
@@ -497,7 +500,7 @@ def profitability(business_id: str, recipe_id: int) -> dict:
         # insumos sin cost_price configurado.
         unit_margin = None
         total_profit = None
-        limitation = "Costo no configurado: uno o más insumos de esta receta no tienen cost_price configurado."
+        limitation = "Costo no configurado para uno o más insumos."
     else:
         unit_margin = product_price - cost_per_portion
         total_profit = unit_margin * quantity_sold

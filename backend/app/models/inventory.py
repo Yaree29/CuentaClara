@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional
 from decimal import Decimal
 from datetime import date
@@ -50,6 +50,10 @@ class ProductCreateRequest(BaseModel):
     # Asistente activo (Modo Asistente) que creó el producto, si aplica.
     # None = producto creado directamente por el dueño.
     assistant_id: Optional[int] = None
+    # True = solo se usa como insumo de recetas, nunca se ofrece como opción
+    # de venta directa (SalesSection.jsx lo filtra). Visible en
+    # ProductFormModal.jsx solo si el negocio tiene recetas/produccion activo.
+    is_ingredient_only: bool = False
 
     @field_validator("name")
     @classmethod
@@ -104,6 +108,7 @@ class ProductUpdateRequest(BaseModel):
     #   "use_gains"     → se pagó con dinero del negocio → registra gasto
     #   "register_only" → solo se corrige el conteo      → sin gasto
     purchase_type: Optional[str] = None
+    is_ingredient_only: Optional[bool] = None
 
     @field_validator("name")
     @classmethod
@@ -168,6 +173,12 @@ class StockAdjustRequest(BaseModel):
     quantity: Decimal           # positivo = entrada, negativo = salida
     reason: str                 # purchase | waste | manual | return
     notes: Optional[str] = None
+    # Obligatorio cuando reason='purchase' (ver reason_valid más abajo):
+    # costo unitario real pagado en esta compra. Se usa para actualizar
+    # products.cost_price (el más reciente conocido) — misma columna que lee
+    # recipes_service.py y invoice_service.get_profitability, no se duplica
+    # el dato en otro campo.
+    unit_cost: Optional[Decimal] = None
     # Asistente activo (Modo Asistente) que hizo el ajuste, si aplica.
     # None = ajuste hecho directamente por el dueño.
     assistant_id: Optional[int] = None
@@ -186,6 +197,19 @@ class StockAdjustRequest(BaseModel):
         if v not in allowed:
             raise ValueError(f"Razón inválida. Opciones: {', '.join(allowed)}")
         return v
+
+    @field_validator("unit_cost")
+    @classmethod
+    def unit_cost_non_negative(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v < 0:
+            raise ValueError("El costo unitario no puede ser negativo.")
+        return v
+
+    @model_validator(mode="after")
+    def unit_cost_required_for_purchase(self):
+        if self.reason == "purchase" and self.unit_cost is None:
+            raise ValueError('"Costo unitario de compra" es obligatorio al registrar una entrada por compra.')
+        return self
 
 class StockAdjustResponse(BaseModel):
     product_id: int

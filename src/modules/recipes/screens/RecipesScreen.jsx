@@ -305,7 +305,14 @@ const RecipeDetailModal = ({ visible, recipe, onClose, onChanged, onEdit, onDele
     setProduceSuccess(null);
     try {
       const result = await recipeService.produce(recipe.id, portions);
-      setProduceSuccess(`Producción registrada. Costo: ${money(result.total_cost)}.`);
+      // "Costo: $0.00" no significa que de verdad costó $0 — significa que
+      // uno o más insumos nunca tuvieron cost_price configurado. Mostrar el
+      // número ahí confundía más que ayudar.
+      setProduceSuccess(
+        result.has_missing_cost
+          ? 'Producción registrada. Costo no configurado para uno o más insumos.'
+          : `Producción registrada. Costo: ${money(result.total_cost)}.`
+      );
       setPortionsToProduce('');
       await loadControlData(recipe.id, consumptionFilter);
       onChanged?.();

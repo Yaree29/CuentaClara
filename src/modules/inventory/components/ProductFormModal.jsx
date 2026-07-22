@@ -71,24 +71,25 @@ const validateExpirationDate = (val) => {
  *  showExpiration – boolean (business_inventory_config.caducidad) — muestra el
  *                   campo opcional de fecha de vencimiento cuando el negocio
  *                   tiene ese flag activo.
- *  showCostPrice  – boolean — muestra "Costo de Producción" (cost_price) solo
- *                   cuando el negocio es category_group === 'comida_preparada'
- *                   (el costo alimenta el cálculo de recetas, una función
- *                   propia de ese grupo). Para el resto de categorías no aparece.
  *  prefillBarcode – string | null — código ya leído por el escáner al crear un
  *                   producto que no existía; rellena el campo Código de barras.
  *  showWeightControl – boolean (business_inventory_config.control_peso) —
  *                   muestra el selector de unidad de medida (kg/libra/unidad)
  *                   para unit_type. Si el negocio no tiene este flag activo,
  *                   el campo no aparece (unitType se guarda como null).
+ *  showIngredientOnlyToggle – boolean (business_inventory_config.recetas ||
+ *                   .produccion) — muestra el toggle "Es insumo para recetas
+ *                   (no se vende directamente)" (products.is_ingredient_only).
+ *                   Mismo criterio de flags que showWeightControl.
  */
-const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false, showCostPrice = false, prefillBarcode = null, showWeightControl = false }) => {
+const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, categories = [], showExpiration = false, prefillBarcode = null, showWeightControl = false, showIngredientOnlyToggle = false }) => {
   const [name, setName]         = useState('');
   const [price, setPrice]       = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [category, setCategory] = useState('');
   const [stock, setStock]       = useState('');
   const [minStock, setMinStock] = useState('');
+  const [isIngredientOnly, setIsIngredientOnly] = useState(false);
   const [purchaseType, setPurchaseType] = useState('register_only');
   const [expirationDate, setExpirationDate] = useState('');
   const [barcode, setBarcode] = useState('');
@@ -118,7 +119,16 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     if (initialData) {
       setName(initialData.name ?? '');
       setPrice(initialData.price?.toString() ?? '');
-      setCostPrice(initialData.costPrice !== null && initialData.costPrice !== undefined ? initialData.costPrice.toString() : '');
+      // cost_price=0 en la base de datos significa "nunca se compró/configuró"
+      // (create_product lo defaultea a 0, no NULL) — no es un costo real de
+      // $0.00. Precargar "0" en el input daría a entender que ya hay un costo
+      // registrado; se deja vacío para que el placeholder/aviso de "Costo no
+      // configurado" sea el que se vea.
+      setCostPrice(
+        initialData.costPrice !== null && initialData.costPrice !== undefined && Number(initialData.costPrice) > 0
+          ? initialData.costPrice.toString()
+          : ''
+      );
       setCategory(initialData.category ?? (categories[0] || ''));
       setStock(initialData.stock !== null && initialData.stock !== undefined ? initialData.stock.toString() : '');
       setMinStock(initialData.minStock !== null && initialData.minStock !== undefined ? initialData.minStock.toString() : '');
@@ -126,10 +136,12 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       setExpirationDate(initialData.expirationDate ? initialData.expirationDate.slice(0, 10) : '');
       setBarcode(initialData.sku ?? '');
       setUnitType(initialData.unitType ?? '');
+      setIsIngredientOnly(!!initialData.isIngredientOnly);
     } else {
       setName('');
       setPrice('');
       setCostPrice('');
+      setIsIngredientOnly(false);
       // Al crear desde un escaneo sin coincidencia (prefillBarcode presente),
       // arranca en "Sin categoría" — el producto puede ser de cualquier
       // categoría y no hay forma de adivinarla solo del código leído. En el
@@ -219,23 +231,7 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
         ? 'El nombre es demasiado corto.'
         : null;
     const pErr  = validatePrice(price);
-    // Si dice que pagó la mercancía, el costo deja de ser opcional: es el dato
-    // con el que se calcula cuánto dinero salió. Sin él el gasto se estimaba
-    // con el precio de VENTA e inflaba los reportes (90 unidades que se venden
-    // a $99 figuraban como $8910 gastados).
-    //
-    // Solo se puede exigir si el campo está visible: showCostPrice depende de
-    // la configuración del negocio y, cuando está apagado, el costo ni siquiera
-    // se muestra ni se envía.
-    const costoRequerido =
-      showCostPrice &&
-      isAddingStock &&
-      purchaseType === 'use_gains' &&
-      (costPrice === '' || parseFloat(costPrice) <= 0);
-
-    const cpErr = costoRequerido
-      ? 'Escribe cuánto te costó cada unidad para poder registrar el gasto.'
-      : (showCostPrice ? validateCostPrice(costPrice) : null);
+    const cpErr = validateCostPrice(costPrice);
     const sErr  = validateNonNegativeInt(stock, 'La cantidad');
     const msErr = validateNonNegativeInt(minStock, 'El stock mínimo');
     const edErr = showExpiration ? validateExpirationDate(expirationDate) : null;
@@ -252,9 +248,10 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
     onSave({
       name: name.trim(),
       price: parseFloat(price),
-      // Solo se envía cost_price cuando el campo está visible para este negocio
-      // (comida_preparada); para el resto se omite y no se sobreescribe.
-      ...(showCostPrice ? { costPrice: costPrice !== '' ? parseFloat(costPrice) : null } : {}),
+      // "Costo unitario ($)" es el único punto donde se registra/actualiza
+      // cost_price — siempre visible, para cualquier producto/categoría, ya
+      // no depende de ningún flujo de "Entrada de inventario"/compra.
+      costPrice: costPrice !== '' ? parseFloat(costPrice) : null,
       category: category || null,
       // El "Código de barras" se guarda en la columna sku (no hay columna
       // barcode separada — ver products.sku). null si quedó vacío.
@@ -266,6 +263,9 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
       minStock: minStock !== '' ? parseInt(minStock, 10) : 0,
       purchaseType: purchaseType,
       ...(showExpiration ? { expirationDate: expirationDate !== '' ? expirationDate : null } : {}),
+      // Solo se envía si el toggle está visible (negocio con recetas/producción
+      // activo); para el resto se omite y no se sobreescribe.
+      ...(showIngredientOnlyToggle ? { isIngredientOnly } : {}),
     });
   };
 
@@ -331,21 +331,26 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                 {priceError ? <Text style={styles.errorText}>{priceError}</Text> : null}
               </View>
 
-              {/* ── Costo de producción (solo comida_preparada — insumo para Recetas) ── */}
-              {showCostPrice && (
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Costo de Producción ($)</Text>
-                  <TextInput
-                    style={[styles.formInput, costPriceError && styles.inputError]}
-                    value={costPrice}
-                    onChangeText={handleCostPriceChange}
-                    keyboardType="decimal-pad"
-                    placeholder="Opcional — para calcular costo de recetas"
-                    placeholderTextColor={colors.placeholder}
-                  />
-                  {costPriceError ? <Text style={styles.errorText}>{costPriceError}</Text> : null}
-                </View>
-              )}
+              {/* ── Costo unitario ($) — único punto donde se registra/actualiza
+                  products.cost_price, para cualquier producto/categoría. Ya no
+                  depende de ningún flujo de "Entrada de inventario"/compra;
+                  recetas y márgenes reales leen este mismo valor. ── */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Costo unitario ($)</Text>
+                <TextInput
+                  style={[styles.formInput, costPriceError && styles.inputError]}
+                  value={costPrice}
+                  onChangeText={handleCostPriceChange}
+                  keyboardType="decimal-pad"
+                  placeholder={
+                    initialData && Number(initialData.costPrice) === 0
+                      ? 'Costo no configurado'
+                      : 'Opcional — cuánto te cuesta cada unidad'
+                  }
+                  placeholderTextColor={colors.placeholder}
+                />
+                {costPriceError ? <Text style={styles.errorText}>{costPriceError}</Text> : null}
+              </View>
 
               {/* ── Código de barras (columna sku): generar automático o escanear/teclear ── */}
               <View style={styles.formGroup}>
@@ -469,15 +474,17 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                     </TouchableOpacity>
                   </View>
 
-                  {/* Adelanta cuánto se va a descontar, para que el número no
-                      sea una sorpresa en el reporte. */}
-                  {purchaseType === 'use_gains' && showCostPrice && (
+                  {/* El costo ya se captura arriba en "Costo unitario ($)" —
+                      aquí solo se adelanta cuánto se va a descontar con ese
+                      mismo valor, para que el número no sea una sorpresa en
+                      el reporte. No hay un segundo input de costo. */}
+                  {purchaseType === 'use_gains' && (
                     <Text style={styles.purchaseHint}>
                       {costPrice !== '' && parseFloat(costPrice) > 0
                         ? `Se registrará un gasto de $${(
                             (initialData ? addedUnits : typedStock) * parseFloat(costPrice)
-                          ).toFixed(2)} (${initialData ? addedUnits : typedStock} × $${parseFloat(costPrice).toFixed(2)} de costo).`
-                        : 'Escribe el Costo de Producción para calcular el gasto.'}
+                          ).toFixed(2)} (${initialData ? addedUnits : typedStock} × $${parseFloat(costPrice).toFixed(2)} de costo unitario).`
+                        : 'Completa "Costo unitario ($)" arriba para calcular el gasto de esta compra.'}
                     </Text>
                   )}
                 </View>
@@ -522,6 +529,20 @@ const ProductFormModal = ({ visible, onClose, initialData, onSave, onDelete, cat
                   </View>
                 )}
               </View>
+
+              {/* ── Es insumo para recetas (solo si el negocio tiene recetas/producción activo) ── */}
+              {showIngredientOnlyToggle && (
+                <View style={styles.formGroup}>
+                  <TouchableOpacity
+                    style={[styles.formCategoryPill, isIngredientOnly && styles.formCategoryPillActive, { alignSelf: 'flex-start' }]}
+                    onPress={() => setIsIngredientOnly((prev) => !prev)}
+                  >
+                    <Text style={[styles.formCategoryText, isIngredientOnly && styles.formCategoryTextActive]}>
+                      {isIngredientOnly ? '✓ ' : ''}Es insumo para recetas (no se vende directamente)
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* ── Guardar ── */}
               <TouchableOpacity

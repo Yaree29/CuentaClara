@@ -189,7 +189,7 @@ def receive_purchase_order(business_id: str, user_id: str, purchase_order_id: in
         raise ValueError(f"Solo se pueden recibir órdenes en estado 'draft' (actual: {po_result.data[0]['status']})")
 
     items_result = supabase_admin.table("purchase_items")\
-        .select("product_id, quantity")\
+        .select("product_id, quantity, unit_cost")\
         .eq("purchase_order_id", purchase_order_id)\
         .execute()
 
@@ -201,6 +201,11 @@ def receive_purchase_order(business_id: str, user_id: str, purchase_order_id: in
                 product_id=item["product_id"],
                 quantity=Decimal(str(item["quantity"])),
                 reason="purchase",
+                # PurchaseItemCreate ya exige unit_cost al crear la orden —
+                # adjust_stock actualiza products.cost_price con este mismo
+                # valor al recibirla, sin duplicar el dato en otro campo.
+                unit_cost=Decimal(str(item["unit_cost"])) if item.get("unit_cost") is not None else None,
+                assistant_id=None,
             ),
         )
 

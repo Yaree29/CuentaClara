@@ -56,6 +56,14 @@ const registerService = {
     // en settings junto a la metadata de onboarding — no tienen columna propia.
     const mergedSettings = {
       ...(settings || {}),
+      // auth_service.py lee estos dos en snake_case (sell_physical_products/
+      // transforms_raw_material) para decidir modules_to_activate en
+      // 'servicios'/'comida_preparada' — el formulario los captura en
+      // camelCase (sellPhysicalProducts/transformsRawMaterial), así que se
+      // agregan aquí también en snake_case. Mismo patrón que business_type/
+      // avg_price justo abajo.
+      sell_physical_products: settings?.sellPhysicalProducts === 'Sí',
+      transforms_raw_material: settings?.transformsRawMaterial === 'Sí',
       ...(isInformal
         ? {
             business_type: businessType || null,

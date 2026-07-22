@@ -26,8 +26,21 @@ const ResetPasswordScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
+      // La sesión de recuperación la establece App.js (setSession con los tokens
+      // del deep link). Si no hay sesión, el problema SÍ es el enlace; se
+      // distingue explícitamente para no culpar al enlace de otros errores.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert(
+          'Enlace no válido',
+          'No se pudo abrir tu sesión de recuperación. Solicita un enlace nuevo desde "¿Olvidaste tu contraseña?" y ábrelo directamente desde el correo.'
+        );
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+
       // Cerrar la sesión de recuperación para forzar un login limpio con la nueva clave.
       await supabase.auth.signOut();
       Alert.alert(
@@ -36,10 +49,30 @@ const ResetPasswordScreen = ({ navigation }) => {
         [{ text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) }]
       );
     } catch (e) {
-      Alert.alert(
-        'No se pudo actualizar',
-        'El enlace de recuperación pudo haber expirado. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
-      );
+      // Antes CUALQUIER fallo se reportaba como "el enlace expiró", lo que
+      // ocultaba la causa real. El caso más común no tiene nada que ver con el
+      // enlace: Supabase rechaza reutilizar la contraseña actual.
+      const msg = (e?.message || '').toLowerCase();
+      const code = e?.code || '';
+
+      if (code === 'same_password' || msg.includes('should be different')) {
+        Alert.alert(
+          'Elige otra contraseña',
+          'La nueva contraseña debe ser distinta a la que ya tenías.'
+        );
+      } else if (
+        msg.includes('session') || msg.includes('jwt') ||
+        msg.includes('expired') || msg.includes('token')
+      ) {
+        Alert.alert(
+          'No se pudo actualizar',
+          'El enlace de recuperación pudo haber expirado. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
+        );
+      } else {
+        // Se muestra el mensaje real: sin esto, un fallo distinto (red, política
+        // de contraseñas del proyecto, etc.) queda indistinguible del anterior.
+        Alert.alert('No se pudo actualizar', e?.message || 'Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }

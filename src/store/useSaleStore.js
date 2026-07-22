@@ -137,6 +137,27 @@ const useSalesStore = create((set) => ({
       },
     }),
 
+  /* ===========================
+     RESET DE SESIÓN
+     ===========================
+     Este store vive en memoria y NO se limpiaba al cambiar de cuenta: al
+     cerrar sesión y entrar (o registrarse) con otro usuario sin matar la app,
+     el dashboard del usuario nuevo seguía leyendo las ventas/gastos del
+     anterior — de ahí que una cuenta recién creada mostrara "Venta realizada
+     USD 12.00" sin haber hecho nada. Se invoca desde useAuthStore en
+     setLogin/setLogout. */
+  resetSalesSession: () =>
+    set({
+      openSales: [
+        { id: 1, products: [], note: '', status: 'open', saved: false },
+      ],
+      selectedSale: 1,
+      dailySales: [],
+      generalMovements: [],
+      expenses: [],
+      dailyTotals: null,
+    }),
+
 }));
 
 export default useSalesStore;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AuthLayout from '../../../views/layouts/AuthLayout';
@@ -369,7 +369,13 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <AuthLayout title={headerCopy.title} subtitle={headerCopy.subtitle} showBack onBack={handleBack}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Un View, NO un ScrollView: AuthLayout ya envuelve a los hijos en un
+          KeyboardAwareScrollView. Anidar un segundo scroll hacía que el
+          contenido se desplazara dentro del interno, así que el margen inferior
+          del layout (insets de la barra de navegación de Android) no aplicaba y
+          el enlace "¿Ya tienes cuenta?" quedaba debajo de los botones del
+          sistema; además rompía el auto-scroll al enfocar un campo. */}
+      <View style={styles.container}>
 
         {step === 1 && (
           <>
@@ -768,7 +774,7 @@ const RegisterScreen = ({ navigation }) => {
           <Text style={styles.linkText}>¿Ya tienes cuenta? Inicia sesión</Text>
         </TouchableOpacity>
 
-      </ScrollView>
+      </View>
     </AuthLayout>
   );
 };

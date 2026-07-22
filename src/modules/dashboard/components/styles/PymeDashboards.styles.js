@@ -263,6 +263,111 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 16,
   },
+
+  /* ===== Meta mensual: estado sin meta + edición ===== */
+  goalEmptyCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.warning,
+    padding: 18,
+  },
+  goalEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  goalEmptySubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  goalEmptyCta: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+    marginTop: 12,
+  },
+  goalEditButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  goalEditText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  /* ===== Modal para elegir la meta ===== */
+  goalModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  goalModalCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 22,
+  },
+  goalModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  goalModalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  goalModalInput: {
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  goalModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
+  },
+  goalModalCancel: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  goalModalCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  goalModalSave: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minWidth: 130,
+    alignItems: 'center',
+  },
+  goalModalSaveDisabled: {
+    backgroundColor: colors.disabledButton,
+  },
+  goalModalSaveText: {
+    color: colors.textWhite,
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });
 
 export default styles;

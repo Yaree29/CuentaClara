@@ -1,6 +1,6 @@
 // Pyme Dashboard
 import React, {useState,useCallback,useMemo,useEffect,} from "react";
-import {View,Text,ScrollView,RefreshControl,TouchableOpacity,} from "react-native";
+import {View,Text,ScrollView,RefreshControl,TouchableOpacity,Modal,TextInput,Alert,ActivityIndicator,} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import {ExclamationTriangleIcon,TrophyIcon,ArrowTrendingDownIcon,} from "react-native-heroicons/outline";
 import styles from "./styles/PymeDashboards.styles";
@@ -10,6 +10,7 @@ import useBlueprintStore from "../../../store/useBlueprintStore";
 import useSalesStore from "../../../store/useSaleStore";
 import useDashboardData from "../hooks/useDashboardData";
 import salesService from "../../sales/services/salesService";
+import businessService from "../../../services/businessService";
 import SummaryCard from "./shared/SummaryCard";
 import AlertCard from "./shared/AlertCard";
 import GoalProgressCard from "./shared/GoalProgressCard";
@@ -64,17 +65,59 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
   useFocusEffect(
     useCallback(() => {
       fetchDailyTotals();
-    }, [fetchDailyTotals])
+      fetchMonthIncome();
+    }, [fetchDailyTotals, fetchMonthIncome])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([reload(), fetchDailyTotals()]);
+      await Promise.all([reload(), fetchDailyTotals(), fetchMonthIncome()]);
     } finally {
       setRefreshing(false);
     }
-  }, [reload, fetchDailyTotals]);
+  }, [reload, fetchDailyTotals, fetchMonthIncome]);
+
+  // Guarda la meta dentro de business_configs.settings. El backend REEMPLAZA
+  // `settings` entero (ver business_service.update_business_config), así que se
+  // envía fusionado con lo que ya había para no borrar el resto de ajustes.
+  const handleSaveGoal = useCallback(async () => {
+    const value = Number(String(goalDraft).replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) {
+      Alert.alert('Meta inválida', 'Escribe un monto mayor a 0.');
+      return;
+    }
+    setSavingGoal(true);
+    try {
+      await businessService.updateBusinessConfig({
+        settings: { ...(config?.settings || {}), monthlyGoal: value },
+      });
+      setGoalModalVisible(false);
+      await reload();
+    } catch (e) {
+      Alert.alert('No se pudo guardar', e?.message || 'Intenta de nuevo.');
+    } finally {
+      setSavingGoal(false);
+    }
+  }, [goalDraft, config, reload]);
+
+  // Acumulado del MES (1 del mes → hoy), para medir la meta mensual. Es una
+  // consulta aparte de la del día: /sales/profits acepta rango.
+  const [monthIncome, setMonthIncome] = useState(0);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [goalDraft, setGoalDraft] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  const fetchMonthIncome = useCallback(async () => {
+    const now = new Date();
+    const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    try {
+      const data = await salesService.getProfitsAndExpenses(firstDay, todayISO());
+      setMonthIncome(Number(data?.income) || 0);
+    } catch {
+      // Sin conexión o rol sin permiso: se conserva el último valor conocido.
+    }
+  }, []);
 
   const [todayIncome, setTodayIncome] = useState(0);
 
@@ -121,7 +164,10 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
     });
   }, [user,businessData,enabledModules,currency,preferences,dailySales,expenses,generalMovements,dailyTotals,inventoryAlerts,]);
 
-  const {header,summary,alerts,goals,quickActions,finance,activity,} = dashboard;
+  // `goals` (buildGoal) ya no se usa para pintar: comparaba las ventas del día
+  // contra una meta mensual inventada. La meta real se calcula más abajo con
+  // el acumulado del mes y el objetivo guardado por el dueño.
+  const {header,summary,alerts,quickActions,finance,activity,} = dashboard;
 
   // Resumen: hero oscuro (Ventas del día, mismo lenguaje visual que el hero
   // "Ventas del Día" de InformalDashboard.styles.js) con el % de meta como
@@ -133,7 +179,18 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
   const cashCard = summary.find((card) => card.id === "cash");
   const ordersCard = summary.find((card) => card.id === "orders");
 
-  const goalPercentage = Math.min(Math.max(Number(goals.percentage) || 0, 0), 100);
+  // ── Meta mensual (real) ────────────────────────────────────────────────────
+  // buildGoal() comparaba las ventas de HOY contra un objetivo MENSUAL, y usaba
+  // un tope inventado de 10.000 cuando no había meta configurada (además nunca
+  // llegaba a leerla: `settings` no se pasaba dentro de businessData). Aquí se
+  // calcula con lo acumulado del mes y con la meta que el dueño eligió; si no
+  // hay meta, no se finge ninguna: se ofrece configurarla.
+  const monthlyGoal = Number(config?.settings?.monthlyGoal) || 0;
+  const hasGoal = monthlyGoal > 0;
+
+  const goalPercentage = hasGoal
+    ? Math.min(Math.max((monthIncome / monthlyGoal) * 100, 0), 100)
+    : 0;
 
   const secondaryCards = useMemo(() => {
     const cards = [];
@@ -174,17 +231,21 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
           {salesCard?.subtitle || "Ventas del día"}
         </Text>
 
-        <View style={styles.heroProgressTrack}>
-          <View
-            style={[
-              styles.heroProgressFill,
-              { width: `${goalPercentage}%` },
-            ]}
-          />
-        </View>
-        <Text style={styles.heroProgressLabel}>
-          {Math.round(goalPercentage)}% de la meta mensual
-        </Text>
+        {hasGoal ? (
+          <>
+            <View style={styles.heroProgressTrack}>
+              <View
+                style={[
+                  styles.heroProgressFill,
+                  { width: `${goalPercentage}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.heroProgressLabel}>
+              {Math.round(goalPercentage)}% de la meta mensual
+            </Text>
+          </>
+        ) : null}
       </View>
 
       <View style={styles.summaryGrid}>
@@ -276,11 +337,40 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
           </Text>
         </View>
 
-        <GoalProgressCard
-          current={goals.current}
-          target={goals.target}
-          percentage={goals.percentage}
-        />
+        {hasGoal ? (
+          <>
+            <GoalProgressCard
+              current={monthIncome}
+              target={monthlyGoal}
+              percentage={goalPercentage}
+            />
+            <TouchableOpacity
+              style={styles.goalEditButton}
+              onPress={() => {
+                setGoalDraft(String(monthlyGoal));
+                setGoalModalVisible(true);
+              }}
+            >
+              <Text style={styles.goalEditText}>Cambiar meta</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          // Sin meta configurada no se inventa un objetivo: se invita a elegirlo.
+          <TouchableOpacity
+            style={styles.goalEmptyCard}
+            onPress={() => {
+              setGoalDraft('');
+              setGoalModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.goalEmptyTitle}>Selecciona una meta para este mes</Text>
+            <Text style={styles.goalEmptySubtitle}>
+              Define cuánto quieres vender y sigue tu avance aquí.
+            </Text>
+            <Text style={styles.goalEmptyCta}>Elegir meta →</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/*separacion*/}
@@ -324,6 +414,56 @@ const PymeDashboard = ({ onTodayIncomeChange } = {}) => {
           </Text>
         )}
       </View>
+
+      {/* Selector de meta mensual */}
+      <Modal
+        visible={goalModalVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        navigationBarTranslucent
+        onRequestClose={() => setGoalModalVisible(false)}
+      >
+        <View style={styles.goalModalOverlay}>
+          <View style={styles.goalModalCard}>
+            <Text style={styles.goalModalTitle}>Meta de ventas del mes</Text>
+            <Text style={styles.goalModalSubtitle}>
+              ¿Cuánto quieres vender este mes? Verás tu avance en el inicio.
+            </Text>
+
+            <TextInput
+              style={styles.goalModalInput}
+              placeholder="Ej: 1500"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={goalDraft}
+              onChangeText={setGoalDraft}
+            />
+
+            <View style={styles.goalModalActions}>
+              <TouchableOpacity
+                style={styles.goalModalCancel}
+                onPress={() => setGoalModalVisible(false)}
+                disabled={savingGoal}
+              >
+                <Text style={styles.goalModalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.goalModalSave, savingGoal && styles.goalModalSaveDisabled]}
+                onPress={handleSaveGoal}
+                disabled={savingGoal}
+              >
+                {savingGoal ? (
+                  <ActivityIndicator color={colors.textWhite} size="small" />
+                ) : (
+                  <Text style={styles.goalModalSaveText}>Guardar meta</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </ScrollView>
   );

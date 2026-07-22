@@ -28,16 +28,30 @@ const getParam = (url, key) => {
 // que canjear, los tokens ya vienen en el propio enlace) y navega a
 // ResetPasswordScreen. Cualquier fallo se avisa explícitamente: un fallo
 // silencioso aquí se ve, desde la app, como "no pasó nada" al tocar el enlace.
+// Evita procesar dos veces el MISMO enlace: en arranque en frío,
+// Linking.getInitialURL() y el evento 'url' pueden disparar ambos con la misma
+// URL. El segundo setSession reutilizaría un refresh token que el primero ya
+// rotó — falla y deja la sesión de recuperación inservible, así que después
+// updateUser (ResetPasswordScreen) no encontraba sesión válida.
+let lastRecoveryUrl = null;
+
 const handleRecoveryUrl = async (url) => {
   if (!url || !url.includes('reset-password')) return;
+  if (url === lastRecoveryUrl) return;
+  lastRecoveryUrl = url;
 
   const accessToken = getParam(url, 'access_token');
   const refreshToken = getParam(url, 'refresh_token');
 
   if (!accessToken || !refreshToken) {
+    // Supabase devuelve el motivo en el propio fragmento cuando el enlace no
+    // sirve (p.ej. error_description=Email+link+is+invalid+or+has+expired).
+    const description = getParam(url, 'error_description');
     Alert.alert(
       'Enlace no válido',
-      'Este enlace de recuperación ya venció o ya se usó. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
+      description
+        ? description.replace(/\+/g, ' ')
+        : 'Este enlace de recuperación ya venció o ya se usó. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
     );
     return;
   }
@@ -47,7 +61,9 @@ const handleRecoveryUrl = async (url) => {
     refresh_token: refreshToken,
   });
   if (error) {
-    Alert.alert('No se pudo abrir el enlace', 'Intenta solicitar la recuperación de nuevo.');
+    // Se muestra el mensaje real: un texto genérico aquí hacía imposible
+    // distinguir un enlace vencido de un fallo de red.
+    Alert.alert('No se pudo abrir el enlace', error.message || 'Intenta solicitar la recuperación de nuevo.');
     return;
   }
 

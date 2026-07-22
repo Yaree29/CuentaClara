@@ -1,4 +1,17 @@
 import { create } from 'zustand';
+import useSalesStore from './useSaleStore';
+
+// Limpia el estado de venta en memoria al abrir o cerrar sesión. Sin esto, los
+// datos de una cuenta se filtraban a la siguiente mientras la app siguiera
+// viva (ver resetSalesSession en useSaleStore.js). Se llama con getState() —
+// no es un hook — así que es seguro invocarlo dentro de estas acciones.
+const resetSalesSession = () => {
+  try {
+    useSalesStore.getState().resetSalesSession();
+  } catch {
+    // Un fallo aquí nunca debe impedir iniciar o cerrar sesión.
+  }
+};
 
 // =============================================================================
 // Estado de sesión en memoria. La sesión "real" (tokens y su rotación) la
@@ -17,21 +30,27 @@ const useAuthStore = create((set) => ({
     isInitializing: true,
     isBiometricVerified: false,
 
-    setLogin: (userData, token) => set({
-        user: userData,
-        token,
-        isAuthenticated: true,
-        isInitializing: false,
-        isBiometricVerified: false,
-    }),
+    setLogin: (userData, token) => {
+        resetSalesSession();
+        set({
+            user: userData,
+            token,
+            isAuthenticated: true,
+            isInitializing: false,
+            isBiometricVerified: false,
+        });
+    },
 
-    setLogout: () => set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isInitializing: false,
-        isBiometricVerified: false,
-    }),
+    setLogout: () => {
+        resetSalesSession();
+        set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isInitializing: false,
+            isBiometricVerified: false,
+        });
+    },
 
     setInitializing: (isInitializing) => set({ isInitializing }),
 

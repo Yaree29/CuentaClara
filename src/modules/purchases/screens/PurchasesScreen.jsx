@@ -8,7 +8,8 @@
 // =============================================================================
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
 import { usePurchases } from '../hooks/usePurchases';
 import styles from '../styles/purchases.styles';
 import colors from '../../../theme/colors';
@@ -164,10 +165,10 @@ const PurchasesScreen = () => {
   };
 
   return (
-    <MainLayout>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Compras</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <DashboardHeader title="Compras" />
 
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.tabsContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'new' && styles.tabActive]}
@@ -412,7 +413,7 @@ const PurchasesScreen = () => {
           </View>
         )}
       </ScrollView>
-    </MainLayout>
+    </SafeAreaView>
   );
 };
 

@@ -19,12 +19,6 @@ export default StyleSheet.create({
     paddingBottom: 24,
   },
 
-  hubTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 20,
-  },
   section: {
     marginBottom: 24,
   },

@@ -1,15 +1,14 @@
 // =============================================================================
-// CREADO: 2026-07-19
-// Propósito: Saludo dinámico del Dashboard (Inicio), compartido entre
-//            InformalDashboard.jsx y PymeDashboard.jsx para no duplicar la
-//            lógica de mensajes. Antes vivía dentro de DashboardHeader.jsx —
-//            se movió aquí. Reutiliza los estilos welcomeContainer/welcomeTitle/
-//            welcomeSubtitle ya existentes en InformalDashboard.styles.js.
+// MODIFICADO: 2026-07-22
+// Propósito: Lógica del saludo dinámico (nombre + subtítulo) — antes se
+//            renderizaba como bloque propio dentro del scroll de
+//            InformalDashboard.jsx/PymeDashboard.jsx; ahora vive en la fila
+//            fija de DashboardHeader.jsx (variant "Home"). Se deja aquí como
+//            hook para que el Header reutilice exactamente esta lógica sin
+//            duplicarla.
 // =============================================================================
-import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { useState } from 'react';
 import useAuthStore from '../../../../store/useAuthStore';
-import styles from '../styles/InformalDashboard.styles';
 
 // Para "hay ventas hoy" existen 2 variantes de frase; se elige una al azar
 // una sola vez por montaje (no en cada render) para que el subtítulo no
@@ -21,26 +20,29 @@ const buildSubtitle = (hasSalesToday, businessName, useAltPhrase) => {
     if (businessName) {
       if (isLongName) {
         return useAltPhrase
-          ? `${businessName} está creciendo\u00A0🎉`
-          : `${businessName} va muy bien hoy\u00A0📈`;
+          ? `${businessName} está creciendo 🎉`
+          : `${businessName} va muy bien hoy 📈`;
       }
       return useAltPhrase
-        ? `Tu ${businessName} está creciendo hoy\u00A0🎉`
-        : `Tu ${businessName} está teniendo un buen día\u00A0📈`;
+        ? `Tu ${businessName} está creciendo hoy 🎉`
+        : `Tu ${businessName} está teniendo un buen día 📈`;
     }
-    return useAltPhrase ? '¡Vamos por más hoy!\u00A0🎉' : '¡Vamos por un buen día!\u00A0📈';
+    return useAltPhrase ? '¡Vamos por más hoy! 🎉' : '¡Vamos por un buen día! 📈';
   }
 
   if (businessName) {
     return isLongName
-      ? `¡Vamos por más con ${businessName}!\u00A0💪`
-      : `Aún no acaba el día, ¡vamos por más con ${businessName}!\u00A0💪`;
+      ? `¡Vamos por más con ${businessName}! 💪`
+      : `Aún no acaba el día, ¡vamos por más con ${businessName}! 💪`;
   }
 
-  return 'Aún no acaba el día, ¡vamos por más!\u00A0💪';
+  return 'Aún no acaba el día, ¡vamos por más! 💪';
 };
 
-const DashboardGreeting = ({ todayIncome = 0 }) => {
+// Hook — nombre de pila del usuario + subtítulo dinámico según si ya hubo
+// ventas hoy. Usado por DashboardHeader.jsx para el saludo de la pantalla
+// Inicio.
+export const useDashboardGreeting = (todayIncome = 0) => {
   const user = useAuthStore((state) => state.user);
   const firstName = user?.name?.split(' ')[0] || 'Comerciante';
   const businessName = user?.business?.name || '';
@@ -49,18 +51,7 @@ const DashboardGreeting = ({ todayIncome = 0 }) => {
 
   const subtitle = buildSubtitle(todayIncome > 0, businessName, useAltPhrase);
 
-  return (
-    <View style={styles.welcomeContainer}>
-      <View>
-        <Text style={styles.welcomeTitle}>
-          <Text style={styles.welcomeTitleRegular}>¡Hola, </Text>
-          <Text style={styles.welcomeTitleBold}>{firstName}</Text>
-          <Text style={styles.welcomeTitleRegular}>!</Text>
-        </Text>
-        <Text style={styles.welcomeSubtitle}>{subtitle}</Text>
-      </View>
-    </View>
-  );
+  return { firstName, subtitle };
 };
 
-export default DashboardGreeting;
+export default useDashboardGreeting;

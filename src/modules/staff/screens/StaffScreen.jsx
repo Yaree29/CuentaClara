@@ -5,52 +5,25 @@
 //            la funcionalidad completa aún no está implementada.
 // =============================================================================
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import MainLayout from '../../../views/layouts/MainLayout';
+import { View, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DashboardHeader from '../../dashboard/components/shared/DashboardHeader';
+import styles from '../styles/staffScreen.styles';
 
 const StaffScreen = () => {
   return (
-    <MainLayout>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <DashboardHeader title="Personal" />
+
       <View style={styles.container}>
         <Text style={styles.icon}>👥</Text>
-        <Text style={styles.title}>Personal</Text>
         <Text style={styles.subtitle}>Próximamente</Text>
         <Text style={styles.description}>
           Aquí podrás gestionar empleados, roles y permisos del negocio.
         </Text>
       </View>
-    </MainLayout>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-});
 
 export default StaffScreen;

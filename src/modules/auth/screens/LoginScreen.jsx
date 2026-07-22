@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image, Modal, StyleSheet } from 'react-native';
+import { Alert, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AuthLayout from '../../../views/layouts/AuthLayout';
@@ -160,21 +160,17 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout title="Hola," subtitle="Inicia sesión">
       <View style={styles.container}>
-        <Image
-          source={require('../../../utils/images/icon.png')}
-          style={styles.logo}
-        />
-        <Text style={styles.brandTitle}>CuentaClara</Text>
-
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         <View style={styles.form}>
           <View>
+            <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
               style={[styles.input, emailError && styles.inputError]}
-              placeholder="Correo electrónico"
+              placeholder="tucorreo@ejemplo.com"
+              placeholderTextColor={colors.placeholder}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -190,10 +186,12 @@ const LoginScreen = ({ navigation }) => {
           </View>
 
           <View>
+            <Text style={styles.label}>Contraseña</Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
-                placeholder="Contraseña"
+                placeholder="••••••••"
+                placeholderTextColor={colors.placeholder}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -231,7 +229,7 @@ const LoginScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color={colors.textButton} />
             ) : (
-              <Text style={styles.buttonText}>Entrar</Text>
+              <Text style={styles.buttonText}>Iniciar sesión</Text>
             )}
           </TouchableOpacity>
 

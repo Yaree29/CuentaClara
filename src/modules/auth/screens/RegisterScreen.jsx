@@ -7,6 +7,7 @@ import styles from '../styles/register.styles';
 import registerService from '../services/registerService';
 import useAuthStore from '../../../store/useAuthStore';
 import { useAuth } from '../hooks/useAuth';
+import { safeGoBack } from '../utils/navigationHelpers';
 import {
   validateEmail, 
   validatePassword, 
@@ -134,7 +135,9 @@ const RegisterScreen = ({ navigation }) => {
     if (step > 1) {
       setStep(step - 1);
     } else {
-      navigation.goBack();
+      // Si no hay pantalla previa en el stack (p. ej. se llegó desde
+      // WelcomeScreen con "replace"), vuelve a Login en vez de fallar.
+      safeGoBack(navigation, 'Login');
     }
   };
 
@@ -269,28 +272,28 @@ const RegisterScreen = ({ navigation }) => {
     return () => (mounted = false);
   }, []);
 
+  // Título/subtítulo del encabezado según el paso actual (solo diseño).
+  const getHeaderCopy = () => {
+    if (step === 1) return { title: 'Crea tu', subtitle: 'cuenta' };
+    if (step === 2) return { title: 'Elige tu', subtitle: 'perfil' };
+    if (step === 3 && formData.profileType === 'empresa') return { title: 'Configura tu', subtitle: 'negocio' };
+    return { title: 'Configuración', subtitle: 'rápida' };
+  };
+  const headerCopy = getHeaderCopy();
+
   return (
-    <AuthLayout>
-      <ScrollView contentContainerStyle={styles.container}>
-        {step > 1 && (
-          <TouchableOpacity
-            onPress={handleBack}
-            style={{ alignSelf: 'flex-start', marginBottom: 12 }}
-          >
-            <Text style={styles.linkText}>Atrás</Text>
-          </TouchableOpacity>
-        )}
-        
+    <AuthLayout title={headerCopy.title} subtitle={headerCopy.subtitle} showBack onBack={handleBack}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
         {step === 1 && (
           <>
-            <Text style={styles.title}>Crear Cuenta</Text>
-            <Text style={styles.subtitle}>Información básica</Text>
-
             <View style={styles.form}>
               <View>
+                <Text style={styles.label}>Nombre</Text>
                 <TextInput
                   style={[styles.input, errors.name && styles.inputError]}
                   placeholder="Nombre"
+                  placeholderTextColor={colors.placeholder}
                   value={formData.name}
                   onChangeText={(val) => updateField('name', val)}
                   maxLength={100}
@@ -298,17 +301,23 @@ const RegisterScreen = ({ navigation }) => {
                 {errors.name ? <Text style={styles.errorMessage}>{errors.name}</Text> : null}
               </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Apellido"
-                value={formData.lastName}
-                onChangeText={(val) => updateField('lastName', val)}
-              />
+              <View>
+                <Text style={styles.label}>Apellido</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Apellido"
+                  placeholderTextColor={colors.placeholder}
+                  value={formData.lastName}
+                  onChangeText={(val) => updateField('lastName', val)}
+                />
+              </View>
 
               <View>
+                <Text style={styles.label}>Correo electrónico</Text>
                 <TextInput
                   style={[styles.input, errors.email && styles.inputError]}
                   placeholder="Correo electrónico"
+                  placeholderTextColor={colors.placeholder}
                   value={formData.email}
                   onChangeText={(val) => updateField('email', val)}
                   autoCapitalize="none"
@@ -320,10 +329,12 @@ const RegisterScreen = ({ navigation }) => {
               </View>
 
               <View>
+                <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.passwordWrapper}>
                   <TextInput
                     style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
                     placeholder="Contraseña"
+                    placeholderTextColor={colors.placeholder}
                     secureTextEntry={!showPassword}
                     value={formData.password}
                     onChangeText={(val) => updateField('password', val)}
@@ -350,9 +361,11 @@ const RegisterScreen = ({ navigation }) => {
               </View>
 
               <View>
+                <Text style={styles.label}>Teléfono (opcional)</Text>
                 <TextInput
                   style={[styles.input, errors.phone && styles.inputError]}
                   placeholder="Teléfono (opcional)"
+                  placeholderTextColor={colors.placeholder}
                   value={formData.phone}
                   onChangeText={(val) => updateField('phone', val)}
                   keyboardType="phone-pad"
@@ -361,9 +374,11 @@ const RegisterScreen = ({ navigation }) => {
               </View>
 
               <View>
+                <Text style={styles.label}>Nombre del negocio</Text>
                 <TextInput
                   style={[styles.input, errors.businessName && styles.inputError]}
                   placeholder="Nombre del negocio"
+                  placeholderTextColor={colors.placeholder}
                   value={formData.businessName}
                   onChangeText={(val) => updateField('businessName', val)}
                   maxLength={100}
@@ -380,7 +395,7 @@ const RegisterScreen = ({ navigation }) => {
 
         {step === 2 && (
           <>
-            <Text style={styles.title}>Selecciona tu perfil</Text>
+            <Text style={styles.subtitle}>Selecciona el tipo de perfil que mejor describe tu negocio</Text>
 
             <View style={styles.form}>
               <TouchableOpacity
@@ -394,13 +409,13 @@ const RegisterScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.button}
+                style={styles.buttonOutline}
                 onPress={() => {
                   updateField('profileType', 'empresa');
                   handleNext();
                 }}
               >
-                <Text style={styles.buttonText}>Empresa PYME</Text>
+                <Text style={styles.buttonOutlineText}>Empresa PYME</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -408,14 +423,13 @@ const RegisterScreen = ({ navigation }) => {
 
         {step === 3 && formData.profileType === 'empresa' && (
           <>
-            <Text style={styles.title}>Configuración Empresa</Text>
-
             <View style={styles.form}>
               <Text style={styles.sectionTitle}>Sección General</Text>
               
               <TextInput
                 style={styles.input}
                 placeholder="RUC / NIT / Identificación Tributaria *"
+                placeholderTextColor={colors.placeholder}
                 value={formData.nit}
                 onChangeText={(val) => updateField('nit', val)}
               />
@@ -423,6 +437,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Dirección Física"
+                placeholderTextColor={colors.placeholder}
                 value={formData.address}
                 onChangeText={(val) => updateField('address', val)}
               />
@@ -430,6 +445,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="URL del Logo (opcional)"
+                placeholderTextColor={colors.placeholder}
                 value={formData.logoUrl}
                 onChangeText={(val) => updateField('logoUrl', val)}
               />
@@ -441,7 +457,7 @@ const RegisterScreen = ({ navigation }) => {
                 style={[styles.input, { justifyContent: 'center' }]}
                 onPress={() => setTemplatePickerOpen(!templatePickerOpen)}
               >
-                <Text>
+                <Text style={{ color: colors.textPrimary }}>
                   {formData.industryTemplateId
                     ? (() => {
                         const t = templates.find((t) => t.id === formData.industryTemplateId);
@@ -452,9 +468,9 @@ const RegisterScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               {templatePickerOpen && (
-                <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 8 }}>
+                <View style={styles.dropdownList}>
                   {templates.length === 0 ? (
-                    <ActivityIndicator style={{ padding: 16 }} />
+                    <ActivityIndicator style={{ padding: 16 }} color={colors.primary} />
                   ) : (
                     templates.map((t) => (
                       <TouchableOpacity
@@ -464,7 +480,7 @@ const RegisterScreen = ({ navigation }) => {
                           updateField('categoryId', t.id); 
                           setTemplatePickerOpen(false);
                         }}
-                        style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                        style={styles.dropdownItem}
                       >
                         <Text>{t.icon}  {t.name}</Text>
                       </TouchableOpacity>
@@ -483,7 +499,7 @@ const RegisterScreen = ({ navigation }) => {
                     {formData.industryTemplateId === 1 && (
                       <>
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Unidad de Medida</Text>
+                          <Text style={styles.rowLabel}>Unidad de Medida</Text>
                           <View style={styles.inputRow}>
                             {['Kg', 'Lb', 'Ambos'].map((unit) => (
                               <TouchableOpacity
@@ -500,18 +516,19 @@ const RegisterScreen = ({ navigation }) => {
                         </View>
                         
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Merma Estimada (%)</Text>
+                          <Text style={styles.rowLabel}>Merma Estimada (%)</Text>
                           <TextInput
                             style={[styles.input, { padding: 8, width: 80, textAlign: 'center' }]}
                             keyboardType="numeric"
                             value={formData.settings.wasteMargin}
                             onChangeText={(val) => updateSettingField('wasteMargin', val)}
                             placeholder="0"
+                            placeholderTextColor={colors.placeholder}
                           />
                         </View>
 
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>¿Usa balanza digital?</Text>
+                          <Text style={styles.rowLabel}>¿Usa balanza digital?</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -533,7 +550,7 @@ const RegisterScreen = ({ navigation }) => {
                     {formData.industryTemplateId === 2 && (
                       <>
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Cobra por comisión</Text>
+                          <Text style={styles.rowLabel}>Cobra por comisión</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -550,7 +567,7 @@ const RegisterScreen = ({ navigation }) => {
                         </View>
 
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Vende productos físicos</Text>
+                          <Text style={styles.rowLabel}>Vende productos físicos</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -572,7 +589,7 @@ const RegisterScreen = ({ navigation }) => {
                     {formData.industryTemplateId === 3 && (
                       <>
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Usa códigos de barras</Text>
+                          <Text style={styles.rowLabel}>Usa códigos de barras</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -594,7 +611,7 @@ const RegisterScreen = ({ navigation }) => {
                     {formData.industryTemplateId === 4 && (
                       <>
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Transforma materia prima</Text>
+                          <Text style={styles.rowLabel}>Transforma materia prima</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -611,7 +628,7 @@ const RegisterScreen = ({ navigation }) => {
                         </View>
 
                         <View style={styles.rowContainer}>
-                          <Text style={styles.label}>Maneja propinas</Text>
+                          <Text style={styles.rowLabel}>Maneja propinas</Text>
                           <View style={styles.inputRow}>
                             {['Sí', 'No'].map((opt) => (
                               <TouchableOpacity
@@ -633,7 +650,7 @@ const RegisterScreen = ({ navigation }) => {
                   <Text style={styles.sectionTitle}>Configuración General</Text>
                   <View style={styles.sectionCard}>
                     <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Forma de venta</Text>
+                      <Text style={styles.rowLabel}>Forma de venta</Text>
                       <View style={styles.inputRow}>
                         {['Mostrador', 'Delivery', 'Ambos'].map((mode) => (
                           <TouchableOpacity
@@ -650,18 +667,19 @@ const RegisterScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Tasa de impuesto (%)</Text>
+                      <Text style={styles.rowLabel}>Tasa de impuesto (%)</Text>
                       <TextInput
                         style={[styles.input, { padding: 8, width: 80, textAlign: 'center' }]}
                         keyboardType="numeric"
                         value={formData.settings.taxRate}
                         onChangeText={(val) => updateSettingField('taxRate', val)}
                         placeholder="7.00"
+                        placeholderTextColor={colors.placeholder}
                       />
                     </View>
 
                     <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Inventario simplificado</Text>
+                      <Text style={styles.rowLabel}>Inventario simplificado</Text>
                       <View style={styles.inputRow}>
                         {['Sí', 'No'].map((opt) => (
                           <TouchableOpacity
@@ -678,7 +696,7 @@ const RegisterScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.rowContainer}>
-                      <Text style={styles.label}>Reportes básicos</Text>
+                      <Text style={styles.rowLabel}>Reportes básicos</Text>
                       <View style={styles.inputRow}>
                         {['Sí', 'No'].map((opt) => (
                           <TouchableOpacity
@@ -710,28 +728,34 @@ const RegisterScreen = ({ navigation }) => {
 
         {step === 3 && formData.profileType === 'emprendedor' && (
           <>
-            <Text style={styles.title}>Configuración rápida</Text>
-
             <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="¿Qué vendes?"
-                value={formData.businessType}
-                onChangeText={(val) => updateField('businessType', val)}
-              />
+              <View>
+                <Text style={styles.label}>¿Qué vendes?</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="¿Qué vendes?"
+                  placeholderTextColor={colors.placeholder}
+                  value={formData.businessType}
+                  onChangeText={(val) => updateField('businessType', val)}
+                />
+              </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Precio promedio"
-                value={formData.avgPrice}
-                onChangeText={(val) => updateField('avgPrice', val)}
-              />
+              <View>
+                <Text style={styles.label}>Precio promedio</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Precio promedio"
+                  placeholderTextColor={colors.placeholder}
+                  value={formData.avgPrice}
+                  onChangeText={(val) => updateField('avgPrice', val)}
+                />
+              </View>
 
               <TouchableOpacity
-                style={styles.button}
+                style={styles.buttonOutline}
                 onPress={() => updateField('taxEnabled', !formData.taxEnabled)}
               >
-                <Text style={styles.buttonText}>
+                <Text style={styles.buttonOutlineText}>
                   Impuesto 7%: {formData.taxEnabled ? 'Activo' : 'Inactivo'}
                 </Text>
               </TouchableOpacity>
@@ -744,7 +768,7 @@ const RegisterScreen = ({ navigation }) => {
         )}
 
         {/* LINK */}
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.link}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, 'Login')} style={styles.link}>
           <Text style={styles.linkText}>¿Ya tienes cuenta? Inicia sesión</Text>
         </TouchableOpacity>
 

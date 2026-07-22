@@ -73,17 +73,36 @@ def update_customer(business_id: str, customer_id: int, data) -> dict:
 # ── Deudas ────────────────────────────────────────────────────────────────────
 
 def list_debts(business_id: str, status: str = None) -> list:
-    query = supabase_admin.table("debts")\
-        .select("id, business_id, customer_id, original_amount, remaining_amount, description, status, due_date, created_at, customers(name, phone, notes)")\
-        .eq("business_id", business_id)
+    # Se embebe invoices(notes) siguiendo el FK debts.invoice_id: si la deuda
+    # nació de una venta a crédito, la nota escrita en esa venta se muestra
+    # junto a la descripción del fiado.
+    base_columns = (
+        "id, business_id, customer_id, invoice_id, original_amount, "
+        "remaining_amount, description, status, due_date, created_at, "
+        "customers(name, phone, notes)"
+    )
 
-    if status:
-        query = query.eq("status", status)
-    else:
-        # Por defecto excluir las totalmente pagadas y canceladas
-        query = query.in_("status", ["pending", "partial", "overdue"])
+    def run(columns: str):
+        q = supabase_admin.table("debts").select(columns).eq("business_id", business_id)
 
-    result = query.order("created_at", desc=True).execute()
+        if status:
+            q = q.eq("status", status)
+        else:
+            # Por defecto excluir las totalmente pagadas y canceladas
+            q = q.in_("status", ["pending", "partial", "overdue"])
+
+        return q.order("created_at", desc=True).execute()
+
+    try:
+        result = run(f"{base_columns}, invoices(notes)")
+    except Exception as e:
+        # Si el embed de invoices falla (relación no detectada por PostgREST,
+        # columna notes ausente porque falta aplicar 12_invoicing_pymes.sql),
+        # devolvemos igual la libreta sin las notas de factura. Perder una nota
+        # es aceptable; dejar al usuario sin ver sus fiados, no.
+        print(f"[list_debts] No se pudo embeber invoices(notes): {e}")
+        result = run(base_columns)
+
     data = result.data or []
 
     # Aplanar customer.name al campo customer_name para simplificar el response
@@ -92,6 +111,12 @@ def list_debts(business_id: str, status: str = None) -> list:
         row["customer_name"] = customer["name"] if customer else "Sin nombre"
         row["customer_phone"] = customer.get("phone") if customer else None
         row["customer_notes"] = customer.get("notes") if customer else None
+
+        # invoices llega como dict (relación singular) o None si no hay factura
+        invoice = row.pop("invoices", None)
+        if isinstance(invoice, list):
+            invoice = invoice[0] if invoice else None
+        row["invoice_notes"] = invoice.get("notes") if invoice else None
 
     return data
 

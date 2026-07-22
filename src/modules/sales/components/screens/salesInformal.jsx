@@ -8,7 +8,7 @@ import colors from '../../../../theme/colors';
 import { useSales } from '../../hooks/useSales';
 import styles from '../styles/salesInformal.style';
 import inventoryService from '../../../inventory/services/inventoryService';
-import debtService from '../../../credit/services/debtService';
+import debtService, { buildDebtDescription } from '../../../credit/services/debtService';
 import billingService from '../../../Invoice/services/billingService';
 import LinkCustomerModal from '../LinkCustomerModal';
 import {UserPlusIcon,ShoppingBagIcon,DocumentTextIcon,XMarkIcon} from 'react-native-heroicons/solid';
@@ -127,10 +127,12 @@ const SalesInformal = () => {
       const result = await processSale(items, total, finalNote, apiPaymentMethod, isCredit);
 
       if (isCredit) {
+        // La nota de la venta se guarda también en el fiado, para que aparezca
+        // como "Nota del fiado" en la libreta y no se quede solo en la factura.
         await debtService.createDebt({
           customer_id: linkedCustomer.id,
           amount: total,
-          description: itemsSummary,
+          description: buildDebtDescription(itemsSummary, finalNote),
           invoice_id: result?.invoice_id,
         });
       }

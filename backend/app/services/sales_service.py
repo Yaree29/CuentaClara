@@ -77,6 +77,9 @@ def create_quick_sale(business_id: str, user_id: str, data):
         "user_id": user_id,
         "assistant_id": data.assistant_id,
         "assistant_name": assistant_name,
+        # La nota que escribe el usuario al registrar la venta. Antes se
+        # recibía en el modelo pero nunca se guardaba: se perdía en silencio.
+        "notes": (data.notes or "").strip() or None,
         "created_at": datetime.utcnow().isoformat()
     }).execute()
 

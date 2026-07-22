@@ -268,7 +268,11 @@ const InformalInventory = () => {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyComponent}
-        refreshing={loading}
+        // El spinner del RefreshControl solo para pull-to-refresh (cuando ya
+        // hay productos en pantalla). En la carga inicial la lista está vacía
+        // y el indicador lo pone ListEmptyComponent: si ambos usaran `loading`
+        // a secas, se verían dos spinners al entrar.
+        refreshing={loading && filteredProducts.length > 0}
         onRefresh={refreshInventory}
       />
 

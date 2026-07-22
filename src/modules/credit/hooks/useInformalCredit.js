@@ -18,7 +18,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
-import debtService from '../services/debtService';
+import debtService, {
+  buildDebtDescription,
+  parseDebtDescription,
+} from '../services/debtService';
 import inventoryService from '../../inventory/services/inventoryService';
 import useAuthStore from '../../../store/useAuthStore';
 
@@ -30,6 +33,64 @@ export const SORT_CATEGORIES = [
   { key: 'most_paid',  label: 'Más abono' },
   { key: 'least_paid', label: 'Menos abono' },
 ];
+
+// Une la nota guardada en la descripción del fiado con la nota de la factura
+// asociada. Un fiado creado desde Ventas guarda la misma nota en ambos lados,
+// así que se deduplica (ignorando mayúsculas y espacios) para no mostrarla dos
+// veces. Si son distintas, se muestran ambas en líneas separadas.
+const mergeNotes = (...notes) => {
+  const seen = new Set();
+  const unique = [];
+
+  for (const note of notes) {
+    const clean = (note || '').trim();
+    if (!clean) continue;
+
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    unique.push(clean);
+  }
+
+  return unique.join('\n');
+};
+
+// Traduce los errores técnicos del backend a mensajes que entienda el dueño
+// del negocio. Si aparece uno que no conocemos, damos una salida genérica pero
+// accionable en vez de mostrar el texto crudo de la API.
+const friendlyPaymentError = (rawMessage, remaining) => {
+  const msg = (rawMessage || '').toLowerCase();
+
+  if (msg.includes('supera el saldo')) {
+    const limite = Number.isFinite(remaining) ? remaining.toFixed(2) : null;
+    return limite
+      ? `El abono es mayor que lo que te deben. Solo quedan $${limite} por pagar.`
+      : 'El abono es mayor que lo que te deben en este fiado.';
+  }
+
+  if (msg.includes('ya está paid') || msg.includes('no acepta abonos')) {
+    return 'Este fiado ya está pagado por completo, no hace falta anotar más abonos.';
+  }
+
+  if (msg.includes('ya está cancelled')) {
+    return 'Este fiado fue eliminado, así que no se le pueden anotar abonos.';
+  }
+
+  if (msg.includes('deuda no encontrada')) {
+    return 'No encontramos este fiado. Actualiza la lista e inténtalo de nuevo.';
+  }
+
+  if (msg.includes('sesión') || msg.includes('401')) {
+    return 'Tu sesión se cerró. Vuelve a iniciar sesión para anotar el abono.';
+  }
+
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) {
+    return 'No hay conexión con el servidor. Revisa tu internet e inténtalo otra vez.';
+  }
+
+  return 'No pudimos guardar el abono en este momento. Inténtalo de nuevo en un momento.';
+};
 
 export const useInformalCredit = () => {
   const user = useAuthStore((state) => state.user);
@@ -112,6 +173,7 @@ export const useInformalCredit = () => {
       const customer = customersById.get(d.customer_id);
       const originalAmount = Number(d.original_amount) || 0;
       const remainingAmount = Number(d.remaining_amount) || 0;
+      const { products, debtNote } = parseDebtDescription(d.description);
 
       return {
         id: String(d.id),
@@ -122,8 +184,11 @@ export const useInformalCredit = () => {
         originalAmount,
         paidAmount: originalAmount - remainingAmount,
         items: d.description || '',
+        products,                                   // solo los productos fiados
+        debtNote: mergeNotes(debtNote, d.invoice_notes), // nota del fiado + de la venta
+        invoiceId: d.invoice_id || null,
         status: d.status || 'pending',
-        notes: d.customer_notes || customer?.notes || '',
+        notes: d.customer_notes || customer?.notes || '', // nota del cliente
         lastUpdate: d.created_at,
       };
     });
@@ -244,13 +309,28 @@ export const useInformalCredit = () => {
     }
   };
 
-  // Registrar abono / pago
-  const registerPayment = async (creditId, paymentAmount) => {
-    const amount = Number(paymentAmount) || 0;
+  // Registrar abono / pago.
+  // Devuelve { ok, error } para que la UI muestre el mensaje en el propio
+  // formulario, en lenguaje de tendero, en vez de un Alert genérico.
+  const registerPayment = async (creditId, paymentAmount, remainingDebt) => {
+    const amount = Number(paymentAmount);
+    const remaining = Number(remainingDebt);
 
-    if (amount <= 0) {
-      Alert.alert('Monto inválido', 'Ingresa un monto mayor a cero.');
-      return;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return {
+        ok: false,
+        error: 'Escribe cuánto te abonaron. Por ejemplo: 10.50',
+      };
+    }
+
+    if (Number.isFinite(remaining) && amount > remaining) {
+      return {
+        ok: false,
+        error:
+          `El abono es mayor que lo que te deben. La deuda pendiente es de $${remaining.toFixed(2)}, ` +
+          `así que puedes anotar hasta ese monto. Si te pagaron de más, anota $${remaining.toFixed(2)} ` +
+          'y entrega el vuelto.',
+      };
     }
 
     try {
@@ -263,9 +343,10 @@ export const useInformalCredit = () => {
       setSelectedClient(null);
 
       await fetchAll();
+      return { ok: true };
     } catch (err) {
       console.error('Error al registrar abono:', err);
-      Alert.alert('Error', err.message || 'No se pudo registrar el abono');
+      return { ok: false, error: friendlyPaymentError(err?.message, remaining) };
     }
   };
 

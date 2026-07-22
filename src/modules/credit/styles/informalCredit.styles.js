@@ -243,9 +243,18 @@ export default StyleSheet.create({
   },
 
   /* --- Note preview --- */
+  noteLabelText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+
   notePreview: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 6,
     backgroundColor: colors.background,
     paddingHorizontal: 10,
@@ -380,6 +389,45 @@ export default StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     color: colors.textPrimary,
+  },
+
+  formInputError: {
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+  },
+
+  /* --- Mensajes de error dentro del formulario --- */
+  inlineErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.danger + '12',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.danger,
+  },
+
+  payFullBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: colors.success + '18',
+  },
+
+  payFullBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.success,
   },
 
   primaryBtn: {

@@ -75,11 +75,42 @@ def _upload_image_to_storage(base64_str: str, bucket: str, file_path: str) -> st
     img.save(out_io, format="JPEG", quality=60, optimize=True)
     compressed_image_data = out_io.getvalue()
 
-    supabase_admin.storage.from_(bucket).upload(
-        path=file_path,
-        file=compressed_image_data,
-        file_options={"content-type": "image/jpeg", "upsert": "true"}
-    )
+    # OJO: en storage3 0.6.1 las claves de `file_options` se mandan TAL CUAL
+    # como headers HTTP. La clave válida es "x-upsert" (así se llama el header
+    # que entiende Supabase Storage); mandar "upsert" crea un header inútil y
+    # deja el "x-upsert: false" por defecto, lo que hace que subir la misma
+    # imagen otra vez devuelva 409 Duplicate en lugar de reemplazarla.
+    file_options = {"content-type": "image/jpeg", "x-upsert": "true"}
+
+    try:
+        supabase_admin.storage.from_(bucket).upload(
+            path=file_path,
+            file=compressed_image_data,
+            file_options=file_options,
+        )
+    except Exception as e:
+        # Red de seguridad: si el storage igual reporta que el archivo ya
+        # existe, lo reemplazamos con update() en vez de propagar el error.
+        # Subir la misma foto de nuevo es una acción válida del usuario.
+        message = str(e).lower()
+        already_exists = (
+            "duplicate" in message
+            or "already exists" in message
+            or "resource already exists" in message
+            or "409" in message
+        )
+        if not already_exists:
+            raise
+
+        # storage3 0.6.1 no expone update(): borramos el archivo previo y
+        # volvemos a subirlo. El resultado para el usuario es el mismo,
+        # su foto queda reemplazada sin ningún error en pantalla.
+        supabase_admin.storage.from_(bucket).remove([file_path])
+        supabase_admin.storage.from_(bucket).upload(
+            path=file_path,
+            file=compressed_image_data,
+            file_options=file_options,
+        )
 
     public_url = supabase_admin.storage.from_(bucket).get_public_url(file_path)
     if not isinstance(public_url, str):
@@ -455,7 +486,11 @@ def update_profile(user_id: str, business_id: str, data):
         try:
             avatar_url = _upload_image_to_storage(data.avatar_base64, "avatars", f"{user_id}.jpg")
         except Exception as e:
-            raise ValueError(f"Error al subir el avatar: {str(e)}")
+            print(f"[update_profile] Error al subir avatar de {user_id}: {e}")
+            raise ValueError(
+                "No pudimos guardar tu foto de perfil. "
+                "Revisa tu conexión e inténtalo de nuevo."
+            )
 
     user_payload = {}
     if data.name:

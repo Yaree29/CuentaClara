@@ -9,6 +9,7 @@ import {
 } from 'react-native-heroicons/solid';
 import { Ionicons } from '@expo/vector-icons';
 import { useInformalCredit, SORT_CATEGORIES } from '../hooks/useInformalCredit';
+import { buildDebtDescription } from '../services/debtService';
 import styles from '../styles/informalCredit.styles';
 import colors from '../../../theme/colors';
 
@@ -48,16 +49,10 @@ const InformalCredit = () => {
       setFormClientName(editingCredit.clientName);
       setFormPhone(editingCredit.phone ? editingCredit.phone.replace('+507', '') : '');
       
-      // Intentar parsear productos y notas desde el string 'items'
-      let rawItems = editingCredit.items || '';
-      let parsedNotes = rawItems;
+      // Productos y nota ya vienen separados desde el hook
+      const rawItems = editingCredit.products || '';
+      let parsedNotes = editingCredit.debtNote || rawItems;
       let parsedProducts = {};
-      
-      if (rawItems.includes('| Nota: ')) {
-        const parts = rawItems.split('| Nota: ');
-        rawItems = parts[0].trim();
-        parsedNotes = parts[1].trim();
-      }
 
       if (rawItems && inventoryProducts.length > 0) {
         let matchedCount = 0;
@@ -128,11 +123,8 @@ const InformalCredit = () => {
       return;
     }
     
-    // Concatenar productos seleccionados + notas
-    let finalItems = computedItemsStr;
-    if (formNotes.trim()) {
-      finalItems = finalItems ? `${finalItems} | Nota: ${formNotes.trim()}` : formNotes.trim();
-    }
+    // Productos seleccionados + nota, en el formato compartido con Ventas
+    const finalItems = buildDebtDescription(computedItemsStr, formNotes);
 
     saveCredit({
       clientName: formClientName,
@@ -163,10 +155,42 @@ const InformalCredit = () => {
   };
 
   const [paymentAmount, setPaymentAmount] = useState('');
-  const handlePaymentSubmit = () => {
-    if (!paymentAmount) return;
-    registerPayment(selectedClient.id, parseFloat(paymentAmount));
+  const [paymentError, setPaymentError] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // Al abrir/cerrar el modal de pago limpiamos el formulario y el error previo
+  useEffect(() => {
     setPaymentAmount('');
+    setPaymentError('');
+  }, [isPaymentModalVisible, selectedClient?.id]);
+
+  const remainingDebt = Number(selectedClient?.totalDebt) || 0;
+  const typedAmount = Number(paymentAmount.replace(',', '.'));
+  const exceedsDebt = Number.isFinite(typedAmount) && typedAmount > remainingDebt;
+
+  const handlePaymentChange = (value) => {
+    setPaymentAmount(value);
+    if (paymentError) setPaymentError('');
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (savingPayment) return;
+
+    setSavingPayment(true);
+    const result = await registerPayment(
+      selectedClient.id,
+      paymentAmount.replace(',', '.'),
+      remainingDebt
+    );
+    setSavingPayment(false);
+
+    if (!result?.ok) {
+      setPaymentError(result?.error || 'No pudimos guardar el abono. Inténtalo de nuevo.');
+      return;
+    }
+
+    setPaymentAmount('');
+    setPaymentError('');
   };
 
   // Formatear método de pago
@@ -208,6 +232,9 @@ const InformalCredit = () => {
         break;
       case 'edit':
         openEditModal(credit);
+        break;
+      case 'note':
+        openNoteModal(credit);
         break;
       case 'delete':
         Alert.alert(
@@ -269,16 +296,30 @@ const InformalCredit = () => {
             </View>
           </View>
 
-          {/* Descripción */}
-          {item.items ? (
-            <Text style={styles.itemsText} numberOfLines={2}>{item.items}</Text>
+          {/* Productos fiados */}
+          {item.products ? (
+            <Text style={styles.itemsText} numberOfLines={2}>{item.products}</Text>
           ) : null}
 
-          {/* Nota preview */}
+          {/* Nota de este fiado */}
+          {item.debtNote ? (
+            <View style={styles.notePreview}>
+              <Ionicons name="pricetag-outline" size={14} color={colors.info} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noteLabelText}>Nota del fiado</Text>
+                <Text style={styles.notePreviewText} numberOfLines={2}>{item.debtNote}</Text>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Nota del cliente */}
           {item.notes ? (
             <View style={styles.notePreview}>
-              <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.notePreviewText} numberOfLines={1}>{item.notes}</Text>
+              <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noteLabelText}>Nota del cliente</Text>
+                <Text style={styles.notePreviewText} numberOfLines={2}>{item.notes}</Text>
+              </View>
             </View>
           ) : null}
 
@@ -412,6 +453,12 @@ const InformalCredit = () => {
                 <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('edit')}>
                   <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
                   <Text style={[styles.contextMenuText, { fontSize: 16 }]}>Editar fiado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('note')}>
+                  <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} />
+                  <Text style={[styles.contextMenuText, { fontSize: 16 }]}>
+                    {menuCredit?.notes ? 'Editar nota del cliente' : 'Añadir nota del cliente'}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleMenuAction('delete')}>
                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
@@ -579,18 +626,62 @@ const InformalCredit = () => {
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>¿Cuánto abonó? ($)</Text>
               <TextInput
-                style={styles.formInput}
+                style={[
+                  styles.formInput,
+                  (paymentError || exceedsDebt) && styles.formInputError,
+                ]}
                 value={paymentAmount}
-                onChangeText={setPaymentAmount}
+                onChangeText={handlePaymentChange}
                 keyboardType="numeric"
                 placeholder="0.00"
+                placeholderTextColor={colors.textMuted}
               />
+
+              {/* Aviso en vivo mientras escribe: evita que llegue al backend */}
+              {exceedsDebt && !paymentError ? (
+                <View style={styles.inlineErrorBox}>
+                  <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                  <Text style={styles.inlineErrorText}>
+                    Ese monto es mayor que la deuda. {selectedClient?.clientName} solo debe{' '}
+                    ${remainingDebt.toFixed(2)}.
+                  </Text>
+                </View>
+              ) : null}
+
+              {paymentError ? (
+                <View style={styles.inlineErrorBox}>
+                  <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                  <Text style={styles.inlineErrorText}>{paymentError}</Text>
+                </View>
+              ) : null}
+
+              {/* Atajo para saldar el fiado completo */}
+              {remainingDebt > 0 && (
+                <TouchableOpacity
+                  style={styles.payFullBtn}
+                  onPress={() => handlePaymentChange(remainingDebt.toFixed(2))}
+                >
+                  <Text style={styles.payFullBtnText}>
+                    Pagó todo (${remainingDebt.toFixed(2)})
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
+
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: colors.success }]}
+              style={[
+                styles.primaryBtn,
+                { backgroundColor: colors.success },
+                (exceedsDebt || savingPayment || !paymentAmount) && { opacity: 0.5 },
+              ]}
               onPress={handlePaymentSubmit}
+              disabled={exceedsDebt || savingPayment || !paymentAmount}
             >
-              <Text style={styles.primaryBtnText}>Confirmar Pago</Text>
+              {savingPayment ? (
+                <ActivityIndicator size="small" color={colors.textButton} />
+              ) : (
+                <Text style={styles.primaryBtnText}>Confirmar Pago</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -645,13 +736,13 @@ const InformalCredit = () => {
                 </View>
 
                 {/* Productos */}
-                {detailCredit.items ? (
+                {detailCredit.products ? (
                   <View style={styles.detailSection}>
                     <Text style={styles.detailSectionTitle}>
                       <Ionicons name="cart-outline" size={16} color={colors.textSecondary} /> Productos
                     </Text>
                     <View style={styles.detailItemsList}>
-                      {detailCredit.items.split(',').map((item, idx) => (
+                      {detailCredit.products.split(',').map((item, idx) => (
                         <View key={idx} style={styles.detailItemPill}>
                           <Text style={styles.detailItemText}>{item.trim()}</Text>
                         </View>
@@ -660,15 +751,39 @@ const InformalCredit = () => {
                   </View>
                 ) : null}
 
-                {/* Nota */}
-                {detailCredit.notes ? (
+                {/* Nota del fiado */}
+                {detailCredit.debtNote ? (
                   <View style={styles.detailSection}>
                     <Text style={styles.detailSectionTitle}>
-                      <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} /> Nota
+                      <Ionicons name="pricetag-outline" size={16} color={colors.textSecondary} /> Nota del fiado
                     </Text>
-                    <Text style={styles.detailNoteText}>{detailCredit.notes}</Text>
+                    <Text style={styles.detailNoteText}>{detailCredit.debtNote}</Text>
                   </View>
                 ) : null}
+
+                {/* Nota del cliente (siempre visible, para poder crearla) */}
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>
+                    <Ionicons name="person-outline" size={16} color={colors.textSecondary} /> Nota del cliente
+                  </Text>
+                  {detailCredit.notes ? (
+                    <Text style={styles.detailNoteText}>{detailCredit.notes}</Text>
+                  ) : (
+                    <Text style={styles.detailEmptyPayments}>Sin nota para este cliente</Text>
+                  )}
+                  <TouchableOpacity
+                    style={styles.payFullBtn}
+                    onPress={() => {
+                      const credit = detailCredit;
+                      closeDetailModal();
+                      openNoteModal(credit);
+                    }}
+                  >
+                    <Text style={styles.payFullBtnText}>
+                      {detailCredit.notes ? 'Editar nota' : 'Añadir nota'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 {/* Historial de pagos */}
                 <View style={styles.detailSection}>

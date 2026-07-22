@@ -6,6 +6,49 @@
 // =============================================================================
 import { apiRequest } from '../../../services/apiClient';
 
+// -----------------------------------------------------------------------------
+// Formato de la descripción de un fiado.
+//
+// La tabla `debts` solo tiene una columna `description`, así que productos y
+// nota viajan juntos en un mismo string:
+//
+//   "1x Buzo Adidas, 2x Gorra | Nota: paga el viernes"
+//
+// Estos helpers son la ÚNICA fuente de verdad de ese formato. Los usan tanto el
+// módulo de fiado como el de ventas, para que una nota escrita al registrar la
+// venta se vea igual que una escrita desde la libreta de fiados.
+// -----------------------------------------------------------------------------
+export const NOTE_SEPARATOR = '| Nota: ';
+
+export const buildDebtDescription = (products, note) => {
+  const cleanProducts = (products || '').trim();
+  const cleanNote = (note || '').trim();
+
+  // La nota SIEMPRE va detrás del separador, incluso si no hay productos.
+  // Si no, al releerla se confundiría con un producto más.
+  if (cleanNote) {
+    return cleanProducts
+      ? `${cleanProducts} ${NOTE_SEPARATOR}${cleanNote}`
+      : `${NOTE_SEPARATOR}${cleanNote}`;
+  }
+
+  return cleanProducts;
+};
+
+export const parseDebtDescription = (description) => {
+  const raw = description || '';
+
+  if (raw.includes(NOTE_SEPARATOR)) {
+    const [products, ...noteParts] = raw.split(NOTE_SEPARATOR);
+    return {
+      products: products.trim(),
+      debtNote: noteParts.join(NOTE_SEPARATOR).trim(),
+    };
+  }
+
+  return { products: raw.trim(), debtNote: '' };
+};
+
 const debtService = {
   // --- Clientes ---
   getCustomers: async () => {
